@@ -16,15 +16,20 @@ export default function Home() {
   const [wishlist, setWishlist] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ニックネーム未登録ガード
   useEffect(() => {
-    if (!authLoading && user && !userData?.nickname) {
-      router.push("/user/edit");
-    }
-  }, [user, userData, authLoading, router]);
+    // 全ての必須項目が揃っている場合のみデータ取得
+    const hasRequired =
+      userData?.nickname &&
+      userData?.mbti &&
+      userData?.birthday &&
+      userData?.phone &&
+      userData?.emergencyContact &&
+      userData?.allergies &&
+      userData?.medications &&
+      userData?.medicalHistory &&
+      userData?.dislikedFoods;
 
-  useEffect(() => {
-    if (user && userData?.nickname) {
+    if (user && hasRequired) {
       Promise.all([
         getTodos(user.uid),
         getWishlist(user.uid)
@@ -35,10 +40,6 @@ export default function Home() {
       });
     }
   }, [user, userData]);
-
-  if (authLoading || (user && !userData?.nickname)) {
-    return null; // リダイレクト中
-  }
 
   return (
     <AuthGuard>

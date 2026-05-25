@@ -2,6 +2,15 @@ export interface User {
   id: string;
   displayName?: string;
   pictureUrl?: string;
+  nickname?: string;
+  mbti?: string;
+  birthday?: string;
+  phone?: string;
+  emergencyContact?: string;
+  allergies?: string;
+  medications?: string;
+  medicalHistory?: string;
+  dislikedFoods?: string;
   agreedAt?: number;
   lastLoginAt?: number;
   createdAt?: number;

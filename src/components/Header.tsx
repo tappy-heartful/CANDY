@@ -13,7 +13,7 @@ import {
   showDialog,
   writeLog,
 } from "@/src/lib/functions";
-import React from "react";
+import React, { useEffect } from "react";
 
 export default function Header() {
   const router = useRouter();
@@ -22,6 +22,11 @@ export default function Header() {
   const { items } = useBreadcrumb();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // 画面遷移時にスピナーを確実に非表示にする
+  useEffect(() => {
+    hideSpinner();
+  }, [pathname]);
 
   // メニューを表示しないページ
   if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
@@ -98,10 +103,10 @@ export default function Header() {
             <i className="fa-solid fa-share-nodes"></i>
           </button>
           {user && (
-            <img 
-              className="line-icon" 
-              src={pictureUrl} 
-              alt="User Icon" 
+            <img
+              className="line-icon"
+              src={pictureUrl}
+              alt="User Icon"
               onClick={toggleMenu}
             />
           )}
@@ -110,25 +115,29 @@ export default function Header() {
 
       {/* Breadcrumbs */}
       {items.length > 0 && pathname !== "/home" && (
-        <div className="breadcrumb-container">
-          <div className="breadcrumb-list">
-            <Link href="/home" className="breadcrumb-item">
-              <i className="fa-solid fa-house"></i>
-            </Link>
-            {items.map((item, index) => (
-              <React.Fragment key={index}>
-                <span className="breadcrumb-separator">/</span>
-                {item.href ? (
-                  <Link href={item.href} className="breadcrumb-item">
-                    {item.title}
-                  </Link>
-                ) : (
-                  <span className="breadcrumb-item active">{item.title}</span>
-                )}
-              </React.Fragment>
-            ))}
+        <>
+          <div className="breadcrumb-container">
+            <div className="breadcrumb-list">
+              <Link href="/home" className="breadcrumb-item">
+                <i className="fa-solid fa-house"></i>
+              </Link>
+              {items.map((item, index) => (
+                <React.Fragment key={index}>
+                  <span className="breadcrumb-separator">/</span>
+                  {item.href ? (
+                    <Link href={item.href} className="breadcrumb-item">
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className="breadcrumb-item active">{item.title}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        </div>
+          {/* パンくずリストが固定表示のため、後ろのコンテンツが被らないようにスペーサーを入れる */}
+          <div style={{ height: "45px" }}></div>
+        </>
       )}
 
       {/* Slide Menu */}
