@@ -50,8 +50,12 @@ function CallbackContent() {
       if (!data.ok) {
         if (result.error === 'NOT_FRIEND') {
           await showDialog("個別連絡のため、LINE公式アカウントを友だち追加してください。追加後に再度ログインをお願いします。", true);
-          // 公式LINEのURLは後ほど修正が必要かもしれませんが、一旦そのまま
           window.open("https://lin.ee/Z4gtFj6", "_blank", "noopener,noreferrer");
+          router.push("/login");
+          return;
+        }
+        if (result.error === 'USER_LIMIT_REACHED') {
+          await showDialog("このアプリは2人専用です。既に2人のユーザーが登録されているため、これ以上はログインできません。", true);
           router.push("/login");
           return;
         }

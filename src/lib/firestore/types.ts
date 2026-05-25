@@ -9,3 +9,37 @@ export interface User {
   isSystemAdmin?: boolean;
   [key: string]: any;
 }
+
+export interface Todo {
+  id: string;
+  title: string;
+  note?: string;
+  isCompleted: boolean;
+  type: "personal" | "couple";
+  showToPartner: boolean; // type="personal" の場合のみ有効
+  groupId: string;
+  uid: string; // 作成者
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Wishlist {
+  id: string;
+  title: string;
+  note?: string;
+  isAchieved: boolean;
+  type: "personal" | "couple";
+  showToPartner: boolean;
+  groupId: string;
+  uid: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  type: "todo" | "wishlist";
+  uid: string; // 作成者（2人の場合は共有だが管理上）
+  createdAt: number;
+}
