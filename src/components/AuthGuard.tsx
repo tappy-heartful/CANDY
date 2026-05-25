@@ -1,18 +1,37 @@
 "use client";
 
 import { useAuth } from "@/src/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (userData && pathname !== "/user/edit") {
+        // 必須項目チェック
+        const isMissingRequired =
+          !userData.nickname ||
+          !userData.mbti ||
+          !userData.birthday ||
+          !userData.phone ||
+          !userData.emergencyContact ||
+          !userData.allergies ||
+          !userData.medications ||
+          !userData.medicalHistory ||
+          !userData.dislikedFoods;
+
+        if (isMissingRequired) {
+          router.push("/user/edit");
+        }
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userData, loading, router, pathname]);
 
   if (loading || !user) {
     return (
@@ -39,6 +58,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         `}</style>
       </div>
     );
+  }
+
+  // 必須項目チェック
+  const isMissingRequired =
+    !userData?.nickname ||
+    !userData?.mbti ||
+    !userData?.birthday ||
+    !userData?.phone ||
+    !userData?.emergencyContact ||
+    !userData?.allergies ||
+    !userData?.medications ||
+    !userData?.medicalHistory ||
+    !userData?.dislikedFoods;
+
+  if (isMissingRequired && pathname !== "/user/edit") {
+    return null; // リダイレクト中
   }
 
   return <>{children}</>;

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const rawLineUid = verifyData.sub;
     const salt = process.env.SALT || '';
     const pepper = process.env.PEPPER || '';
-    
+
     const hashedUserId = crypto
       .createHash('sha256')
       .update(salt + rawLineUid + pepper)
@@ -56,7 +56,16 @@ export async function POST(req: NextRequest) {
 
     const customToken = await adminAuth.createCustomToken(hashedUserId);
 
-    // 5. lineMessagingIds の更新
+    // 5. 2人限定ログイン制限のチェック
+    const usersCount = await adminDb.collection('users').count().get();
+    const userDoc = await adminDb.collection('users').doc(hashedUserId).get();
+
+    // まだ登録されていないユーザーで、かつ既に2人登録されている場合は弾く
+    if (!userDoc.exists && usersCount.data().count >= 2) {
+      return NextResponse.json({ error: 'USER_LIMIT_REACHED' }, { status: 403 });
+    }
+
+    // 6. lineMessagingIds の更新
     await adminDb.collection('lineMessagingIds').doc(hashedUserId).set({
       lineUid: rawLineUid,
       isCandy: true,
