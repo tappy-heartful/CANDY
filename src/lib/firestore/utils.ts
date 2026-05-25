@@ -3,6 +3,7 @@
  */
 export const toPlainObject = (doc: any) => {
   const data = doc.data();
+  if (!data) return { id: doc.id };
   const obj = { ...data, id: doc.id };
   
   // 再帰的にTimestampをミリ秒(number)に変換する
