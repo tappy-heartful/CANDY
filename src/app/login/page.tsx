@@ -9,12 +9,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     utils.clearAllAppSession();
+    utils.removeSession("fromLogin");
   }, []);
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
     try {
-      const res = await fetch('/api/line/get-url'); 
+      const res = await fetch('/api/line/get-url');
       const { loginUrl } = await res.json();
       window.location.href = loginUrl;
     } catch (err) {
@@ -40,7 +41,7 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.authSection}>
-          <button 
+          <button
             className={`${styles.loginBtn} ${isLoggingIn ? styles.loggingIn : ''}`}
             onClick={handleLogin}
             disabled={isLoggingIn}
@@ -48,17 +49,17 @@ export default function LoginPage() {
             {isLoggingIn ? '準備中...' : 'LINEでログイン'}
           </button>
 
-          <a 
-            href="https://lin.ee/Z4gtFj6" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://lin.ee/Z4gtFj6"
+            target="_blank"
+            rel="noopener noreferrer"
             className={styles.addFriendBtn}
           >
             公式LINEを友だち追加
           </a>
         </div>
       </div>
-      
+
       {/* Decorative elements */}
       <div className={`${styles.bubble} ${styles.bubble1}`}></div>
       <div className={`${styles.bubble} ${styles.bubble2}`}></div>

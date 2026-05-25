@@ -1,3 +1,10 @@
+import { db } from "./firebase";
+import {
+  doc,
+  collection,
+  setDoc,
+  serverTimestamp
+} from "firebase/firestore";
 import { showDialog } from "@/src/components/CommonDialog";
 
 // --- 定数 ---
@@ -101,6 +108,31 @@ export function hideSpinner() {
   if (spinnerInterval) {
     clearInterval(spinnerInterval);
     spinnerInterval = null;
+  }
+}
+
+// --- ログ記録 ---
+export async function writeLog({ dataId, action, status = 'success', errorDetail = {} }: any) {
+  try {
+    const uid = getSession('uid') || 'unknown';
+    const now = new Date();
+    const dateStr =
+      now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0');
+
+    const logRef = doc(collection(db, 'logs'), dateStr, 'items', now.getTime().toString());
+    await setDoc(logRef, {
+      uid,
+      dataId,
+      action,
+      status,
+      errorDetail,
+      timestamp: serverTimestamp(),
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server',
+    });
+  } catch (e) {
+    console.error('Log write failed:', e);
   }
 }
 

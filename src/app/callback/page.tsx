@@ -84,7 +84,17 @@ function CallbackContent() {
       }
 
       const redirectAfterLogin = result.redirectAfterLogin || "/home";
-      router.push(redirectAfterLogin);
+
+      // 4. 規約同意チェック & リダイレクト
+      if (!finalData?.agreedAt) {
+        // 同意ページへ行く前に、本来行きたかった場所を覚えておく
+        setSession("redirectAfterLogin", redirectAfterLogin);
+        router.push("/agreement");
+      } else {
+        // ログイン成功フラグ（演出用）
+        setSession("fromLogin", "true");
+        router.push(redirectAfterLogin);
+      }
 
     } catch (e) {
       console.error(e);

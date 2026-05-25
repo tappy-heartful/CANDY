@@ -1,0 +1,147 @@
+.agreementPage {
+  min-height: 100vh;
+  background-color: #fdfdfd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+}
+
+.container {
+  max-width: 500px;
+  width: 100%;
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 10px 40px rgba(155, 124, 195, 0.1);
+  border: 3px solid #9B7CC3;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  color: #9B7CC3;
+  font-size: 24px;
+  margin: 0;
+}
+
+.main {
+  color: #444;
+  line-height: 1.6;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  color: #F7A8C4;
+  font-size: 18px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #fce4ec;
+  padding-bottom: 4px;
+}
+
+.list {
+  padding-left: 20px;
+  margin-bottom: 12px;
+}
+
+.list li {
+  margin-bottom: 8px;
+}
+
+.note {
+  font-size: 13px;
+  color: #888;
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #A0E7D2;
+}
+
+.checkboxWrapper {
+  margin: 32px 0;
+  text-align: center;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #9B7CC3;
+}
+
+.checkboxLabel input {
+  width: 20px;
+  height: 20px;
+  accent-color: #9B7CC3;
+}
+
+.agreeBtn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 30px;
+  border: none;
+  background-color: #ccc;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: not-allowed;
+  transition: all 0.3s ease;
+}
+
+.agreeBtn.active {
+  background-color: #F7A8C4;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(247, 168, 196, 0.4);
+}
+
+.agreeBtn.active:hover {
+  transform: translateY(-2px);
+  background-color: #f896b8;
+}
+
+.footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.backLink {
+  color: #9B7CC3;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.loadingContainer {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #A0E7D2;
+  border-top: 4px solid #F7A8C4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
