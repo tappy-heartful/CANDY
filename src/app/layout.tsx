@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import CommonDialog from "@/src/components/CommonDialog";
 import PWARegistration from "@/src/components/PWARegistration";
+import Header from "@/src/components/Header";
+import Footer from "@/src/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,9 +51,11 @@ export default function RootLayout({
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} with-fixed-header`}>
         <AuthProvider>
+          <Header />
           {children}
+          <Footer />
           <CommonDialog />
           <PWARegistration />
         </AuthProvider>

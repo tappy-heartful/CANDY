@@ -6,6 +6,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { setSession, clearAllAppSession } from "@/src/lib/functions";
 import { User as FirestoreUser } from "@/src/lib/firestore/types";
+import { BreadcrumbProvider } from "@/src/contexts/BreadcrumbContext";
 
 interface AuthContextType {
   user: User | null;
@@ -68,7 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      {children}
+      <BreadcrumbProvider>
+        {children}
+      </BreadcrumbProvider>
     </AuthContext.Provider>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Todo, Group } from "@/src/lib/firestore/types";
 import { updateTodo, deleteTodo, addTodo, addGroup } from "../api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -32,15 +32,14 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     if (!newTodoTitle || !user) return;
     showSpinner();
     try {
-      const res = await addTodo({
+      await addTodo({
         title: newTodoTitle,
         type,
         uid: user.uid,
         groupId: selectedGroupId,
-        showToPartner: type === "couple", // デフォルト設定
+        showToPartner: type === "couple",
       });
-      // 簡易的に再取得せずに追加（本来はResからデータを構築するかrouter.refresh）
-      window.location.reload(); 
+      window.location.reload();
     } catch (e) {
       showDialog("追加に失敗しました");
     } finally {
@@ -60,49 +59,49 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
   };
 
   return (
-    <div className="todo-container">
+    <div className="page-container">
       <style jsx>{`
-        .todo-container { padding: 20px; max-width: 600px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .title { color: #9B7CC3; font-size: 24px; font-weight: bold; }
-        .filter-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab { padding: 8px 16px; border-radius: 20px; border: 2px solid #9B7CC3; background: none; color: #9B7CC3; cursor: pointer; }
+        .todo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; }
+        .tab { padding: 8px 16px; border-radius: 20px; border: 2px solid #9B7CC3; background: none; color: #9B7CC3; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap; }
         .tab.active { background: #9B7CC3; color: white; }
-        .input-section { background: #fdf2f8; padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 2px dashed #F7A8C4; }
-        .todo-input { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #F7A8C4; margin-bottom: 10px; outline: none; }
-        .group-select { width: 100%; padding: 8px; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 10px; }
+        .input-section { background: #fdf2f8; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 2px dashed #F7A8C4; }
+        .todo-input { width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #F7A8C4; margin-bottom: 12px; outline: none; font-size: 16px; }
+        .group-select { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 12px; font-size: 14px; background: white; }
         .btn-group { display: flex; gap: 10px; }
-        .btn-add { flex: 1; padding: 10px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .btn-add { flex: 1; padding: 12px; border-radius: 16px; border: none; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
+        .btn-add:active { transform: scale(0.95); }
         .btn-personal { background: #F7A8C4; }
         .btn-couple { background: #A0E7D2; }
         .todo-list { display: flex; flex-direction: column; gap: 12px; }
-        .todo-item { display: flex; align-items: center; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #9B7CC3; }
-        .todo-item.completed { opacity: 0.6; text-decoration: line-through; }
-        .todo-checkbox { width: 20px; height: 20px; margin-right: 15px; accent-color: #9B7CC3; cursor: pointer; }
+        .todo-item { display: flex; align-items: center; background: white; padding: 16px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-left: 5px solid #9B7CC3; transition: all 0.2s; }
+        .todo-item.completed { opacity: 0.6; background: #f9f9f9; }
+        .todo-checkbox { width: 22px; height: 22px; margin-right: 15px; accent-color: #9B7CC3; cursor: pointer; }
         .todo-info { flex: 1; }
-        .todo-title { font-weight: bold; color: #444; }
-        .todo-meta { font-size: 12px; color: #888; margin-top: 4px; }
-        .badge { padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-right: 5px; color: white; }
+        .todo-title { font-weight: bold; color: #444; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+        .todo-meta { font-size: 11px; color: #999; margin-top: 4px; }
+        .badge { padding: 2px 8px; border-radius: 8px; font-size: 10px; color: white; font-weight: bold; }
         .badge-personal { background: #F7A8C4; }
-        .badge-couple { background: #A0E7D2; }
+        .badge-couple { background: #9B7CC3; }
+        .add-group-btn { background: #f3e5f5; border: none; color: #9B7CC3; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; }
       `}</style>
 
-      <div className="header">
-        <div className="title">🍭 TODO List</div>
-        <button onClick={handleAddGroup} className="tab">+ Group</button>
+      <div className="todo-header">
+        <div className="card-title-main"><span>📝</span> TODO List</div>
+        <button onClick={handleAddGroup} className="add-group-btn">+ グループ追加</button>
       </div>
 
       <div className="input-section">
-        <input 
-          type="text" 
-          className="todo-input" 
-          placeholder="なにする？" 
+        <input
+          type="text"
+          className="todo-input"
+          placeholder="なにする？"
           value={newTodoTitle}
           onChange={(e) => setNewTodoTitle(e.target.value)}
         />
-        <select 
-          className="group-select" 
-          value={selectedGroupId} 
+        <select
+          className="group-select"
+          value={selectedGroupId}
           onChange={(e) => setSelectedGroupId(e.target.value)}
         >
           <option value="">グループを選択</option>
@@ -120,30 +119,36 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         <button className={`tab ${filter === "couple" ? "active" : ""}`} onClick={() => setFilter("couple")}>2人</button>
       </div>
 
-      <div className="todo-list">
-        {todos
-          .filter(t => filter === "all" || t.type === filter)
-          .map(todo => (
-            <div key={todo.id} className={`todo-item ${todo.isCompleted ? "completed" : ""}`}>
-              <input 
-                type="checkbox" 
-                className="todo-checkbox" 
-                checked={todo.isCompleted} 
-                onChange={() => handleToggleComplete(todo)}
-              />
-              <div className="todo-info">
-                <div className="todo-title">
-                  <span className={`badge ${todo.type === "personal" ? "badge-personal" : "badge-couple"}`}>
-                    {todo.type === "personal" ? "自分" : "2人"}
-                  </span>
-                  {todo.title}
+      <div className="content-card">
+        <div className="todo-list">
+          {todos.filter(t => filter === "all" || t.type === filter).length > 0 ? (
+            todos
+              .filter(t => filter === "all" || t.type === filter)
+              .map(todo => (
+                <div key={todo.id} className={`todo-item ${todo.isCompleted ? "completed" : ""}`}>
+                  <input
+                    type="checkbox"
+                    className="todo-checkbox"
+                    checked={todo.isCompleted}
+                    onChange={() => handleToggleComplete(todo)}
+                  />
+                  <div className="todo-info">
+                    <div className="todo-title">
+                      <span className={`badge ${todo.type === "personal" ? "badge-personal" : "badge-couple"}`}>
+                        {todo.type === "personal" ? "自分" : "2人"}
+                      </span>
+                      {todo.title}
+                    </div>
+                    <div className="todo-meta">
+                      {groups.find(g => g.id === todo.groupId)?.name || "未分類"}
+                    </div>
+                  </div>
                 </div>
-                <div className="todo-meta">
-                  {groups.find(g => g.id === todo.groupId)?.name || "未分類"}
-                </div>
-              </div>
-            </div>
-          ))}
+              ))
+          ) : (
+            <div style={{ textAlign: 'center', color: '#ccc', padding: '20px' }}>TODOはありません</div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import AuthGuard from "@/src/components/AuthGuard";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-server-actions";
 import { getGroups } from "@/src/features/todo/api/todo-server-actions";
 import WishlistClient from "@/src/features/wishlist/views/WishlistClient";
@@ -10,9 +11,14 @@ import { Wishlist, Group } from "@/src/lib/firestore/types";
 
 export default function WishlistPage() {
   const { user, loading } = useAuth();
+  const { setBreadcrumbs } = useBreadcrumb();
   const [items, setItems] = useState<Wishlist[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    setBreadcrumbs([{ title: "Wishlist" }]);
+  }, [setBreadcrumbs]);
 
   useEffect(() => {
     if (user) {
