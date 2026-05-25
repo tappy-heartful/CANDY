@@ -9,11 +9,11 @@ export default function Footer() {
   const pathname = usePathname();
   const { userData } = useAuth();
 
-  // メニューを表示しないページ
-  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
-
   const [showOverlay, setShowOverlay] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // メニューを表示しないページ
+  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
 
   const displayName = userData?.displayName || "ゲスト";
   const pictureUrl = userData?.pictureUrl || "/icon.png";

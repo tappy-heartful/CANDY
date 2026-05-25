@@ -71,14 +71,14 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       `}</style>
 
       <div className="wish-header">
-        <div className="card-title-main"><span>🎁</span> Wishlist</div>
+        <div className="card-title-main"><i className="fa-solid fa-gift"></i> Wishlist</div>
       </div>
 
       <div className="input-section">
         <input
           type="text"
           className="wish-input"
-          placeholder="叶えたいこと、やりたいこと"
+          placeholder="例: 北海道旅行に行きたい"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
         />
