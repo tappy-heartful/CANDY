@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import CommonDialog from "@/src/components/CommonDialog";
+import PWARegistration from "@/src/components/PWARegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CANDY",
   description: "Sweet & Colorful Life",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CANDY",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport = {
+  themeColor: "#9B7CC3",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -36,6 +53,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <CommonDialog />
+          <PWARegistration />
         </AuthProvider>
       </body>
     </html>
