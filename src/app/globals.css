@@ -1,0 +1,63 @@
+:root {
+  --background: #ffffff;
+  --foreground: #333333;
+  --pink: #F7A8C4;
+  --mint: #A0E7D2;
+  --purple: #9B7CC3;
+  --light-pink: #fce4ec;
+  --light-mint: #e0f2f1;
+  --light-purple: #f3e5f5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff; /* Keep it light for CANDY theme */
+    --foreground: #333333;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar for CANDY */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--light-purple);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--purple);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8666b0;
+}
+
+/* Global Transitions */
+a, button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Base Layout Classes */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1, h2, h3 {
+  color: var(--purple);
+}
