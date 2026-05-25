@@ -50,7 +50,7 @@ function CallbackContent() {
       if (!data.ok) {
         if (result.error === 'NOT_FRIEND') {
           await showDialog("個別連絡のため、LINE公式アカウントを友だち追加してください。追加後に再度ログインをお願いします。", true);
-          window.open("https://lin.ee/Z4gtFj6", "_blank", "noopener,noreferrer");
+          window.open("https://lin.ee/o8SSLxF", "_blank", "noopener,noreferrer");
           router.push("/login");
           return;
         }

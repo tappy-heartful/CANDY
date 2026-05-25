@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Wishlist, Group } from "@/src/lib/firestore/types";
-import { addWishlist, updateWishlist } from "../api/wishlist-client-service";
-import { addGroup } from "../../todo/api/todo-client-service";
+import { addWishlist, updateWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
+import { addGroup } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 
@@ -71,14 +71,14 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       `}</style>
 
       <div className="wish-header">
-        <div className="card-title-main"><span>🎁</span> Wishlist</div>
+        <div className="card-title-main"><i className="fa-solid fa-gift"></i> Wishlist</div>
       </div>
 
       <div className="input-section">
         <input
           type="text"
           className="wish-input"
-          placeholder="叶えたいこと、やりたいこと"
+          placeholder="例: 北海道旅行に行きたい"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
         />

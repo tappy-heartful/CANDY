@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Todo, Group } from "@/src/lib/firestore/types";
-import { updateTodo, deleteTodo, addTodo, addGroup } from "../api/todo-client-service";
+import { updateTodo, deleteTodo, addTodo, addGroup } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 
@@ -87,7 +87,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       `}</style>
 
       <div className="todo-header">
-        <div className="card-title-main"><span>📝</span> TODO List</div>
+        <div className="card-title-main"><i className="fa-solid fa-list-check"></i> TODO List</div>
         <button onClick={handleAddGroup} className="add-group-btn">+ グループ追加</button>
       </div>
 
@@ -95,7 +95,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         <input
           type="text"
           className="todo-input"
-          placeholder="なにする？"
+          placeholder="例: 週末の買い物に行く"
           value={newTodoTitle}
           onChange={(e) => setNewTodoTitle(e.target.value)}
         />

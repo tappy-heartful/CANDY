@@ -28,6 +28,16 @@ export default function Header() {
     hideSpinner();
   }, [pathname]);
 
+  // bodyにpadding-topをつけるかどうかを制御
+  useEffect(() => {
+    const isNoHeaderPage = ["/login", "/callback", "/agreement"].includes(pathname);
+    if (isNoHeaderPage) {
+      document.body.classList.remove("with-fixed-header");
+    } else {
+      document.body.classList.add("with-fixed-header");
+    }
+  }, [pathname]);
+
   // メニューを表示しないページ
   if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
 

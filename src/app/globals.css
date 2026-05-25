@@ -20,6 +20,11 @@ body.with-fixed-header {
   padding-top: 70px;
 }
 
+/* ログイン・コールバック画面などのためのクラス */
+.no-header-padding {
+  padding-top: 0 !important;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

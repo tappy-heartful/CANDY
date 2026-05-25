@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
-import { updateProfile } from "../api/user-client-service";
+import { updateProfile } from "@/src/features/user/api/user-client-service";
 import { showDialog, showSpinner, hideSpinner, setSession } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
 

@@ -1,0 +1,346 @@
+.homeContainer {
+  padding-bottom: 40px;
+}
+
+.welcomeSection {
+  margin-top: 10px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.profileImgContainer {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 15px;
+}
+
+.profileImg {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 4px solid #A0E7D2;
+  box-shadow: 0 4px 15px rgba(160, 231, 210, 0.4);
+  object-fit: cover;
+}
+
+.editBadge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #9B7CC3;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: 2px solid white;
+  text-decoration: none;
+}
+
+.greeting {
+  font-size: 24px;
+  color: #9B7CC3;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.nickname {
+  color: #F7A8C4;
+  position: relative;
+}
+
+.nickname::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(247, 168, 196, 0.2);
+  border-radius: 2px;
+}
+
+.menuGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+  justify-content: center;
+}
+
+.menuCard {
+  padding: 25px 15px;
+  border-radius: 25px;
+  box-shadow: 0 8px 20px rgba(155, 124, 195, 0.1);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+  position: relative;
+  overflow: hidden;
+  color: white !important;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.menuCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 25px rgba(155, 124, 195, 0.2);
+  filter: brightness(1.05);
+}
+
+.menuCard:active {
+  transform: scale(0.95);
+}
+
+.cardTodo { background-color: #F7A8C4 !important; }
+.cardWish { background-color: #A0E7D2 !important; }
+
+.cardPartner {
+  background-color: #9B7CC3 !important;
+  grid-column: 1 / -1;
+  flex-direction: row !important;
+  justify-content: center;
+  gap: 15px;
+  padding: 20px;
+}
+
+.cardIcon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.cardPartner .cardIcon {
+  margin-bottom: 0;
+}
+
+.cardTitle {
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.previewList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.previewItem {
+  background: #fff;
+  padding: 16px 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-left: 6px solid #9B7CC3;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.05);
+  margin-bottom: 4px;
+}
+
+.previewItemTodo { border-color: #F7A8C4; }
+.previewItemWish { border-color: #A0E7D2; }
+
+.itemText {
+  flex: 1;
+  font-size: 15px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemBadge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  color: white;
+  font-weight: bold;
+}
+
+.badgeCouple { background: #9B7CC3; }
+.badgePersonal { background: #F7A8C4; }
+
+.emptyMsg {
+  font-size: 14px;
+  color: #bbb;
+  text-align: center;
+  padding: 24px;
+  background: #fcfcfc;
+  border-radius: 20px;
+  border: 2px dashed #eee;
+}
+
+.viewAllLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px auto 0;
+  width: 80%;
+  max-width: 280px;
+  padding: 12px 24px;
+  font-size: 15px;
+  color: white !important;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 30px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+}
+
+.viewAllLink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  filter: brightness(1.05);
+}
+
+.viewAllLink:active {
+  transform: scale(0.98);
+}
+
+.viewAllTodo { background-color: #F7A8C4 !important; }
+.viewAllWish { background-color: #A0E7D2 !important; }
+
+/* Welcome Overlay */
+.welcomeOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeOut 0.5s ease-in-out 3s forwards;
+}
+
+.welcomeCandy {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 0.6s infinite alternate cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.welcomeText {
+  font-size: 28px;
+  font-weight: 900;
+  color: #9B7CC3;
+  text-align: center;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 0.3s forwards;
+}
+
+.welcomeName {
+  color: #F7A8C4;
+  display: block;
+  font-size: 36px;
+  margin-top: 10px;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0) rotate(-5deg); }
+  to { transform: translateY(-30px) rotate(5deg); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+/* Partner Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.partnerModal {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  border-radius: 30px;
+  overflow-y: auto;
+  position: relative;
+  padding: 30px 20px;
+  border: 4px solid #9B7CC3;
+}
+
+.modalClose {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 24px;
+  color: #9B7CC3;
+  cursor: pointer;
+}
+
+.partnerProfileHeader {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.partnerProfileImg {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #A0E7D2;
+  margin-bottom: 10px;
+  object-fit: cover;
+}
+
+.partnerNickname {
+  font-size: 24px;
+  font-weight: bold;
+  color: #9B7CC3;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.infoItem {
+  background: #f8f4ff;
+  padding: 15px;
+  border-radius: 15px;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: #F7A8C4;
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.infoValue {
+  font-size: 16px;
+  color: #555;
+  white-space: pre-wrap;
+}

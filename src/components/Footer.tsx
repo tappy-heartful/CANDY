@@ -9,9 +9,6 @@ export default function Footer() {
   const pathname = usePathname();
   const { userData } = useAuth();
 
-  // メニューを表示しないページ
-  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
-
   const [showOverlay, setShowOverlay] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -36,6 +33,9 @@ export default function Footer() {
       };
     }
   }, [pathname]);
+
+  // メニューを表示しないページ
+  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
 
   const manualClose = () => {
     setIsAnimating(false);
