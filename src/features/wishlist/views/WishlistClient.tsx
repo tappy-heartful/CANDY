@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Wishlist, Group } from "@/src/lib/firestore/types";
-import { addWishlist, updateWishlist } from "../api/wishlist-client-service";
-import { addGroup } from "../../todo/api/todo-client-service";
+import { addWishlist, updateWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
+import { addGroup } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 

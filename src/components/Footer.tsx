@@ -12,9 +12,6 @@ export default function Footer() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // メニューを表示しないページ
-  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
-
   const displayName = userData?.displayName || "ゲスト";
   const pictureUrl = userData?.pictureUrl || "/icon.png";
 
@@ -36,6 +33,9 @@ export default function Footer() {
       };
     }
   }, [pathname]);
+
+  // メニューを表示しないページ
+  if (["/login", "/callback", "/agreement"].includes(pathname)) return null;
 
   const manualClose = () => {
     setIsAnimating(false);
