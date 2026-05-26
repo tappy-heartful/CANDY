@@ -205,46 +205,55 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
             <div key={groupId} className={styles.groupBlock}>
               <div className={styles.groupTitle}>{groupNameById.get(groupId) || "未分類"}</div>
               <div className={styles.wishList}>
-                {groupItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""}`}
-                    onClick={() => setSelectedEditItem(item)}
-                  >
-                    <div className={styles.cardHeader}>
-                      <div className={styles.cardTitle}>{item.title}</div>
-                      <button
-                        className={styles.deleteWishlistBtn}
-                        onClick={(e) => handleDeleteWishlist(item.id, e)}
-                        title="削除"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </div>
-                    <div className={styles.cardMeta}>
-                      <div className={styles.metaRow}>
-                        <span
-                          className={`${styles.badge} ${
-                            item.type === "couple"
-                              ? styles.badgeCouple
-                              : item.uid === user?.uid
-                                ? styles.badgeMe
-                                : styles.badgePartner
-                          }`}
-                        >
-                          {item.type === "couple" ? "2人" : item.uid === user?.uid ? myLabel : partnerLabel}
-                        </span>
-                        <span className={styles.groupBadge}>
-                          {groupNameById.get(item.groupId) || "未分類"}
-                        </span>
+                {groupItems.map((item) => {
+                  const isEditable = item.uid === user?.uid;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""} ${!isEditable ? styles.nonEditable : ""}`}
+                      onClick={() => {
+                        if (isEditable) {
+                          setSelectedEditItem(item);
+                        }
+                      }}
+                    >
+                      <div className={styles.cardHeader}>
+                        <div className={styles.cardTitle}>{item.title}</div>
+                        {isEditable && (
+                          <button
+                            className={styles.deleteWishlistBtn}
+                            onClick={(e) => handleDeleteWishlist(item.id, e)}
+                            title="削除"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        )}
                       </div>
-                      <div className={styles.urgencyBadge}>
-                        <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>
-                        早くやりたい度: {item.urgency ?? 50}
+                      <div className={styles.cardMeta}>
+                        <div className={styles.metaRow}>
+                          <span
+                            className={`${styles.badge} ${
+                              item.type === "couple"
+                                ? styles.badgeCouple
+                                : item.uid === user?.uid
+                                  ? styles.badgeMe
+                                  : styles.badgePartner
+                            }`}
+                          >
+                            {item.type === "couple" ? "2人" : item.uid === user?.uid ? myLabel : partnerLabel}
+                          </span>
+                          <span className={styles.groupBadge}>
+                            {groupNameById.get(item.groupId) || "未分類"}
+                          </span>
+                        </div>
+                        <div className={styles.urgencyBadge}>
+                          <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>
+                          早くやりたい度: {item.urgency ?? 50}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

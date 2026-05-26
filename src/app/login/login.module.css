@@ -45,11 +45,11 @@
   text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(0,0,0,0.05);
 }
 
-.c { color: #9B7CC3; }
-.a { color: #F7A8C4; }
-.n { color: #A0E7D2; }
-.d { color: #A0E7D2; }
-.y { color: #9B7CC3; }
+.c { color: #9B7CC3; } /* Pastel Purple */
+.a { color: #F7A8C4; } /* Pastel Pink */
+.n { color: #FFE066; } /* Pastel Yellow */
+.d { color: #A0E7D2; } /* Pastel Mint */
+.y { color: #90CAF9; } /* Pastel Sky Blue */
 
 .subtitle {
   color: #9B7CC3;

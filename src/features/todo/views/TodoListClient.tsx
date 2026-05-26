@@ -263,6 +263,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                         className={styles.todoCheckbox}
                         checked={todo.isCompleted}
                         onChange={() => handleToggleComplete(todo)}
+                        disabled={todo.uid !== user?.uid}
                       />
                       <div className={styles.todoInfo}>
                         <div className={styles.todoTitle}>
@@ -286,16 +287,18 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                               className={styles.dateInput}
                               value={todo.date || ""}
                               onChange={(e) => handleTodoDateChange(todo.id, e.target.value)}
+                              disabled={todo.uid !== user?.uid}
                             />
                             <select
                               className={styles.dateModeSelect}
                               value={todo.dateMode || "due"}
                               onChange={(e) => handleTodoDateModeChange(todo.id, e.target.value as "due" | "on")}
+                              disabled={todo.uid !== user?.uid}
                             >
                               <option value="on">に</option>
                               <option value="due">まで</option>
                             </select>
-                            {todo.date && (
+                            {todo.uid === user?.uid && todo.date && (
                               <button
                                 className={styles.clearDateBtn}
                                 onClick={() => handleTodoDateChange(todo.id, "")}
@@ -307,13 +310,15 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                           </div>
                         </div>
                       </div>
-                      <button
-                        className={styles.deleteTodoBtn}
-                        onClick={() => handleDeleteTodo(todo.id)}
-                        title="TODOを削除"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
+                      {todo.uid === user?.uid && (
+                        <button
+                          className={styles.deleteTodoBtn}
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          title="TODOを削除"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
+                      )}
                     </div>
 
                     <div className={styles.steps}>
@@ -326,32 +331,37 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                                 className={styles.stepCheckbox}
                                 checked={step.isCompleted}
                                 onChange={() => handleToggleStep(todo.id, step)}
+                                disabled={todo.uid !== user?.uid}
                               />
                               <span className={styles.stepTitle}>{step.title}</span>
-                              <button
-                                className={styles.deleteStepBtn}
-                                onClick={() => handleDeleteStep(todo.id, step.id)}
-                                title="ステップを削除"
-                              >
-                                <i className="fa-solid fa-xmark"></i>
-                              </button>
+                              {todo.uid === user?.uid && (
+                                <button
+                                  className={styles.deleteStepBtn}
+                                  onClick={() => handleDeleteStep(todo.id, step.id)}
+                                  title="ステップを削除"
+                                >
+                                  <i className="fa-solid fa-xmark"></i>
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
                       )}
 
-                      <div className={styles.stepAdd}>
-                        <input
-                          type="text"
-                          className={styles.stepInput}
-                          placeholder="例: お店に電話する"
-                          value={stepInputs[todo.id] || ""}
-                          onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
-                        />
-                        <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
-                          + ステップ追加
-                        </button>
-                      </div>
+                      {todo.uid === user?.uid && (
+                        <div className={styles.stepAdd}>
+                          <input
+                            type="text"
+                            className={styles.stepInput}
+                            placeholder="例: お店に電話する"
+                            value={stepInputs[todo.id] || ""}
+                            onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
+                          />
+                          <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
+                            + ステップ追加
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

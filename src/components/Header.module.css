@@ -26,11 +26,11 @@
   display: inline-block;
 }
 
-.c { color: #9B7CC3; }
-.a { color: #F7A8C4; }
-.n { color: #A0E7D2; }
-.d { color: #A0E7D2; }
-.y { color: #9B7CC3; }
+.c { color: #9B7CC3; } /* Pastel Purple */
+.a { color: #F7A8C4; } /* Pastel Pink */
+.n { color: #FFE066; } /* Pastel Yellow */
+.d { color: #A0E7D2; } /* Pastel Mint */
+.y { color: #90CAF9; } /* Pastel Sky Blue */
 
 .headerRight {
   display: flex;
@@ -66,7 +66,7 @@
 
 .breadcrumbContainer {
   position: fixed;
-  top: 60px;
+  top: 56px;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -83,7 +83,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 15px;
   color: #888;
   overflow-x: auto;
   white-space: nowrap;
@@ -100,6 +100,10 @@
   align-items: center;
 }
 
+.homeIcon {
+  margin-right: 6px;
+}
+
 .breadcrumbItemActive {
   color: #888;
   font-weight: normal;
@@ -107,7 +111,7 @@
 
 .breadcrumbSeparator {
   color: #ddd;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .breadcrumbSpacer {
