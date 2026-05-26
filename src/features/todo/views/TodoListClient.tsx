@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Group, Todo, TodoStep, User as FirestoreUser } from "@/src/lib/firestore/types";
-import { addTodo, addTodoStep, addGroup, toggleTodoStep, updateTodo } from "@/src/features/todo/api/todo-client-service";
+import { addTodo, addTodoStep, addGroup, toggleTodoStep, updateTodo, deleteTodo, deleteTodoStep } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
@@ -130,6 +130,41 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     }
   };
 
+  const handleDeleteTodo = async (todoId: string) => {
+    const confirmed = await showDialog("本当にこのTODOを削除しますか？");
+    if (!confirmed) return;
+    showSpinner();
+    try {
+      await deleteTodo(todoId);
+      setTodos((prev) => prev.filter((t) => t.id !== todoId));
+    } catch (e) {
+      showDialog("削除に失敗しました");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  const handleDeleteStep = async (todoId: string, stepId: string) => {
+    showSpinner();
+    try {
+      await deleteTodoStep(todoId, stepId);
+      setTodos((prev) =>
+        prev.map((t) =>
+          t.id === todoId
+            ? {
+                ...t,
+                steps: (t.steps || []).filter((s) => s.id !== stepId),
+              }
+            : t,
+        ),
+      );
+    } catch (e) {
+      showDialog("ステップの削除に失敗しました");
+    } finally {
+      hideSpinner();
+    }
+  };
+
   const handleAddGroup = async () => {
     const name = await showDialog("新しいグループ名を入力してください", false, true) as string;
     if (!name || !user) return;
@@ -224,23 +259,39 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                         </div>
                         <div className={styles.todoMeta}>
                           <div className={styles.dateRow}>
-                            <select
-                              className={styles.dateModeSelect}
-                              value={todo.dateMode || "due"}
-                              onChange={(e) => handleTodoDateModeChange(todo.id, e.target.value as "due" | "on")}
-                            >
-                              <option value="due">期限</option>
-                              <option value="on">日付</option>
-                            </select>
                             <input
                               type="date"
                               className={styles.dateInput}
                               value={todo.date || ""}
                               onChange={(e) => handleTodoDateChange(todo.id, e.target.value)}
                             />
+                            <select
+                              className={styles.dateModeSelect}
+                              value={todo.dateMode || "due"}
+                              onChange={(e) => handleTodoDateModeChange(todo.id, e.target.value as "due" | "on")}
+                            >
+                              <option value="on">に</option>
+                              <option value="due">まで</option>
+                            </select>
+                            {todo.date && (
+                              <button
+                                className={styles.clearDateBtn}
+                                onClick={() => handleTodoDateChange(todo.id, "")}
+                                title="日付を削除"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
+                      <button
+                        className={styles.deleteTodoBtn}
+                        onClick={() => handleDeleteTodo(todo.id)}
+                        title="TODOを削除"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
                     </div>
 
                     <div className={styles.steps}>
@@ -255,6 +306,13 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                                 onChange={() => handleToggleStep(todo.id, step)}
                               />
                               <span className={styles.stepTitle}>{step.title}</span>
+                              <button
+                                className={styles.deleteStepBtn}
+                                onClick={() => handleDeleteStep(todo.id, step.id)}
+                                title="ステップを削除"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -300,20 +358,20 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           onChange={(e) => setNewTodoTitle(e.target.value)}
         />
         <div className={styles.dateRow}>
-          <select
-            className={styles.dateModeSelect}
-            value={newTodoDateMode}
-            onChange={(e) => setNewTodoDateMode(e.target.value as "due" | "on")}
-          >
-            <option value="due">期限</option>
-            <option value="on">日付</option>
-          </select>
           <input
             type="date"
             className={styles.dateInput}
             value={newTodoDate}
             onChange={(e) => setNewTodoDate(e.target.value)}
           />
+          <select
+            className={styles.dateModeSelect}
+            value={newTodoDateMode}
+            onChange={(e) => setNewTodoDateMode(e.target.value as "due" | "on")}
+          >
+            <option value="on">に</option>
+            <option value="due">まで</option>
+          </select>
         </div>
         <select
           className={styles.groupSelect}

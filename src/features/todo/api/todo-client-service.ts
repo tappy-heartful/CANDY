@@ -74,6 +74,21 @@ export async function toggleTodoStep(todoId: string, stepId: string) {
   });
 }
 
+export async function deleteTodoStep(todoId: string, stepId: string) {
+  const todoRef = doc(db, "todos", todoId);
+  const snap = await getDoc(todoRef);
+  if (!snap.exists()) return;
+
+  const todoData = snap.data() as Partial<Todo>;
+  const currentSteps = Array.isArray(todoData.steps) ? todoData.steps : [];
+  const nextSteps = currentSteps.filter((s) => s.id !== stepId);
+
+  return await updateDoc(todoRef, {
+    steps: nextSteps,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function addGroup(name: string, type: "todo" | "wishlist", uid: string) {
   const groupsRef = collection(db, "groups");
   return await addDoc(groupsRef, {
