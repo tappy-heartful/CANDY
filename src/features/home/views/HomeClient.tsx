@@ -50,7 +50,10 @@ export default function HomeClient() {
         getPartnerData(user.uid)
       ]).then(([todoData, wishData, partner]) => {
         setTodos(todoData.filter((t) => !t.isCompleted).slice(0, 5));
-        setWishlist(wishData.slice(0, 3));
+        const filteredWishlist = wishData
+          .filter((w) => !w.isAchieved)
+          .sort((a, b) => (b.urgency ?? 50) - (a.urgency ?? 50));
+        setWishlist(filteredWishlist.slice(0, 3));
         setPartnerData(partner);
         setLoading(false);
       });

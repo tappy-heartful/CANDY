@@ -1,5 +1,49 @@
 .wishHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.addGroupBtn {
+  background: #f3e5f5;
+  border: none;
+  color: #9B7CC3;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.addGroupBtn:active {
+  transform: scale(0.95);
+}
+
+.filterTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #9B7CC3;
+  background: none;
+  color: #9B7CC3;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.active {
+  background: #9B7CC3;
+  color: white;
 }
 
 .inputSection {
@@ -19,6 +63,45 @@
   outline: none;
   font-size: 16px;
   box-sizing: border-box;
+  background: white;
+}
+
+.groupSelect {
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #A0E7D2;
+  margin-bottom: 12px;
+  font-size: 16px;
+  background: white;
+  min-height: 48px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.urgencyRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.urgencyLabel {
+  font-size: 13px;
+  font-weight: 900;
+  color: #9B7CC3;
+}
+
+.urgencySlider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #ddd;
+  outline: none;
+  accent-color: #9B7CC3;
+  cursor: pointer;
 }
 
 .btnGroup {
@@ -37,10 +120,31 @@
   transition: transform 0.1s;
 }
 
-.btnAdd:active { transform: scale(0.95); }
+.btnAdd:active {
+  transform: scale(0.95);
+}
 
-.btnPersonal { background: #F7A8C4; }
-.btnCouple { background: #9B7CC3; }
+.btnPersonal {
+  background: #F7A8C4;
+}
+
+.btnCouple {
+  background: #9B7CC3;
+}
+
+.groupBlock {
+  margin-top: 10px;
+  margin-bottom: 18px;
+}
+
+.groupTitle {
+  font-weight: 900;
+  color: #444;
+  font-size: 14px;
+  margin: 12px 0 10px;
+  padding-left: 10px;
+  border-left: 5px solid #A0E7D2;
+}
 
 .wishList {
   display: grid;
@@ -52,16 +156,58 @@
   background: white;
   padding: 16px;
   border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   position: relative;
   border: 2px solid #fdf2f8;
   transition: all 0.2s;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .wishCard:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.cardTitle {
+  font-weight: 900;
+  color: #444;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.deleteWishlistBtn {
+  background: none;
+  border: none;
+  color: #c5a9df;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  margin-top: -2px;
+  margin-right: -2px;
+  flex-shrink: 0;
+}
+
+.deleteWishlistBtn:hover {
+  background: #fdf2f8;
+  color: #F7A8C4;
 }
 
 .achieved {
@@ -76,14 +222,11 @@
   top: 8px;
   right: 8px;
   font-size: 14px;
+  pointer-events: none;
 }
 
-.cardTitle {
-  font-weight: 900;
-  color: #444;
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.4;
+.achieved .deleteWishlistBtn {
+  margin-right: 16px; /* Avoid overlapping the ✨ emoji */
 }
 
 .cardMeta {
@@ -92,6 +235,33 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
+}
+
+.metaRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.groupBadge {
+  background: #f3e5f5;
+  color: #9B7CC3;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.urgencyBadge {
+  font-size: 10px;
+  font-weight: 900;
+  color: #777;
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
 }
 
 .badge {
@@ -101,10 +271,24 @@
   font-size: 9px;
   color: white;
   width: fit-content;
+  font-weight: 900;
 }
 
-.badgePersonal { background: #F7A8C4; }
-.badgeCouple { background: #9B7CC3; }
+.badgePersonal {
+  background: #F7A8C4;
+}
+
+.badgeCouple {
+  background: #9B7CC3;
+}
+
+.badgeMe {
+  background: #F7A8C4;
+}
+
+.badgePartner {
+  background: #A0E7D2;
+}
 
 .emptyState {
   grid-column: 1 / -1;
