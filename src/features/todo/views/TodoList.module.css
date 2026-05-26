@@ -74,7 +74,8 @@
   width: 120px;
   display: block;
   box-sizing: border-box;
-  padding: 12px;
+  height: 48px;
+  padding: 0 12px;
   border-radius: 12px;
   border: 2px solid #ddd;
   font-size: 14px;
@@ -85,11 +86,11 @@
 }
 
 .dateInput {
-  flex: 1 1 170px;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  padding: 12px;
+  height: 48px;
+  padding: 0 12px;
   border-radius: 12px;
   border: 2px solid #ddd;
   outline: none;
