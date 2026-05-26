@@ -65,7 +65,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     if (!newTodoTitle || !user) return;
     showSpinner();
     try {
-      await addTodo({
+      const docRef = await addTodo({
         title: newTodoTitle,
         type,
         uid: user.uid,
@@ -74,7 +74,23 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         dateMode: newTodoDateMode,
         date: newTodoDate || "",
       });
-      window.location.reload();
+      const newTodoItem: Todo = {
+        id: docRef.id,
+        title: newTodoTitle,
+        type,
+        uid: user.uid,
+        groupId: selectedGroupId,
+        showToPartner: type === "couple",
+        dateMode: newTodoDateMode,
+        date: newTodoDate || "",
+        isCompleted: false,
+        steps: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setTodos((prev) => [newTodoItem, ...prev]);
+      setNewTodoTitle("");
+      setNewTodoDate("");
     } catch (e) {
       showDialog("追加に失敗しました");
     } finally {
@@ -169,8 +185,16 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     const name = await showDialog("新しいグループ名を入力してください", false, true) as string;
     if (!name || !user) return;
     try {
-      await addGroup(name, "todo", user.uid);
-      window.location.reload();
+      const docRef = await addGroup(name, "todo", user.uid);
+      const newGroup = {
+        id: docRef.id,
+        name,
+        type: "todo" as const,
+        uid: user.uid,
+        createdAt: Date.now(),
+      };
+      setGroups((prev) => [...prev, newGroup]);
+      setSelectedGroupId(docRef.id);
     } catch (e) {
       showDialog("グループ追加に失敗しました");
     }

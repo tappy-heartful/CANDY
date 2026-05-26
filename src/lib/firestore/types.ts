@@ -58,6 +58,7 @@ export interface Wishlist {
   uid: string;
   createdAt: number;
   updatedAt: number;
+  urgency?: number;
 }
 
 export interface Group {
