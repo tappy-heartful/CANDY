@@ -171,6 +171,15 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
+.nonEditable {
+  cursor: default;
+}
+
+.nonEditable:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
 .cardHeader {
   display: flex;
   justify-content: space-between;

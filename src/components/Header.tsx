@@ -129,7 +129,7 @@ export default function Header() {
           <div className={styles.breadcrumbContainer}>
             <div className={styles.breadcrumbList}>
               <Link href="/home" className={styles.breadcrumbItem}>
-                <i className="fa-solid fa-house"></i>
+                <i className={`fa-solid fa-house ${styles.homeIcon}`}></i>ホーム
               </Link>
               {items.map((item, index) => (
                 <Fragment key={index}>

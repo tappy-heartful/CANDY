@@ -8,10 +8,28 @@
   text-align: center;
 }
 
+.profileRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.heartConnector {
+  font-size: 24px;
+  color: #ff6b81;
+  animation: heartbeat 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes heartbeat {
+  from { transform: scale(1); }
+  to { transform: scale(1.2); }
+}
+
 .profileImgContainer {
   position: relative;
   display: inline-block;
-  margin-bottom: 15px;
 }
 
 .profileImg {
@@ -21,6 +39,11 @@
   border: 4px solid #A0E7D2;
   box-shadow: 0 4px 15px rgba(160, 231, 210, 0.4);
   object-fit: cover;
+}
+
+.partnerImg {
+  border-color: #9B7CC3;
+  box-shadow: 0 4px 15px rgba(155, 124, 195, 0.4);
 }
 
 .editBadge {
@@ -63,6 +86,23 @@
   width: 100%;
   height: 4px;
   background: rgba(247, 168, 196, 0.2);
+  border-radius: 2px;
+}
+
+.partnerNickname {
+  color: #9B7CC3;
+  position: relative;
+  font-weight: bold;
+}
+
+.partnerNickname::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(155, 124, 195, 0.2);
   border-radius: 2px;
 }
 
