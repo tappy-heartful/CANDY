@@ -6,6 +6,7 @@ import { auth, db } from "@/src/lib/firebase";
 import { signInWithCustomToken } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { hideSpinner, setSession, showDialog, LOADING_MESSAGES } from "@/src/lib/functions";
+import styles from "./callback.module.css";
 
 function CallbackContent() {
   const router = useRouter();
@@ -110,41 +111,16 @@ function CallbackContent() {
   }
 
   return (
-    <div className="callback-loading">
-      <style jsx>{`
-        .callback-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          background-color: #fff;
-        }
-        .candy-icon {
-          font-size: 64px;
-          color: #F7A8C4;
-          margin-bottom: 24px;
-          animation: bounce 1s infinite alternate;
-        }
-        @keyframes bounce {
-          from { transform: translateY(0); }
-          to { transform: translateY(-20px); }
-        }
-        .loading-message {
-          font-size: 18px;
-          color: #9B7CC3;
-          font-weight: bold;
-        }
-      `}</style>
-      <div className="candy-icon">🍬</div>
-      <p className="loading-message">{message}</p>
+    <div className={styles.callbackLoading}>
+      <div className={styles.candyIcon}>🍬</div>
+      <p className={styles.loadingMessage}>{message}</p>
     </div>
   );
 }
 
 export default function CallbackPage() {
   return (
-    <Suspense fallback={<div className="loading-screen">読み込み中...</div>}>
+    <Suspense fallback={<div className={styles.loadingScreen}>読み込み中...</div>}>
       <CallbackContent />
     </Suspense>
   );

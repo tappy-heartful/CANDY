@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import styles from "./CommonDialog.module.css";
 
 export interface DialogOptions {
   message: string;
@@ -21,9 +22,9 @@ let setter: (options: DialogOptions | null) => void;
  * @param promptPlaceholder 入力フィールドのプレースホルダー
  */
 export const showDialog = (
-  message: string, 
-  isOKOnly = false, 
-  isPrompt = false, 
+  message: string,
+  isOKOnly = false,
+  isPrompt = false,
   promptPlaceholder = ""
 ): Promise<boolean | string | null> => {
   return new Promise((resolve) => {
@@ -64,102 +65,26 @@ export default function CommonDialog() {
   };
 
   return (
-    <div className="dialog-overlay">
-      <style jsx>{`
-        .dialog-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10000;
-        }
-
-        .dialog-box {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
-          width: 90%;
-          max-width: 400px;
-          min-width: 280px;
-          text-align: center;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-          border: 3px solid #9B7CC3; /* Purple outline */
-        }
-
-        #dialog-message {
-          font-size: 16px;
-          line-height: 1.6;
-          margin-bottom: 20px;
-          color: #333;
-          white-space: pre-wrap;
-          word-break: break-all;
-          font-weight: 500;
-        }
-
-        .dialog-buttons {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-        }
-
-        .dialog-btn {
-          padding: 10px 24px;
-          border-radius: 20px;
-          border: none;
-          font-size: 14px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: transform 0.1s, opacity 0.2s;
-        }
-
-        .dialog-btn:active {
-          transform: scale(0.95);
-        }
-
-        .btn-ok {
-          background-color: #F7A8C4; /* Pink */
-          color: white;
-        }
-
-        .btn-cancel {
-          background-color: #E0E0E0;
-          color: #666;
-        }
-
-        .prompt-input {
-          width: 100%;
-          padding: 10px;
-          border: 2px solid #A0E7D2; /* Mint */
-          border-radius: 8px;
-          margin-bottom: 20px;
-          font-size: 16px;
-          outline: none;
-        }
-      `}</style>
-      <div className="dialog-box">
-        <div id="dialog-message">{options.message}</div>
+    <div className={styles.dialogOverlay}>
+      <div className={styles.dialogBox}>
+        <div className={styles.message}>{options.message}</div>
         {options.isPrompt && (
           <input
             type="text"
-            className="prompt-input"
+            className={styles.promptInput}
             placeholder={options.promptPlaceholder}
             value={promptValue}
             onChange={(e) => setPromptValue(e.target.value)}
             autoFocus
           />
         )}
-        <div className="dialog-buttons">
+        <div className={styles.dialogButtons}>
           {!options.isOKOnly && (
-            <button className="dialog-btn btn-cancel" onClick={() => handleClose(false)}>
+            <button className={`${styles.dialogBtn} ${styles.btnCancel}`} onClick={() => handleClose(false)}>
               キャンセル
             </button>
           )}
-          <button className="dialog-btn btn-ok" onClick={() => handleClose(true)}>
+          <button className={`${styles.dialogBtn} ${styles.btnOk}`} onClick={() => handleClose(true)}>
             OK
           </button>
         </div>

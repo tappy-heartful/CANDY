@@ -1,0 +1,19 @@
+.container {
+  text-align: center;
+  padding-top: 100px;
+}
+
+.title {
+  color: #9B7CC3;
+  margin-bottom: 20px;
+}
+
+.button {
+  padding: 12px 24px;
+  background-color: #F7A8C4;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-weight: 900;
+  cursor: pointer;
+}

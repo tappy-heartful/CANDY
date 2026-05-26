@@ -122,6 +122,13 @@
 - **パンくずリスト**: 各ページの `useEffect` 内で `setBreadcrumbs` を呼び出し、適切なナビゲーションを表示する。
 - **未設定状態の案内**: データが存在しない場合は、単に空にするのではなく、状況を説明するメッセージやアクションを促す表示を行う。
 
+### 4.3. スタイル規約 (CSS Modules)
+
+- **原則**: 各画面（`src/features/**/views/*` および `src/app/**/page.tsx`）のデザインは、必ず同階層の `*.module.css` に分離して管理する。
+- **コンポーネントも同様**: `src/components/**` や `src/features/**/components/**` のUIも、可能な限り `*.module.css` を使用する。
+- **禁止**: `style jsx`（styled-jsx）および `style={{ ... }}` の多用は禁止（例外は、どうしても動的に変える必要がある最小限のインライン値のみ）。
+- **globals.css の役割**: `globals.css` はレイアウトの土台・共通トークン・共通クラス（`page-container`, `content-card` 等）に限定し、画面固有の装飾は置かない。
+
 ---
 
 ## 5. 開発プロセスと品質管理

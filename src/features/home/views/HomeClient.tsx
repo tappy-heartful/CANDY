@@ -49,7 +49,7 @@ export default function HomeClient() {
         getWishlist(user.uid),
         getPartnerData(user.uid)
       ]).then(([todoData, wishData, partner]) => {
-        setTodos(todoData.slice(0, 3));
+        setTodos(todoData.filter((t) => !t.isCompleted).slice(0, 5));
         setWishlist(wishData.slice(0, 3));
         setPartnerData(partner);
         setLoading(false);

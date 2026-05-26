@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getSession, removeSession } from "@/src/lib/functions";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
+import styles from "./Footer.module.css";
 
 export default function Footer() {
   const pathname = usePathname();
@@ -44,83 +45,21 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="site-footer">
-        <div className="copyright">&copy; 2026 CANDY Project</div>
-        <div className="developed-by">Made with 💖 for Two</div>
-
-        <style jsx>{`
-          .site-footer {
-            padding: 40px 20px;
-            text-align: center;
-            background-color: #fdf2f8;
-            margin-top: 50px;
-            border-top: 2px dashed #F7A8C4;
-          }
-          .copyright {
-            color: #9B7CC3;
-            font-weight: bold;
-            font-size: 14px;
-          }
-          .developed-by {
-            color: #F7A8C4;
-            font-size: 12px;
-            margin-top: 8px;
-          }
-          .first-login-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(155, 124, 195, 0.9);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s ease;
-          }
-          .first-login-overlay.show {
-            opacity: 1;
-            visibility: visible;
-          }
-          .first-login-content {
-            text-align: center;
-            transform: scale(0.8);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          }
-          .first-login-overlay.show .first-login-content {
-            transform: scale(1);
-          }
-          .user-icon {
-            width: 120px; height: 120px;
-            border-radius: 50%;
-            border: 6px solid white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-          }
-          .welcome-message {
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            line-height: 1.4;
-          }
-          .welcome-message span {
-            font-size: 32px;
-            color: #A0E7D2;
-          }
-        `}</style>
+      <footer className={styles.siteFooter}>
+        <div className={styles.copyright}>&copy; 2026 CANDY Project</div>
+        <div className={styles.developedBy}>Made with 💖 for Two</div>
       </footer>
 
       {showOverlay && (
         <div
-          className={`first-login-overlay ${isAnimating ? "show" : ""}`}
+          className={`${styles.firstLoginOverlay} ${isAnimating ? styles.show : ""}`}
           onClick={manualClose}
         >
-          <div className="first-login-content">
-            <img className="user-icon" src={pictureUrl} alt="User Icon" />
-            <p className="welcome-message">
+          <div className={styles.firstLoginContent}>
+            <img className={styles.userIcon} src={pictureUrl} alt="User Icon" />
+            <p className={styles.welcomeMessage}>
               おかえりなさい！<br />
-              <span>{displayName}</span>さん 🍬
+              <span className={styles.welcomeName}>{displayName}</span>さん 🍬
             </p>
           </div>
         </div>

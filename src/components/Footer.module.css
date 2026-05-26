@@ -1,0 +1,73 @@
+.siteFooter {
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #fdf2f8;
+  margin-top: 50px;
+  border-top: 2px dashed #F7A8C4;
+}
+
+.copyright {
+  color: #9B7CC3;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.developedBy {
+  color: #F7A8C4;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.firstLoginOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(155, 124, 195, 0.9);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.5s ease;
+}
+
+.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.firstLoginContent {
+  text-align: center;
+  transform: scale(0.8);
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.show .firstLoginContent {
+  transform: scale(1);
+}
+
+.userIcon {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 6px solid white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+  object-fit: cover;
+}
+
+.welcomeMessage {
+  color: white;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.welcomeName {
+  font-size: 32px;
+  color: #A0E7D2;
+}

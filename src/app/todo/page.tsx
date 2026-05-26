@@ -7,6 +7,7 @@ import { getTodos as getTodosAction, getGroups } from "@/src/features/todo/api/t
 import TodoListClient from "@/src/features/todo/views/TodoListClient";
 import AuthGuard from "@/src/components/AuthGuard";
 import { Todo, Group } from "@/src/lib/firestore/types";
+import styles from "./todo.module.css";
 
 export default function TodoPage() {
   const { user, loading } = useAuth();
@@ -36,22 +37,8 @@ export default function TodoPage() {
 
   if (loading || fetching) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <div className="spinner"></div>
-        <style jsx>{`
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #A0E7D2;
-            border-top: 4px solid #F7A8C4;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className={styles.wrapper}>
+        <div className={styles.spinner}></div>
       </div>
     );
   }
