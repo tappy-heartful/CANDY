@@ -3,6 +3,7 @@
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
+import styles from "./AuthGuard.module.css";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, userData, loading } = useAuth();
@@ -35,27 +36,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#fff'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #A0E7D2',
-          borderTop: '4px solid #F7A8C4',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className={styles.loadingWrapper}>
+        <div className={styles.spinner}></div>
       </div>
     );
   }

@@ -1,0 +1,93 @@
+.editCard {
+  background: white;
+  border-radius: 30px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(155, 124, 195, 0.1);
+  border: 3px solid #f3e5f5;
+  margin-bottom: 20px;
+}
+
+.userIconContainer {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.userIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid #A0E7D2;
+  box-shadow: 0 4px 15px rgba(160, 231, 210, 0.3);
+  object-fit: cover;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.inputLabel {
+  display: block;
+  text-align: left;
+  font-weight: 900;
+  color: #9B7CC3;
+  margin-bottom: 8px;
+  margin-left: 5px;
+  font-size: 14px;
+}
+
+.appInput,
+.appSelect,
+.appTextarea {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 2px solid #F7A8C4;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+.appInput:focus,
+.appSelect:focus,
+.appTextarea:focus {
+  border-color: #9B7CC3;
+}
+
+.appTextarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.saveBtn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 30px;
+  background-color: #F7A8C4;
+  color: white;
+  border: none;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(247, 168, 196, 0.4);
+  margin-top: 10px;
+}
+
+.saveBtn:hover {
+  transform: translateY(-2px);
+  background-color: #f896b8;
+}
+
+.saveBtn:active {
+  transform: translateY(0);
+}
+
+.note {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+  text-align: center;
+}

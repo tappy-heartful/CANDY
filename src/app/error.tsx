@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import styles from "./error.module.css";
 
 export default function Error({
   error,
@@ -14,19 +15,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="page-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
-      <h2 style={{ color: '#9B7CC3', marginBottom: '20px' }}>申し訳ありません。エラーが発生しました。</h2>
+    <div className={`page-container ${styles.container}`}>
+      <h2 className={styles.title}>申し訳ありません。エラーが発生しました。</h2>
       <button
         onClick={() => reset()}
-        style={{
-          padding: '12px 24px',
-          backgroundColor: '#F7A8C4',
-          color: 'white',
-          border: 'none',
-          borderRadius: '25px',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
+        className={styles.button}
       >
         再試行する
       </button>

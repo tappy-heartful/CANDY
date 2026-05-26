@@ -1,0 +1,38 @@
+.callbackLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #fff;
+}
+
+.candyIcon {
+  font-size: 64px;
+  color: #F7A8C4;
+  margin-bottom: 24px;
+  animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-20px); }
+}
+
+.loadingMessage {
+  font-size: 18px;
+  color: #9B7CC3;
+  font-weight: 900;
+  margin: 0;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.loadingScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: #9B7CC3;
+  font-weight: 900;
+}

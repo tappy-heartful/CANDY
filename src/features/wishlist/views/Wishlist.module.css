@@ -1,0 +1,120 @@
+.wishHeader {
+  margin-bottom: 20px;
+}
+
+.inputSection {
+  background: #eff6ff;
+  padding: 20px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  border: 2px dashed #A0E7D2;
+}
+
+.wishInput {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #A0E7D2;
+  margin-bottom: 12px;
+  outline: none;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.btnGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.btnAdd {
+  flex: 1;
+  padding: 12px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 900;
+  cursor: pointer;
+  color: white;
+  transition: transform 0.1s;
+}
+
+.btnAdd:active { transform: scale(0.95); }
+
+.btnPersonal { background: #F7A8C4; }
+.btnCouple { background: #9B7CC3; }
+
+.wishList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wishCard {
+  background: white;
+  padding: 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  position: relative;
+  border: 2px solid #fdf2f8;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.wishCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.achieved {
+  background: #f0fdf4;
+  border-color: #A0E7D2;
+  opacity: 0.8;
+}
+
+.achieved::after {
+  content: "✨";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+}
+
+.cardTitle {
+  font-weight: 900;
+  color: #444;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cardMeta {
+  font-size: 10px;
+  color: #999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  color: white;
+  width: fit-content;
+}
+
+.badgePersonal { background: #F7A8C4; }
+.badgeCouple { background: #9B7CC3; }
+
+.emptyState {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #ccc;
+  padding: 20px;
+}
+
+@media (max-width: 430px) {
+  .wishList {
+    grid-template-columns: 1fr;
+  }
+}
