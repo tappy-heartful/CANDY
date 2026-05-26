@@ -33,14 +33,26 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
     if (!newTitle || !user) return;
     showSpinner();
     try {
-      await addWishlist({
+      const docRef = await addWishlist({
         title: newTitle,
         type,
         uid: user.uid,
         groupId: selectedGroupId,
         showToPartner: true,
       });
-      window.location.reload();
+      const newItem: Wishlist = {
+        id: docRef.id,
+        title: newTitle,
+        type,
+        uid: user.uid,
+        groupId: selectedGroupId,
+        showToPartner: true,
+        isAchieved: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setItems((prev) => [newItem, ...prev]);
+      setNewTitle("");
     } catch (e) {
       showDialog("追加に失敗しました");
     } finally {
