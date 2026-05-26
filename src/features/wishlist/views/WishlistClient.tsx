@@ -8,6 +8,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./Wishlist.module.css";
+import EditWishlistModal from "@/src/features/wishlist/components/EditWishlistModal";
 
 interface WishlistClientProps {
   initialWishlist: Wishlist[];
@@ -22,6 +23,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   const [newUrgency, setNewUrgency] = useState<number>(50);
   const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || "");
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
+  const [selectedEditItem, setSelectedEditItem] = useState<Wishlist | null>(null);
 
   const [filterState, setFilterState] = useState({
     couple: true,
@@ -47,6 +49,22 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       setItems(items.map(i => i.id === item.id ? { ...i, isAchieved: !i.isAchieved } : i));
     } catch (e) {
       showDialog("更新に失敗しました");
+    }
+  };
+
+  const handleSaveEdit = async (updatedFields: Partial<Wishlist>) => {
+    if (!selectedEditItem) return;
+    showSpinner();
+    try {
+      await updateWishlist(selectedEditItem.id, updatedFields);
+      setItems((prev) =>
+        prev.map((i) => (i.id === selectedEditItem.id ? { ...i, ...updatedFields } : i))
+      );
+      setSelectedEditItem(null);
+    } catch (e) {
+      showDialog("更新に失敗しました");
+    } finally {
+      hideSpinner();
     }
   };
 
@@ -193,7 +211,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
                   <div
                     key={item.id}
                     className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""}`}
-                    onClick={() => handleToggleAchieved(item)}
+                    onClick={() => setSelectedEditItem(item)}
                   >
                     <div className={styles.cardHeader}>
                       <div className={styles.cardTitle}>{item.title}</div>
@@ -332,6 +350,15 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
         </div>
         {renderWishlist(visibleWishlist.filter((w) => w.isAchieved))}
       </div>
+
+      {selectedEditItem && (
+        <EditWishlistModal
+          wishlist={selectedEditItem}
+          groups={groups}
+          onClose={() => setSelectedEditItem(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }
