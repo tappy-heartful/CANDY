@@ -63,19 +63,20 @@
 
 .dateRow {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
   margin-bottom: 12px;
 }
 
 .dateModeSelect {
-  width: 120px;
+  width: 70px;
+  flex-shrink: 0;
   display: block;
   box-sizing: border-box;
   height: 48px;
-  padding: 0 12px;
+  padding: 0 8px;
   border-radius: 12px;
   border: 2px solid #ddd;
   font-size: 14px;
@@ -83,15 +84,18 @@
   min-height: 48px;
   -webkit-appearance: none;
   appearance: none;
+  text-align: center;
 }
 
 .dateInput {
+  flex: 1;
+  min-width: 0;
   height: 48px;
-  padding: 0 12px;
+  padding: 0 8px;
   border-radius: 12px;
   border: 2px solid #ddd;
   outline: none;
-  font-size: 16px;
+  font-size: 15px;
   background: white;
   box-sizing: border-box;
   min-height: 48px;
@@ -181,7 +185,7 @@
 .todoCheckbox {
   width: 28px;
   height: 28px;
-  margin-right: 15px;
+  margin-right: 10px;
   accent-color: #9B7CC3;
   cursor: pointer;
   margin-top: 2px;
@@ -189,6 +193,7 @@
 
 .todoInfo {
   flex: 1;
+  min-width: 0;
 }
 
 .todoTitle {
@@ -293,13 +298,65 @@
   white-space: nowrap;
   min-height: 44px;
 }
+.deleteTodoBtn {
+  background: none;
+  border: none;
+  color: #c5a9df;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+  align-self: flex-start;
+}
 
-@media (max-width: 430px) {
-  .dateRow {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .dateModeSelect {
-    width: 100%;
-  }
+.deleteTodoBtn:hover {
+  background: #fdf2f8;
+  color: #F7A8C4;
+}
+
+.deleteStepBtn {
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.deleteStepBtn:hover {
+  background: #ffebee;
+  color: #ef5350;
+}
+
+.clearDateBtn {
+  background: #fdf2f8;
+  border: 1px solid #F7A8C4;
+  color: #F7A8C4;
+  height: 48px;
+  width: 40px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-height: 48px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.clearDateBtn:hover {
+  background: #F7A8C4;
+  color: white;
 }
