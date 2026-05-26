@@ -137,14 +137,12 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   };
 
   const toggleFilter = (key: "couple" | "me" | "partner") => {
-    setFilterState((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (!next.couple && !next.me && !next.partner) {
-        showDialog("いずれかを選択してください", true);
-        return prev;
-      }
-      return next;
-    });
+    const next = { ...filterState, [key]: !filterState[key] };
+    if (!next.couple && !next.me && !next.partner) {
+      showDialog("いずれかを選択してください", true);
+      return;
+    }
+    setFilterState(next);
   };
 
   const visibleWishlist = useMemo(() => {

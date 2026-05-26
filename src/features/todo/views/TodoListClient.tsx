@@ -225,14 +225,12 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
   const partnerLabel = partnerData?.nickname || "相手";
 
   const toggleFilter = (key: "couple" | "me" | "partner") => {
-    setFilterState((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (!next.couple && !next.me && !next.partner) {
-        showDialog("いずれかを選択してください", true);
-        return prev;
-      }
-      return next;
-    });
+    const next = { ...filterState, [key]: !filterState[key] };
+    if (!next.couple && !next.me && !next.partner) {
+      showDialog("いずれかを選択してください", true);
+      return;
+    }
+    setFilterState(next);
   };
 
   const renderTodoList = (list: Todo[]) => {
