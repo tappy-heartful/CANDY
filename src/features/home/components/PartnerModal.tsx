@@ -28,6 +28,10 @@ export default function PartnerModal({ partnerData, onClose }: PartnerModalProps
           <InfoItem label="服用中の薬" value={partnerData?.medications} />
           <InfoItem label="既往歴・持病" value={partnerData?.medicalHistory} />
           <InfoItem label="苦手な食べ物" value={partnerData?.dislikedFoods} />
+          <InfoItem label="得意なこと" value={partnerData?.strengths} />
+          <InfoItem label="苦手なこと" value={partnerData?.weaknesses} />
+          <InfoItem label="好きな場所" value={partnerData?.favoritePlaces} />
+          <InfoItem label="苦手な場所" value={partnerData?.dislikedPlaces} />
         </div>
       </div>
     </div>

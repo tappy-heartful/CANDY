@@ -11,6 +11,10 @@ export interface User {
   medications?: string;
   medicalHistory?: string;
   dislikedFoods?: string;
+  strengths?: string;
+  weaknesses?: string;
+  favoritePlaces?: string;
+  dislikedPlaces?: string;
   agreedAt?: number;
   lastLoginAt?: number;
   createdAt?: number;

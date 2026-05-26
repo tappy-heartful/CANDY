@@ -22,6 +22,10 @@ export default function UserEditClient() {
     medications: "",
     medicalHistory: "",
     dislikedFoods: "",
+    strengths: "",
+    weaknesses: "",
+    favoritePlaces: "",
+    dislikedPlaces: "",
   });
 
   useEffect(() => {
@@ -40,6 +44,10 @@ export default function UserEditClient() {
         medications: userData.medications || "",
         medicalHistory: userData.medicalHistory || "",
         dislikedFoods: userData.dislikedFoods || "",
+        strengths: userData.strengths || "",
+        weaknesses: userData.weaknesses || "",
+        favoritePlaces: userData.favoritePlaces || "",
+        dislikedPlaces: userData.dislikedPlaces || "",
       });
     }
   }, [userData]);
@@ -311,6 +319,50 @@ export default function UserEditClient() {
             className="app-textarea"
             placeholder="例: パクチー、レバー"
             value={formData.dislikedFoods}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="input-label">得意なこと</label>
+          <textarea
+            name="strengths"
+            className="app-textarea"
+            placeholder="例: 料理、段取り、聞き上手"
+            value={formData.strengths}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="input-label">苦手なこと</label>
+          <textarea
+            name="weaknesses"
+            className="app-textarea"
+            placeholder="例: 朝起きること、細かい作業"
+            value={formData.weaknesses}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="input-label">好きな場所</label>
+          <textarea
+            name="favoritePlaces"
+            className="app-textarea"
+            placeholder="例: 海、カフェ、温泉"
+            value={formData.favoritePlaces}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="input-label">苦手な場所</label>
+          <textarea
+            name="dislikedPlaces"
+            className="app-textarea"
+            placeholder="例: 人混み、騒がしい場所"
+            value={formData.dislikedPlaces}
             onChange={handleChange}
           />
         </div>
