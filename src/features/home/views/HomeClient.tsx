@@ -81,54 +81,44 @@ export default function HomeClient() {
         )}
 
         <div className={styles.welcomeSection}>
-          <div className={styles.profileImgContainer}>
-            <img src={userData?.pictureUrl || "/icon.png"} alt="Profile" className={styles.profileImg} />
-            <Link href="/user/edit" className={styles.editBadge}>
-              <i className="fa-solid fa-pen"></i>
-            </Link>
+          <div className={styles.profileRow}>
+            {/* My profile */}
+            <div className={styles.profileImgContainer}>
+              <img src={userData?.pictureUrl || "/icon.png"} alt="Profile" className={styles.profileImg} />
+              <Link href="/user/edit" className={styles.editBadge}>
+                <i className="fa-solid fa-pen"></i>
+              </Link>
+            </div>
+            
+            {/* Heart connector */}
+            <div className={styles.heartConnector}>
+              <i className="fa-solid fa-heart"></i>
+            </div>
+
+            {/* Partner profile */}
+            <div className={styles.profileImgContainer}>
+              <img src={partnerData?.pictureUrl || "/icon.png"} alt="Partner Profile" className={`${styles.profileImg} ${styles.partnerImg}`} />
+            </div>
           </div>
           <div className={styles.greeting}>
-            Hi, <span className={styles.nickname}>{userData?.nickname || userData?.displayName}</span>! 🍭
+            Hi, <span className={styles.nickname}>{userData?.nickname || userData?.displayName}</span> &{" "}
+            <span className={styles.partnerNickname}>{partnerData?.nickname || "パートナー"}</span>! 🍭
           </div>
         </div>
 
         <div className={styles.menuGrid}>
-          <Link href="/todo" className={`${styles.menuCard} ${styles.cardTodo}`}>
-            <span className={styles.cardIcon}><i className="fa-solid fa-list-check"></i></span>
-            <span className={styles.cardTitle}>TODO</span>
-          </Link>
           <Link href="/wishlist" className={`${styles.menuCard} ${styles.cardWish}`}>
             <span className={styles.cardIcon}><i className="fa-solid fa-gift"></i></span>
             <span className={styles.cardTitle}>Wishlist</span>
+          </Link>
+          <Link href="/todo" className={`${styles.menuCard} ${styles.cardTodo}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-list-check"></i></span>
+            <span className={styles.cardTitle}>TODO</span>
           </Link>
           <button className={`${styles.menuCard} ${styles.cardPartner}`} onClick={() => setShowPartnerModal(true)}>
             <span className={styles.cardIcon}><i className="fa-solid fa-heart-pulse"></i></span>
             <span className={styles.cardTitle}>パートナーの情報を見る</span>
           </button>
-        </div>
-
-        <div className="content-card">
-          <div className="card-title-main">
-            <i className="fa-solid fa-list-check"></i> 直近のTODO
-          </div>
-          <div className={styles.previewList}>
-            {loading ? (
-              <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : todos.length > 0 ? (
-              todos.map(t => (
-                <div key={t.id} className={`${styles.previewItem} ${styles.previewItemTodo}`}>
-                  <span className={`${styles.itemBadge} ${t.type === 'couple' ? styles.badgeCouple : styles.badgePersonal}`}>
-                    {t.type === 'couple' ? '2人' : '自分'}
-                  </span>
-                  <span className={styles.itemText}>{t.title}</span>
-                  {t.isCompleted && <i className="fa-solid fa-check" style={{color: '#A0E7D2'}}></i>}
-                </div>
-              ))
-            ) : (
-              <div className={styles.emptyMsg}>TODOはありません</div>
-            )}
-          </div>
-          <Link href="/todo" className={`${styles.viewAllLink} ${styles.viewAllTodo}`}>すべて見る ＞</Link>
         </div>
 
         <div className="content-card">
@@ -153,6 +143,30 @@ export default function HomeClient() {
             )}
           </div>
           <Link href="/wishlist" className={`${styles.viewAllLink} ${styles.viewAllWish}`}>すべて見る ＞</Link>
+        </div>
+
+        <div className="content-card">
+          <div className="card-title-main">
+            <i className="fa-solid fa-list-check"></i> 直近のTODO
+          </div>
+          <div className={styles.previewList}>
+            {loading ? (
+              <div className={styles.emptyMsg}>読み込み中...</div>
+            ) : todos.length > 0 ? (
+              todos.map(t => (
+                <div key={t.id} className={`${styles.previewItem} ${styles.previewItemTodo}`}>
+                  <span className={`${styles.itemBadge} ${t.type === 'couple' ? styles.badgeCouple : styles.badgePersonal}`}>
+                    {t.type === 'couple' ? '2人' : '自分'}
+                  </span>
+                  <span className={styles.itemText}>{t.title}</span>
+                  {t.isCompleted && <i className="fa-solid fa-check" style={{color: '#A0E7D2'}}></i>}
+                </div>
+              ))
+            ) : (
+              <div className={styles.emptyMsg}>TODOはありません</div>
+            )}
+          </div>
+          <Link href="/todo" className={`${styles.viewAllLink} ${styles.viewAllTodo}`}>すべて見る ＞</Link>
         </div>
       </div>
     </AuthGuard>
