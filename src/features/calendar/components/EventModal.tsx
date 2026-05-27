@@ -118,8 +118,9 @@ export default function EventModal({
         )}
 
         <form onSubmit={handleSubmit} className={styles.modalBody}>
-          <div>
-            <label className={styles.fieldLabel} htmlFor="event-title">
+          <div className={styles.modalScrollArea}>
+            <div>
+              <label className={styles.fieldLabel} htmlFor="event-title">
               タイトル
             </label>
             <input
@@ -253,6 +254,7 @@ export default function EventModal({
                 </a>
               )}
             </div>
+          </div>
           </div>
 
           <div className={styles.modalFooter}>
