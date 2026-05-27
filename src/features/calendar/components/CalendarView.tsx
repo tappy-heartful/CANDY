@@ -51,6 +51,15 @@ export default function CalendarView({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
+  const [holidays, setHolidays] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("https://holidays-jp.github.io/api/v1/date.json")
+      .then((res) => res.json())
+      .then((data) => setHolidays(data))
+      .catch((err) => console.error("Failed to fetch holidays:", err));
+  }, []);
+
   // Fetch events and todos on mount
   useEffect(() => {
     showSpinner();
@@ -362,6 +371,7 @@ export default function CalendarView({
         {gridCells.map((cell, idx) => {
           const dateStr = `${cell.year}-${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
           const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
+          const isHoliday = !!holidays[dateStr];
 
           // Find events and todos active on this date string
           const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
@@ -416,7 +426,7 @@ export default function CalendarView({
                   className={`${styles.dayNumber} ${
                     isToday
                       ? styles.todayCircle
-                      : cellDayOfWeek === 0
+                      : (cellDayOfWeek === 0 || isHoliday)
                         ? styles.sundayNumber
                         : cellDayOfWeek === 6
                           ? styles.saturdayNumber
