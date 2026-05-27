@@ -27,6 +27,11 @@ const CLOCK_THEMES = [
   { id: "themeBerryPie", type: "analog" },
   { id: "themeOceanPearl", type: "analog" },
   { id: "themeNightOwl", type: "analog" },
+  { id: "themeRainbowPop", type: "digital" },
+  { id: "themeNeonCyber", type: "digital" },
+  { id: "themeMatchaLatte", type: "analog" },
+  { id: "themeSweetDonut", type: "analog" },
+  { id: "themeGalaxyMagic", type: "digital" },
 ];
 
 export default function HomeClient() {
@@ -239,6 +244,24 @@ export default function HomeClient() {
           ) : (
             <div className={styles.analogClock}>
               <div className={styles.analogFace}>
+                {[...Array(12)].map((_, i) => {
+                  const num = i + 1;
+                  const angle = num * 30;
+                  return (
+                    <div 
+                      key={num} 
+                      className={styles.clockNumberContainer}
+                      style={{ transform: `rotate(${angle}deg)` }}
+                    >
+                      <div 
+                        className={styles.clockNumber}
+                        style={{ transform: `rotate(${-angle}deg)` }}
+                      >
+                        {num}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div 
                   className={styles.analogHour} 
                   style={{ transform: `rotate(${(currentTime.getHours() % 12) * 30 + currentTime.getMinutes() * 0.5}deg)` }} 

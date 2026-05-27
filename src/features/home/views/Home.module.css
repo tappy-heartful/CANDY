@@ -117,6 +117,62 @@
 .themeNightOwl .analogSecond { background: #ecf0f1; }
 .themeNightOwl .analogCenter { background: #ecf0f1; }
 
+/* 11. Rainbow Pop (Digital) */
+.themeRainbowPop {
+  background: linear-gradient(135deg, #ff9a9e, #fecfef, #a1c4fd, #c2e9fb);
+  background-size: 300% 300%;
+  animation: rainbowFlow 6s ease infinite;
+  box-shadow: 0 8px 16px rgba(161, 196, 253, 0.4);
+}
+@keyframes rainbowFlow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.themeRainbowPop::before { content: "✨"; position: absolute; top: 15px; left: 20px; font-size: 24px; animation: float 3s infinite; }
+.themeRainbowPop::after { content: "🌈"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; animation: pulseHeart 2s infinite; }
+
+/* 12. Neon Cyber (Digital) */
+.themeNeonCyber {
+  background: linear-gradient(135deg, #ff007f 0%, #00f0ff 100%);
+  box-shadow: 0 8px 16px rgba(0, 240, 255, 0.4);
+  color: #fff;
+  text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff007f, 0 0 30px #ff007f;
+}
+.themeNeonCyber::before { content: "⚡️"; position: absolute; top: 15px; left: 20px; font-size: 24px; animation: pulseHeart 1.5s infinite; }
+.themeNeonCyber::after { content: "👾"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; animation: float 2.5s infinite; }
+
+/* 13. Matcha Latte (Analog) */
+.themeMatchaLatte {
+  background: linear-gradient(135deg, #c5e1a5 0%, #fff3e0 100%);
+  box-shadow: 0 8px 16px rgba(197, 225, 165, 0.3);
+}
+.themeMatchaLatte::before { content: "🍵"; position: absolute; top: 15px; left: 20px; font-size: 24px; animation: float 4s infinite; }
+.themeMatchaLatte::after { content: "🌿"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; animation: pulseHeart 3s infinite; }
+.themeMatchaLatte .analogFace { border-color: #81c784; background: #f1f8e9; }
+.themeMatchaLatte .analogHour { background: #388e3c; }
+.themeMatchaLatte .analogMinute { background: #81c784; }
+.themeMatchaLatte .analogSecond { background: #ff9800; }
+.themeMatchaLatte .analogCenter { background: #ff9800; }
+
+/* 14. Sweet Donut (Analog) */
+.themeSweetDonut {
+  background: radial-gradient(circle, #f8bbd0 20%, #ffccbc 100%);
+  box-shadow: 0 8px 16px rgba(248, 187, 208, 0.4);
+}
+.themeSweetDonut::before { content: "🍩"; position: absolute; top: 15px; left: 20px; font-size: 24px; animation: pulseHeart 2s infinite; }
+.themeSweetDonut::after { content: "🍫"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; animation: float 3s infinite reverse; }
+.themeSweetDonut .analogFace { border-color: #f48fb1; background: #fff; }
+.themeSweetDonut .analogHour { background: #ad1457; }
+.themeSweetDonut .analogMinute { background: #f06292; }
+.themeSweetDonut .analogSecond { background: #4dd0e1; }
+.themeSweetDonut .analogCenter { background: #4dd0e1; }
+
+/* 15. Galaxy Magic (Digital) */
+.themeGalaxyMagic {
+  background: linear-gradient(135deg, #311b92 0%, #6a1b9a 50%, #f50057 100%);
+  box-shadow: 0 8px 16px rgba(106, 27, 154, 0.4);
+  color: #fff;
+}
+.themeGalaxyMagic::before { content: "🔮"; position: absolute; top: 15px; left: 20px; font-size: 24px; animation: float 3.5s infinite; }
+.themeGalaxyMagic::after { content: "✨"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; animation: pulseHeart 2s infinite; }
+
 /* Analog Structure */
 .analogClock {
   display: flex;
@@ -184,6 +240,37 @@
   font-weight: 800;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
+
+/* 文字盤のスタイル */
+.clockNumberContainer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+.clockNumber {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  margin-left: -10px;
+  width: 20px;
+  text-align: center;
+  font-family: 'Fredoka One', 'Varela Round', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  color: #888;
+  z-index: 1;
+}
+
+/* テーマごとの文字盤色 */
+.themeClassicPastel .clockNumber { color: #FFB7B2; }
+.themeMacaronClock .clockNumber { color: #FF9AA2; }
+.themeBerryPie .clockNumber { color: #C38D9E; }
+.themeOceanPearl .clockNumber { color: #085078; }
+.themeNightOwl .clockNumber { color: #F39C12; }
+.themeMatchaLatte .clockNumber { color: #4CAF50; }
+.themeSweetDonut .clockNumber { color: #D81B60; }
 
 .cycleThemeBtn {
   position: absolute;
