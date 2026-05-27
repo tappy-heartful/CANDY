@@ -342,6 +342,26 @@ export default function CalendarView({
             ...dayTodos.map(t => ({ ...t, isTodo: true }))
           ];
 
+          combinedItems.sort((a, b) => {
+            // 複数日イベントを優先
+            const aMulti = a.startDate !== a.endDate ? 1 : 0;
+            const bMulti = b.startDate !== b.endDate ? 1 : 0;
+            if (aMulti !== bMulti) return bMulti - aMulti;
+            
+            // 開始日が早い順
+            const aStart = a.startDate || a.date;
+            const bStart = b.startDate || b.date;
+            if (aStart !== bStart) return aStart.localeCompare(bStart);
+            
+            // 終了日が遅い順
+            const aEnd = a.endDate || a.date;
+            const bEnd = b.endDate || b.date;
+            if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
+            
+            // それ以外はタイトル順
+            return a.title.localeCompare(b.title);
+          });
+
           const isToday =
             today.getDate() === cell.dayNum &&
             today.getMonth() === cell.month &&
