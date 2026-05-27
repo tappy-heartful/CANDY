@@ -69,7 +69,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: data.type === "couple",
+          showToPartner: true,
           dateMode: data.dateMode,
           date: data.date,
         });
@@ -79,7 +79,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: data.type === "couple",
+          showToPartner: true,
           dateMode: data.dateMode,
           date: data.date,
           isCompleted: false,
