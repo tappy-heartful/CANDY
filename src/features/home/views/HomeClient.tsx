@@ -4,22 +4,20 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getTodos } from "@/src/features/todo/api/todo-server-actions";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-server-actions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { Todo, Wishlist, User as FirestoreUser } from "@/src/lib/firestore/types";
+import { Wishlist, User as FirestoreUser } from "@/src/lib/firestore/types";
 import styles from "./Home.module.css";
-import PartnerModal from "../components/PartnerModal";
+import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [wishlist, setWishlist] = useState<Wishlist[]>([]);
+  const [recentWishlist, setRecentWishlist] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
-  const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [activeProfileModal, setActiveProfileModal] = useState<'partner' | 'me' | null>(null);
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -42,19 +40,21 @@ export default function HomeClient() {
       userData?.allergies &&
       userData?.medications &&
       userData?.medicalHistory &&
-      userData?.dislikedFoods;
+      userData?.dislikedFoods &&
+      userData?.favoriteFoods &&
+      userData?.happyThings &&
+      userData?.dislikedThings;
 
     if (user && hasRequired) {
       Promise.all([
-        getTodos(user.uid),
         getWishlist(user.uid),
         getPartnerData(user.uid)
-      ]).then(([todoData, wishData, partner]) => {
-        setTodos(todoData.filter((t) => !t.isCompleted).slice(0, 5));
-        const filteredWishlist = wishData
-          .filter((w) => !w.isAchieved)
-          .sort((a, b) => (b.urgency ?? 50) - (a.urgency ?? 50));
-        setWishlist(filteredWishlist.slice(0, 3));
+      ]).then(([wishData, partner]) => {
+        const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 5);
+        const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 5);
+        const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setRecentWishlist(combined);
         setPartnerData(partner);
         setLoading(false);
       });
@@ -64,10 +64,19 @@ export default function HomeClient() {
   return (
     <AuthGuard>
       <div className={`page-container ${styles.homeContainer}`}>
-        {showPartnerModal && (
-          <PartnerModal
-            partnerData={partnerData}
-            onClose={() => setShowPartnerModal(false)}
+        {activeProfileModal === 'partner' && (
+          <ProfileModal
+            userData={partnerData}
+            title="のプロフィール"
+            onClose={() => setActiveProfileModal(null)}
+          />
+        )}
+        {activeProfileModal === 'me' && (
+          <ProfileModal
+            userData={userData as FirestoreUser}
+            title="のプロフィール"
+            isMe={true}
+            onClose={() => setActiveProfileModal(null)}
           />
         )}
 
@@ -107,19 +116,61 @@ export default function HomeClient() {
           </div>
         </div>
 
-        <div className={styles.menuGrid}>
-          <Link href="/wishlist" className={`${styles.menuCard} ${styles.cardWish}`}>
-            <span className={styles.cardIcon}><i className="fa-solid fa-gift"></i></span>
-            <span className={styles.cardTitle}>Wishlist</span>
-          </Link>
-          <Link href="/todo" className={`${styles.menuCard} ${styles.cardTodo}`}>
-            <span className={styles.cardIcon}><i className="fa-solid fa-list-check"></i></span>
-            <span className={styles.cardTitle}>TODO</span>
-          </Link>
-          <button className={`${styles.menuCard} ${styles.cardPartner}`} onClick={() => setShowPartnerModal(true)}>
-            <span className={styles.cardIcon}><i className="fa-solid fa-heart-pulse"></i></span>
-            <span className={styles.cardTitle}>パートナーの情報を見る</span>
-          </button>
+        <div className="content-card">
+          <div className="card-title-main">
+            <i className="fa-solid fa-bell" style={{color: "#A0E7D2"}}></i> 最新のお知らせ
+          </div>
+          <div className={styles.notificationList}>
+            {loading ? (
+              <div className={styles.emptyMsg}>読み込み中...</div>
+            ) : recentWishlist.length > 0 ? (
+              (() => {
+                const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
+                let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
+                
+                recentWishlist.forEach((w) => {
+                  if (!currentGroup || currentGroup.uid !== w.uid) {
+                    if (currentGroup) grouped.push(currentGroup);
+                    currentGroup = {
+                      uid: w.uid,
+                      creatorName: w.uid === user?.uid 
+                        ? (userData?.nickname || userData?.displayName || "自分") 
+                        : (partnerData?.nickname || "パートナー"),
+                      items: [w]
+                    };
+                  } else {
+                    currentGroup.items.push(w);
+                  }
+                });
+                if (currentGroup) grouped.push(currentGroup);
+
+                return grouped.map((group, idx) => (
+                  <div key={idx} className={styles.notificationGroup}>
+                    <div className={styles.notificationHeader}>
+                      <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
+                      <span className={styles.notificationText}>
+                        {group.creatorName}がWishlistを追加しました
+                      </span>
+                    </div>
+                    <div className={styles.notificationItems}>
+                      {group.items.map(item => {
+                        const dateObj = item.createdAt ? new Date(item.createdAt) : new Date();
+                        const dateStr = `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+                        return (
+                          <Link href="/wishlist" key={item.id} className={styles.notificationSubItem}>
+                            <span className={styles.notificationTime}>{dateStr}</span>
+                            <span className={styles.notificationTitle}>{item.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()
+            ) : (
+              <div className={styles.emptyMsg}>最近の追加はありません</div>
+            )}
+          </div>
         </div>
 
         {user && (
@@ -132,52 +183,23 @@ export default function HomeClient() {
           />
         )}
 
-        <div className="content-card">
-          <div className="card-title-main">
-            <i className="fa-solid fa-gift"></i> 直近のWishlist
-          </div>
-          <div className={styles.previewList}>
-            {loading ? (
-              <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : wishlist.length > 0 ? (
-              wishlist.map(w => (
-                <div key={w.id} className={`${styles.previewItem} ${styles.previewItemWish}`}>
-                  <span className={`${styles.itemBadge} ${w.type === 'couple' ? styles.badgeCouple : styles.badgePersonal}`}>
-                    {w.type === 'couple' ? '2人' : '自分'}
-                  </span>
-                  <span className={styles.itemText}>{w.title}</span>
-                  {w.isAchieved && <i className="fa-solid fa-star" style={{color: '#FFD700'}}></i>}
-                </div>
-              ))
-            ) : (
-              <div className={styles.emptyMsg}>Wishlistはありません</div>
-            )}
-          </div>
-          <Link href="/wishlist" className={`${styles.viewAllLink} ${styles.viewAllWish}`}>すべて見る ＞</Link>
-        </div>
-
-        <div className="content-card">
-          <div className="card-title-main">
-            <i className="fa-solid fa-list-check"></i> 直近のTODO
-          </div>
-          <div className={styles.previewList}>
-            {loading ? (
-              <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : todos.length > 0 ? (
-              todos.map(t => (
-                <div key={t.id} className={`${styles.previewItem} ${styles.previewItemTodo}`}>
-                  <span className={`${styles.itemBadge} ${t.type === 'couple' ? styles.badgeCouple : styles.badgePersonal}`}>
-                    {t.type === 'couple' ? '2人' : '自分'}
-                  </span>
-                  <span className={styles.itemText}>{t.title}</span>
-                  {t.isCompleted && <i className="fa-solid fa-check" style={{color: '#A0E7D2'}}></i>}
-                </div>
-              ))
-            ) : (
-              <div className={styles.emptyMsg}>TODOはありません</div>
-            )}
-          </div>
-          <Link href="/todo" className={`${styles.viewAllLink} ${styles.viewAllTodo}`}>すべて見る ＞</Link>
+        <div className={styles.menuGrid}>
+          <Link href="/wishlist" className={`${styles.menuCard} ${styles.cardWish}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-gift"></i></span>
+            <span className={styles.cardTitle}>Wishlist</span>
+          </Link>
+          <Link href="/todo" className={`${styles.menuCard} ${styles.cardTodo}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-list-check"></i></span>
+            <span className={styles.cardTitle}>TODO</span>
+          </Link>
+          <button className={`${styles.menuCard} ${styles.cardPartner}`} onClick={() => setActiveProfileModal('partner')}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-heart-pulse"></i></span>
+            <span className={styles.cardTitle}>パートナーの情報を見る</span>
+          </button>
+          <button className={`${styles.menuCard} ${styles.cardMe}`} onClick={() => setActiveProfileModal('me')}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-user-pen"></i></span>
+            <span className={styles.cardTitle}>自分の情報を見る</span>
+          </button>
         </div>
       </div>
     </AuthGuard>

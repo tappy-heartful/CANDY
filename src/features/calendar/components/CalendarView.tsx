@@ -36,6 +36,8 @@ export default function CalendarView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDailyAgendaOpen, setIsDailyAgendaOpen] = useState(false);
   const [activeDateStr, setActiveDateStr] = useState<string>("");
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
   // Fetch events on mount
   useEffect(() => {
@@ -202,8 +204,37 @@ export default function CalendarView({
 
   const padZero = (n: number) => n.toString().padStart(2, "0");
 
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    const distance = touchStartX - touchEndX;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNextMonth();
+    } else if (isRightSwipe) {
+      handlePrevMonth();
+    }
+  };
+
   return (
-    <div className={styles.calendarCard}>
+    <div 
+      className={styles.calendarCard}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <div className={styles.calendarHeader}>
         <div className={styles.monthLabel}>
           <i className="fa-solid fa-calendar-alt" style={{ color: "#9B7CC3" }}></i>
