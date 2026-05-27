@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarEvent } from "@/src/lib/firestore/types";
 import { getEvents } from "@/src/features/calendar/api/calendar-server-actions";
+import { getTodos } from "@/src/features/todo/api/todo-server-actions";
 import { addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
@@ -32,6 +33,12 @@ export default function CalendarView({
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-11
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [todos, setTodos] = useState<any[]>([]); // will be typed as Todo[]
+  const [filterState, setFilterState] = useState({
+    couple: true,
+    me: true,
+    partner: true,
+  });
   const [activeModalEvent, setActiveModalEvent] = useState<Partial<CalendarEvent> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDailyAgendaOpen, setIsDailyAgendaOpen] = useState(false);
@@ -39,21 +46,40 @@ export default function CalendarView({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
-  // Fetch events on mount
+  // Fetch events and todos on mount
   useEffect(() => {
     showSpinner();
-    getEvents()
-      .then((data) => {
-        setEvents(data);
+    Promise.all([getEvents(), getTodos(currentUserId)])
+      .then(([eventData, todoData]) => {
+        setEvents(eventData);
+        setTodos(todoData);
       })
       .catch((e) => {
-        console.error("Failed to load events:", e);
-        showDialog("予定の読み込みに失敗しました");
+        console.error("Failed to load events/todos:", e);
+        showDialog("データの読み込みに失敗しました");
       })
       .finally(() => {
         hideSpinner();
       });
-  }, []);
+  }, [currentUserId]);
+
+  const visibleEvents = useMemo(() => {
+    return events.filter((e) => {
+      if (e.type === "couple") return filterState.couple;
+      const isMe = e.uid === currentUserId;
+      if (isMe) return filterState.me;
+      return filterState.partner;
+    });
+  }, [events, filterState, currentUserId]);
+
+  const visibleTodos = useMemo(() => {
+    return todos.filter((t) => {
+      if (t.type === "couple") return filterState.couple;
+      const isMe = t.uid === currentUserId;
+      if (isMe) return filterState.me;
+      return filterState.partner;
+    });
+  }, [todos, filterState, currentUserId]);
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -235,6 +261,29 @@ export default function CalendarView({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      <div className={styles.controlsRow}>
+        <div className={styles.filterTabs}>
+          <button
+            className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
+            onClick={() => setFilterState((prev) => ({ ...prev, couple: !prev.couple }))}
+          >
+            2人の予定
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
+            onClick={() => setFilterState((prev) => ({ ...prev, me: !prev.me }))}
+          >
+            {myNickname}
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
+            onClick={() => setFilterState((prev) => ({ ...prev, partner: !prev.partner }))}
+          >
+            {partnerNickname}
+          </button>
+        </div>
+      </div>
+
       <div className={styles.calendarHeader}>
         <div className={styles.monthLabel}>
           <i className="fa-solid fa-calendar-alt" style={{ color: "#9B7CC3" }}></i>
@@ -268,8 +317,13 @@ export default function CalendarView({
           const dateStr = `${cell.year}-${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
           const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
 
-          // Find events active on this date string
-          const dayEvents = events.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
+          // Find events and todos active on this date string
+          const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
+          const dayTodos = visibleTodos.filter((t) => t.date === dateStr);
+          const combinedItems = [
+            ...dayEvents.map(e => ({ ...e, isTodo: false })),
+            ...dayTodos.map(t => ({ ...t, isTodo: true }))
+          ];
 
           const isToday =
             today.getDate() === cell.dayNum &&
@@ -298,26 +352,34 @@ export default function CalendarView({
                 </span>
               </div>
               <div className={styles.eventsContainer}>
-                {dayEvents.slice(0, 3).map((e) => {
-                  const isMe = e.uid === currentUserId;
+                {combinedItems.slice(0, 3).map((item) => {
+                  const isMe = item.uid === currentUserId;
                   const pillClass =
-                    e.type === "couple"
+                    item.type === "couple"
                       ? styles.eventCouple
                       : isMe
                         ? styles.eventMe
                         : styles.eventPartner;
 
+                  if (item.isTodo) {
+                    return (
+                      <span key={`todo-${item.id}`} className={`${styles.todoPill} ${pillClass}`}>
+                        <i className="fa-regular fa-square-check" style={{marginRight: '2px'}}></i>{item.title}
+                      </span>
+                    );
+                  }
+
                   return (
                     <span
-                      key={e.id}
+                      key={`event-${item.id}`}
                       className={`${styles.eventPill} ${pillClass}`}
                     >
-                      {e.title}
+                      {item.title}
                     </span>
                   );
                 })}
-                {dayEvents.length > 3 && (
-                  <span className={styles.moreIndicator}>+{dayEvents.length - 3} 件</span>
+                {combinedItems.length > 3 && (
+                  <span className={styles.moreIndicator}>+{combinedItems.length - 3} 件</span>
                 )}
               </div>
             </div>
@@ -328,7 +390,8 @@ export default function CalendarView({
       {isDailyAgendaOpen && (
         <DailyAgendaModal
           activeDateStr={activeDateStr}
-          events={events.filter((e) => activeDateStr >= e.startDate && activeDateStr <= e.endDate)}
+          events={visibleEvents.filter((e) => activeDateStr >= e.startDate && activeDateStr <= e.endDate)}
+          todos={visibleTodos.filter((t) => t.date === activeDateStr)}
           currentUserId={currentUserId}
           myPictureUrl={myPictureUrl}
           partnerPictureUrl={partnerPictureUrl}
