@@ -25,7 +25,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           !userData.allergies ||
           !userData.medications ||
           !userData.medicalHistory ||
-          !userData.dislikedFoods;
+          !userData.dislikedFoods ||
+          !userData.favoriteFoods ||
+          !userData.happyThings ||
+          !userData.dislikedThings;
 
         if (isMissingRequired) {
           router.push("/user/edit");
@@ -52,7 +55,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     !userData?.allergies ||
     !userData?.medications ||
     !userData?.medicalHistory ||
-    !userData?.dislikedFoods;
+    !userData?.dislikedFoods ||
+    !userData?.favoriteFoods ||
+    !userData?.happyThings ||
+    !userData?.dislikedThings;
 
   if (isMissingRequired && pathname !== "/user/edit") {
     return null; // リダイレクト中

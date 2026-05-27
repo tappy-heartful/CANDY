@@ -23,6 +23,9 @@ export default function UserEditClient() {
     medications: "",
     medicalHistory: "",
     dislikedFoods: "",
+    favoriteFoods: "",
+    happyThings: "",
+    dislikedThings: "",
     strengths: "",
     weaknesses: "",
     favoritePlaces: "",
@@ -45,6 +48,9 @@ export default function UserEditClient() {
         medications: userData.medications || "",
         medicalHistory: userData.medicalHistory || "",
         dislikedFoods: userData.dislikedFoods || "",
+        favoriteFoods: userData.favoriteFoods || "",
+        happyThings: userData.happyThings || "",
+        dislikedThings: userData.dislikedThings || "",
         strengths: userData.strengths || "",
         weaknesses: userData.weaknesses || "",
         favoritePlaces: userData.favoritePlaces || "",
@@ -56,7 +62,8 @@ export default function UserEditClient() {
   const handleSave = async () => {
     const {
       nickname, mbti, birthday, phone, emergencyContact,
-      allergies, medications, medicalHistory, dislikedFoods
+      allergies, medications, medicalHistory, dislikedFoods,
+      favoriteFoods, happyThings, dislikedThings
     } = formData;
 
     if (!nickname.trim()) {
@@ -93,6 +100,18 @@ export default function UserEditClient() {
     }
     if (!dislikedFoods.trim()) {
       showDialog("苦手な食べ物を入力してください", true);
+      return;
+    }
+    if (!favoriteFoods.trim()) {
+      showDialog("好きな食べ物を入力してください", true);
+      return;
+    }
+    if (!happyThings.trim()) {
+      showDialog("されてうれしいことを入力してください", true);
+      return;
+    }
+    if (!dislikedThings.trim()) {
+      showDialog("されて嫌なことを入力してください", true);
       return;
     }
 
@@ -235,12 +254,45 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>好きな食べ物</label>
+          <textarea
+            name="favoriteFoods"
+            className={styles.appTextarea}
+            placeholder="例: お寿司、焼肉"
+            value={formData.favoriteFoods}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
           <label className={styles.inputLabel}>苦手な食べ物</label>
           <textarea
             name="dislikedFoods"
             className={styles.appTextarea}
             placeholder="例: パクチー、レバー"
             value={formData.dislikedFoods}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>されてうれしいこと</label>
+          <textarea
+            name="happyThings"
+            className={styles.appTextarea}
+            placeholder="例: 話をしっかり聞いてくれること"
+            value={formData.happyThings}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>されて嫌なこと</label>
+          <textarea
+            name="dislikedThings"
+            className={styles.appTextarea}
+            placeholder="例: 無視されること、約束を破られること"
+            value={formData.dislikedThings}
             onChange={handleChange}
           />
         </div>

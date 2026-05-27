@@ -11,6 +11,9 @@ export interface User {
   medications?: string;
   medicalHistory?: string;
   dislikedFoods?: string;
+  favoriteFoods?: string;
+  happyThings?: string;
+  dislikedThings?: string;
   strengths?: string;
   weaknesses?: string;
   favoritePlaces?: string;

@@ -143,23 +143,16 @@
 
 .cardTodo { background-color: #F7A8C4 !important; }
 .cardWish { background-color: #A0E7D2 !important; }
+.cardPartner { background-color: #9B7CC3 !important; }
+.cardMe { background-color: #FFD166 !important; }
 
-.cardPartner {
-  background-color: #9B7CC3 !important;
-  grid-column: 1 / -1;
-  flex-direction: row !important;
-  justify-content: center;
-  gap: 15px;
-  padding: 20px;
+.cardPartner, .cardMe {
+  /* remove the grid-column: 1 / -1 to allow 2x2 layout */
 }
 
 .cardIcon {
   font-size: 32px;
   margin-bottom: 8px;
-}
-
-.cardPartner .cardIcon {
-  margin-bottom: 0;
 }
 
 .cardTitle {
@@ -383,4 +376,95 @@
   font-size: 16px;
   color: #555;
   white-space: pre-wrap;
+}
+
+/* Notifications */
+.notificationList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notificationGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.08);
+  border-left: 4px solid #A0E7D2;
+}
+
+.notificationHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px dashed #eee;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.notificationIcon {
+  font-size: 18px;
+  color: #A0E7D2;
+}
+
+.notificationText {
+  font-size: 14px;
+  font-weight: bold;
+  color: #444;
+}
+
+.notificationItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 28px;
+}
+
+.notificationSubItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  margin-left: -8px; /* Offset the padding */
+}
+
+.notificationSubItem:hover {
+  background-color: rgba(160, 231, 210, 0.15);
+}
+
+.notificationTime {
+  font-size: 11px;
+  color: #999;
+  min-width: 65px;
+}
+
+.notificationTitle {
+  font-size: 14px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editProfileBtn {
+  display: inline-block;
+  background-color: #9B7CC3;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.3);
+  transition: all 0.3s;
+}
+
+.editProfileBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(155, 124, 195, 0.4);
 }
