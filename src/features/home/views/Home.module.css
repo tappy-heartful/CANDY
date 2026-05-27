@@ -242,27 +242,35 @@
 }
 
 /* 文字盤のスタイル */
-.number12, .number3, .number6, .number9 {
+.clockNumberContainer {
   position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+.clockNumber {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  margin-left: -10px;
+  width: 20px;
+  text-align: center;
   font-family: 'Fredoka One', 'Varela Round', 'Inter', sans-serif;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 900;
   color: #888;
   z-index: 1;
 }
-.number12 { top: 6px; left: 50%; transform: translateX(-50%); }
-.number3 { right: 8px; top: 50%; transform: translateY(-50%); }
-.number6 { bottom: 6px; left: 50%; transform: translateX(-50%); }
-.number9 { left: 8px; top: 50%; transform: translateY(-50%); }
 
 /* テーマごとの文字盤色 */
-.themeClassicPastel .number12, .themeClassicPastel .number3, .themeClassicPastel .number6, .themeClassicPastel .number9 { color: #FFB7B2; }
-.themeMacaronClock .number12, .themeMacaronClock .number3, .themeMacaronClock .number6, .themeMacaronClock .number9 { color: #FF9AA2; }
-.themeBerryPie .number12, .themeBerryPie .number3, .themeBerryPie .number6, .themeBerryPie .number9 { color: #C38D9E; }
-.themeOceanPearl .number12, .themeOceanPearl .number3, .themeOceanPearl .number6, .themeOceanPearl .number9 { color: #085078; }
-.themeNightOwl .number12, .themeNightOwl .number3, .themeNightOwl .number6, .themeNightOwl .number9 { color: #F39C12; }
-.themeMatchaLatte .number12, .themeMatchaLatte .number3, .themeMatchaLatte .number6, .themeMatchaLatte .number9 { color: #4CAF50; }
-.themeSweetDonut .number12, .themeSweetDonut .number3, .themeSweetDonut .number6, .themeSweetDonut .number9 { color: #D81B60; }
+.themeClassicPastel .clockNumber { color: #FFB7B2; }
+.themeMacaronClock .clockNumber { color: #FF9AA2; }
+.themeBerryPie .clockNumber { color: #C38D9E; }
+.themeOceanPearl .clockNumber { color: #085078; }
+.themeNightOwl .clockNumber { color: #F39C12; }
+.themeMatchaLatte .clockNumber { color: #4CAF50; }
+.themeSweetDonut .clockNumber { color: #D81B60; }
 
 .cycleThemeBtn {
   position: absolute;

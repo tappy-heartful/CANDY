@@ -244,10 +244,24 @@ export default function HomeClient() {
           ) : (
             <div className={styles.analogClock}>
               <div className={styles.analogFace}>
-                <span className={styles.number12}>12</span>
-                <span className={styles.number3}>3</span>
-                <span className={styles.number6}>6</span>
-                <span className={styles.number9}>9</span>
+                {[...Array(12)].map((_, i) => {
+                  const num = i + 1;
+                  const angle = num * 30;
+                  return (
+                    <div 
+                      key={num} 
+                      className={styles.clockNumberContainer}
+                      style={{ transform: `rotate(${angle}deg)` }}
+                    >
+                      <div 
+                        className={styles.clockNumber}
+                        style={{ transform: `rotate(${-angle}deg)` }}
+                      >
+                        {num}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div 
                   className={styles.analogHour} 
                   style={{ transform: `rotate(${(currentTime.getHours() % 12) * 30 + currentTime.getMinutes() * 0.5}deg)` }} 
