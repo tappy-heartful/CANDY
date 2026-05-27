@@ -386,12 +386,30 @@ export default function CalendarView({
                     );
                   }
 
+                  let spanClass = styles.eventPill;
+                  let titleStr = item.title;
+
+                  if (item.startDate !== item.endDate) {
+                    const connectsRight = dateStr < item.endDate && cellDayOfWeek !== 6;
+                    const connectsLeft = dateStr > item.startDate && cellDayOfWeek !== 0;
+
+                    if (connectsRight && connectsLeft) {
+                      spanClass = `${styles.eventPill} ${styles.eventMiddle}`;
+                      titleStr = "";
+                    } else if (connectsRight && !connectsLeft) {
+                      spanClass = `${styles.eventPill} ${styles.eventStart}`;
+                    } else if (!connectsRight && connectsLeft) {
+                      spanClass = `${styles.eventPill} ${styles.eventEnd}`;
+                      titleStr = "";
+                    }
+                  }
+
                   return (
                     <span
                       key={`event-${item.id}`}
-                      className={`${styles.eventPill} ${pillClass}`}
+                      className={`${spanClass} ${pillClass}`}
                     >
-                      {item.title}
+                      {titleStr || "\u00A0"}
                     </span>
                   );
                 })}

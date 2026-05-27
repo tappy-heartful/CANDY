@@ -189,7 +189,7 @@
   flex-direction: column;
   gap: 2px;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .eventPill {
@@ -202,7 +202,6 @@
   overflow: hidden;
   text-overflow: clip;
   box-sizing: border-box;
-  width: 100%;
   display: block;
   text-align: center;
 }
@@ -218,6 +217,30 @@
 
 .eventCouple {
   background-color: #9B7CC3;
+}
+
+.eventStart {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: -12px;
+  position: relative;
+  z-index: 1;
+}
+
+.eventMiddle {
+  border-radius: 0;
+  margin-left: -12px;
+  margin-right: -12px;
+  position: relative;
+  z-index: 1;
+}
+
+.eventEnd {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -12px;
+  position: relative;
+  z-index: 1;
 }
 
 .todoPill {
