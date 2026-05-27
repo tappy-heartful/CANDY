@@ -10,6 +10,7 @@ import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { Todo, Wishlist, User as FirestoreUser } from "@/src/lib/firestore/types";
 import styles from "./Home.module.css";
 import PartnerModal from "../components/PartnerModal";
+import CalendarView from "@/src/features/calendar/components/CalendarView";
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
@@ -120,6 +121,16 @@ export default function HomeClient() {
             <span className={styles.cardTitle}>パートナーの情報を見る</span>
           </button>
         </div>
+
+        {user && (
+          <CalendarView
+            currentUserId={user.uid}
+            myNickname={userData?.nickname || userData?.displayName || "自分"}
+            partnerNickname={partnerData?.nickname || "パートナー"}
+            myPictureUrl={userData?.pictureUrl}
+            partnerPictureUrl={partnerData?.pictureUrl}
+          />
+        )}
 
         <div className="content-card">
           <div className="card-title-main">
