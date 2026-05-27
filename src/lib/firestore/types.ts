@@ -68,3 +68,19 @@ export interface Group {
   uid: string; // 作成者（2人の場合は共有だが管理上）
   createdAt: number;
 }
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  isAllDay: boolean;
+  startDate: string; // "YYYY-MM-DD"
+  startTime?: string; // "HH:MM"
+  endDate: string; // "YYYY-MM-DD"
+  endTime?: string; // "HH:MM"
+  note?: string;
+  link?: string;
+  type: "personal" | "couple";
+  uid: string; // 作成者
+  createdAt: number;
+  updatedAt: number;
+}
