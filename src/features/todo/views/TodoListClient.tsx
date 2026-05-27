@@ -7,6 +7,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./TodoList.module.css";
+import TodoModal from "../components/TodoModal";
 
 interface TodoListClientProps {
   initialTodos: Todo[];
@@ -22,10 +23,9 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     me: true,
     partner: false,
   });
-  const [newTodoTitle, setNewTodoTitle] = useState("");
-  const [newTodoDateMode, setNewTodoDateMode] = useState<"due" | "on">("due");
-  const [newTodoDate, setNewTodoDate] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || "");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [stepInputs, setStepInputs] = useState<Record<string, string>>({});
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
 
@@ -43,57 +43,57 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     }
   };
 
-  const handleTodoDateChange = async (todoId: string, value: string) => {
-    try {
-      await updateTodo(todoId, { date: value || "" });
-      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, date: value || "" } : t)));
-    } catch (e) {
-      showDialog("更新に失敗しました");
-    }
-  };
-
-  const handleTodoDateModeChange = async (todoId: string, value: "due" | "on") => {
-    try {
-      await updateTodo(todoId, { dateMode: value });
-      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, dateMode: value } : t)));
-    } catch (e) {
-      showDialog("更新に失敗しました");
-    }
-  };
-
-  const handleAddTodo = async (type: "personal" | "couple") => {
-    if (!newTodoTitle || !user) return;
+  const handleSaveTodo = async (data: { title: string; groupId: string; type: "personal" | "couple"; date: string; dateMode: "due" | "on" }) => {
+    if (!data.title || !user) return;
+    setIsSubmitting(true);
     showSpinner();
     try {
-      const docRef = await addTodo({
-        title: newTodoTitle,
-        type,
-        uid: user.uid,
-        groupId: selectedGroupId,
-        showToPartner: type === "couple",
-        dateMode: newTodoDateMode,
-        date: newTodoDate || "",
-      });
-      const newTodoItem: Todo = {
-        id: docRef.id,
-        title: newTodoTitle,
-        type,
-        uid: user.uid,
-        groupId: selectedGroupId,
-        showToPartner: type === "couple",
-        dateMode: newTodoDateMode,
-        date: newTodoDate || "",
-        isCompleted: false,
-        steps: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      setTodos((prev) => [newTodoItem, ...prev]);
-      setNewTodoTitle("");
-      setNewTodoDate("");
+      if (editingTodo) {
+        await updateTodo(editingTodo.id, {
+          title: data.title,
+          groupId: data.groupId,
+          date: data.date,
+          dateMode: data.dateMode,
+        });
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === editingTodo.id
+              ? { ...t, title: data.title, groupId: data.groupId, date: data.date, dateMode: data.dateMode }
+              : t
+          )
+        );
+      } else {
+        const docRef = await addTodo({
+          title: data.title,
+          type: data.type,
+          uid: user.uid,
+          groupId: data.groupId,
+          showToPartner: data.type === "couple",
+          dateMode: data.dateMode,
+          date: data.date,
+        });
+        const newTodoItem: Todo = {
+          id: docRef.id,
+          title: data.title,
+          type: data.type,
+          uid: user.uid,
+          groupId: data.groupId,
+          showToPartner: data.type === "couple",
+          dateMode: data.dateMode,
+          date: data.date,
+          isCompleted: false,
+          steps: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setTodos((prev) => [newTodoItem, ...prev]);
+      }
+      setIsModalOpen(false);
+      setEditingTodo(null);
     } catch (e) {
-      showDialog("追加に失敗しました");
+      showDialog("保存に失敗しました");
     } finally {
+      setIsSubmitting(false);
       hideSpinner();
     }
   };
@@ -194,7 +194,6 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         createdAt: Date.now(),
       };
       setGroups((prev) => [...prev, newGroup]);
-      setSelectedGroupId(docRef.id);
     } catch (e) {
       showDialog("グループ追加に失敗しました");
     }
@@ -281,43 +280,34 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                           {todo.title}
                         </div>
                         <div className={styles.todoMeta}>
-                          <div className={styles.dateRow}>
-                            <input
-                              type="date"
-                              className={styles.dateInput}
-                              value={todo.date || ""}
-                              onChange={(e) => handleTodoDateChange(todo.id, e.target.value)}
-                              disabled={todo.uid !== user?.uid}
-                            />
-                            <select
-                              className={styles.dateModeSelect}
-                              value={todo.dateMode || "due"}
-                              onChange={(e) => handleTodoDateModeChange(todo.id, e.target.value as "due" | "on")}
-                              disabled={todo.uid !== user?.uid}
-                            >
-                              <option value="on">に</option>
-                              <option value="due">まで</option>
-                            </select>
-                            {todo.uid === user?.uid && todo.date && (
-                              <button
-                                className={styles.clearDateBtn}
-                                onClick={() => handleTodoDateChange(todo.id, "")}
-                                title="日付を削除"
-                              >
-                                <i className="fa-solid fa-xmark"></i>
-                              </button>
-                            )}
-                          </div>
+                          {todo.date && (
+                            <span className={styles.dateText}>
+                              <i className="fa-regular fa-calendar" style={{marginRight: "4px"}}></i>
+                              {todo.date.replace(/-/g, '/')} {todo.dateMode === 'on' ? 'に' : 'まで'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {todo.uid === user?.uid && (
-                        <button
-                          className={styles.deleteTodoBtn}
-                          onClick={() => handleDeleteTodo(todo.id)}
-                          title="TODOを削除"
-                        >
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
+                        <div className={styles.todoActions}>
+                          <button
+                            className={styles.editTodoBtn}
+                            onClick={() => {
+                              setEditingTodo(todo);
+                              setIsModalOpen(true);
+                            }}
+                            title="TODOを編集"
+                          >
+                            <i className="fa-solid fa-pen"></i>
+                          </button>
+                          <button
+                            className={styles.deleteTodoBtn}
+                            onClick={() => handleDeleteTodo(todo.id)}
+                            title="TODOを削除"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -378,44 +368,9 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
 
       <div className={styles.todoHeader}>
         <div className="card-title-main"><i className="fa-solid fa-list-check"></i> TODO List</div>
-        <button onClick={handleAddGroup} className={styles.addGroupBtn}>+ グループ追加</button>
-      </div>
-
-      <div className={styles.inputSection}>
-        <input
-          type="text"
-          className={styles.todoInput}
-          placeholder="例: 週末の買い物に行く"
-          value={newTodoTitle}
-          onChange={(e) => setNewTodoTitle(e.target.value)}
-        />
-        <div className={styles.dateRow}>
-          <input
-            type="date"
-            className={styles.dateInput}
-            value={newTodoDate}
-            onChange={(e) => setNewTodoDate(e.target.value)}
-          />
-          <select
-            className={styles.dateModeSelect}
-            value={newTodoDateMode}
-            onChange={(e) => setNewTodoDateMode(e.target.value as "due" | "on")}
-          >
-            <option value="on">に</option>
-            <option value="due">まで</option>
-          </select>
-        </div>
-        <select
-          className={styles.groupSelect}
-          value={selectedGroupId}
-          onChange={(e) => setSelectedGroupId(e.target.value)}
-        >
-          <option value="">グループを選択</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
-        <div className={styles.btnGroup}>
-          <button className={`${styles.btnAdd} ${styles.btnPersonal}`} onClick={() => handleAddTodo("personal")}>自分のTODO</button>
-          <button className={`${styles.btnAdd} ${styles.btnCouple}`} onClick={() => handleAddTodo("couple")}>2人のTODO</button>
+        <div className={styles.headerBtns}>
+          <button onClick={handleAddGroup} className={styles.addGroupBtn}>+ グループ</button>
+          <button onClick={() => { setEditingTodo(null); setIsModalOpen(true); }} className={styles.addTodoBtn}>+ TODOを追加</button>
         </div>
       </div>
 
@@ -449,6 +404,18 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         <div className="card-title-main"><i className="fa-solid fa-check"></i> 完了</div>
         {renderTodoList(visibleTodos.filter((t) => t.isCompleted))}
       </div>
+
+      <TodoModal
+        isOpen={isModalOpen}
+        todo={editingTodo}
+        groups={groups}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTodo(null);
+        }}
+        onSave={handleSaveTodo}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }
