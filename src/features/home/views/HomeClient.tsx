@@ -60,7 +60,7 @@ export default function HomeClient() {
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       Promise.all([
-        getWishlist(user.uid),
+        getWishlist(),
         getPartnerData(user.uid),
         getDailyStatuses(todayStr),
         getEvents()
@@ -69,7 +69,7 @@ export default function HomeClient() {
         const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 5);
         const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 5);
         const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        
+
         setRecentWishlist(combined);
         setPartnerData(partner);
 
@@ -93,7 +93,7 @@ export default function HomeClient() {
     try {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      
+
       const submitData = {
         ...data,
         uid: user?.uid,
@@ -103,7 +103,7 @@ export default function HomeClient() {
       await saveDailyStatus(submitData);
       setMyDailyStatus({ ...myDailyStatus, ...submitData } as DailyStatus);
       setIsDailyStatusModalOpen(false);
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     } finally {
       setIsStatusSubmitting(false);
@@ -148,7 +148,7 @@ export default function HomeClient() {
                 <i className="fa-solid fa-pen"></i>
               </Link>
             </div>
-            
+
             {/* Heart connector */}
             <div className={styles.heartConnector}>
               <i className="fa-solid fa-heart"></i>
@@ -166,22 +166,22 @@ export default function HomeClient() {
         </div>
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <DailyStatusCard 
-            user={userData as FirestoreUser} 
-            status={myDailyStatus} 
-            isMe={true} 
-            onEdit={() => setIsDailyStatusModalOpen(true)} 
+          <DailyStatusCard
+            user={userData as FirestoreUser}
+            status={myDailyStatus}
+            isMe={true}
+            onEdit={() => setIsDailyStatusModalOpen(true)}
           />
-          <DailyStatusCard 
-            user={partnerData} 
-            status={partnerDailyStatus} 
-            isMe={false} 
+          <DailyStatusCard
+            user={partnerData}
+            status={partnerDailyStatus}
+            isMe={false}
           />
         </div>
 
         <div className="content-card">
           <div className="card-title-main">
-            <i className="fa-solid fa-bell" style={{color: "#A0E7D2"}}></i> 最新のお知らせ
+            <i className="fa-solid fa-bell" style={{ color: "#A0E7D2" }}></i> 最新のお知らせ
           </div>
           <div className={styles.notificationList}>
             {loading ? (
@@ -191,7 +191,7 @@ export default function HomeClient() {
                 {upcomingEvents.map(e => {
                   const eventDate = new Date(e.startDate);
                   const today = new Date();
-                  today.setHours(0,0,0,0);
+                  today.setHours(0, 0, 0, 0);
                   const diffTime = eventDate.getTime() - today.getTime();
                   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                   const countdownText = diffDays === 0 ? "今日" : `あと${diffDays}日`;
@@ -214,48 +214,48 @@ export default function HomeClient() {
                   );
                 })}
                 {(() => {
-                const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
-                let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
-                
-                recentWishlist.forEach((w) => {
-                  if (!currentGroup || currentGroup.uid !== w.uid) {
-                    if (currentGroup) grouped.push(currentGroup);
-                    currentGroup = {
-                      uid: w.uid,
-                      creatorName: w.uid === user?.uid 
-                        ? (userData?.nickname || userData?.displayName || "自分") 
-                        : (partnerData?.nickname || "パートナー"),
-                      items: [w]
-                    };
-                  } else {
-                    currentGroup.items.push(w);
-                  }
-                });
-                if (currentGroup) grouped.push(currentGroup);
+                  const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
+                  let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
 
-                return grouped.map((group, idx) => (
-                  <div key={idx} className={styles.notificationGroup}>
-                    <div className={styles.notificationHeader}>
-                      <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
-                      <span className={styles.notificationText}>
-                        {group.creatorName}がWishlistを追加しました
-                      </span>
+                  recentWishlist.forEach((w) => {
+                    if (!currentGroup || currentGroup.uid !== w.uid) {
+                      if (currentGroup) grouped.push(currentGroup);
+                      currentGroup = {
+                        uid: w.uid,
+                        creatorName: w.uid === user?.uid
+                          ? (userData?.nickname || userData?.displayName || "自分")
+                          : (partnerData?.nickname || "パートナー"),
+                        items: [w]
+                      };
+                    } else {
+                      currentGroup.items.push(w);
+                    }
+                  });
+                  if (currentGroup) grouped.push(currentGroup);
+
+                  return grouped.map((group, idx) => (
+                    <div key={idx} className={styles.notificationGroup}>
+                      <div className={styles.notificationHeader}>
+                        <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
+                        <span className={styles.notificationText}>
+                          {group.creatorName}がWishlistを追加しました
+                        </span>
+                      </div>
+                      <div className={styles.notificationItems}>
+                        {group.items.map(item => {
+                          const dateObj = item.createdAt ? new Date(item.createdAt) : new Date();
+                          const dateStr = `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+                          return (
+                            <Link href="/wishlist" key={item.id} className={styles.notificationSubItem}>
+                              <span className={styles.notificationTime}>{dateStr}</span>
+                              <span className={styles.notificationTitle}>{item.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className={styles.notificationItems}>
-                      {group.items.map(item => {
-                        const dateObj = item.createdAt ? new Date(item.createdAt) : new Date();
-                        const dateStr = `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
-                        return (
-                          <Link href="/wishlist" key={item.id} className={styles.notificationSubItem}>
-                            <span className={styles.notificationTime}>{dateStr}</span>
-                            <span className={styles.notificationTitle}>{item.title}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ));
-              })()}
+                  ));
+                })()}
               </>
             ) : (
               <div className={styles.emptyMsg}>最近の追加はありません</div>
