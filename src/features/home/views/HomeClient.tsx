@@ -5,7 +5,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
-import { getPartnerData } from "@/src/features/user/api/user-client-service";
+import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { getEvents } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups } from "@/src/features/todo/api/todo-client-service";
@@ -15,6 +15,19 @@ import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
 import DailyStatusCard from "../components/DailyStatusCard";
 import DailyStatusModal from "../components/DailyStatusModal";
+
+const CLOCK_THEMES = [
+  { id: "themePinkyRibbon", type: "digital" },
+  { id: "themeMintyBubble", type: "digital" },
+  { id: "themeMilkyStar", type: "digital" },
+  { id: "themeSunnyCitrus", type: "digital" },
+  { id: "themeCottonCandy", type: "digital" },
+  { id: "themeClassicPastel", type: "analog" },
+  { id: "themeMacaronClock", type: "analog" },
+  { id: "themeBerryPie", type: "analog" },
+  { id: "themeOceanPearl", type: "analog" },
+  { id: "themeNightOwl", type: "analog" },
+];
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
@@ -30,6 +43,7 @@ export default function HomeClient() {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -38,6 +52,12 @@ export default function HomeClient() {
       setShowWelcome(true);
       sessionStorage.setItem('candy.welcomed', 'true');
       setTimeout(() => setShowWelcome(false), 3500);
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (userData?.clockTheme) {
+      setCurrentTheme(userData.clockTheme);
     }
   }, [userData]);
 
@@ -137,6 +157,21 @@ export default function HomeClient() {
     }
   };
 
+  const handleCycleTheme = async () => {
+    const currentIndex = CLOCK_THEMES.findIndex((t) => t.id === currentTheme);
+    const nextIndex = (currentIndex + 1) % CLOCK_THEMES.length;
+    const nextThemeId = CLOCK_THEMES[nextIndex].id;
+    setCurrentTheme(nextThemeId);
+    
+    if (user) {
+      try {
+        await updateProfile(user.uid, { clockTheme: nextThemeId });
+      } catch (e) {
+        console.error("Failed to save clock theme", e);
+      }
+    }
+  };
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -159,6 +194,8 @@ export default function HomeClient() {
     const day = days[date.getDay()];
     return `${m}月${d}日 (${day})`;
   };
+
+  const activeThemeObj = CLOCK_THEMES.find(t => t.id === currentTheme) || CLOCK_THEMES[0];
 
   return (
     <AuthGuard>
@@ -189,9 +226,36 @@ export default function HomeClient() {
           </div>
         )}
 
-        <div className={styles.cuteClockContainer}>
-          <div className={styles.cuteDate}>{formatDate(currentTime)}</div>
-          <div className={styles.cuteTime}>{formatTime(currentTime)}</div>
+        <div className={`${styles.cuteClockContainer} ${styles[currentTheme]}`}>
+          <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
+            <i className="fa-solid fa-arrows-rotate"></i>
+          </button>
+
+          {activeThemeObj.type === "digital" ? (
+            <>
+              <div className={styles.cuteDate}>{formatDate(currentTime)}</div>
+              <div className={styles.cuteTime}>{formatTime(currentTime)}</div>
+            </>
+          ) : (
+            <div className={styles.analogClock}>
+              <div className={styles.analogFace}>
+                <div 
+                  className={styles.analogHour} 
+                  style={{ transform: `rotate(${(currentTime.getHours() % 12) * 30 + currentTime.getMinutes() * 0.5}deg)` }} 
+                />
+                <div 
+                  className={styles.analogMinute} 
+                  style={{ transform: `rotate(${currentTime.getMinutes() * 6 + currentTime.getSeconds() * 0.1}deg)` }} 
+                />
+                <div 
+                  className={styles.analogSecond} 
+                  style={{ transform: `rotate(${currentTime.getSeconds() * 6}deg)` }} 
+                />
+                <div className={styles.analogCenter} />
+              </div>
+              <div className={styles.cuteDateAnalog}>{formatDate(currentTime)}</div>
+            </div>
+          )}
         </div>
 
         <div className={styles.welcomeSection}>

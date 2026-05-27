@@ -8,36 +8,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
   border-radius: 24px;
-  padding: 16px 24px;
+  padding: 20px 24px 16px 24px;
   margin-top: 10px;
   margin-bottom: 24px;
-  box-shadow: 0 8px 16px rgba(255, 154, 158, 0.3);
   position: relative;
   overflow: hidden;
   color: white;
-}
-
-.cuteClockContainer::before {
-  content: "✨";
-  position: absolute;
-  top: 15px;
-  left: 20px;
-  font-size: 20px;
-  opacity: 0.8;
-  animation: float 3s ease-in-out infinite;
-}
-
-.cuteClockContainer::after {
-  content: "💖";
-  position: absolute;
-  bottom: 10px;
-  right: 20px;
-  font-size: 24px;
-  opacity: 0.9;
-  transform: rotate(-15deg);
-  animation: pulseHeart 2s infinite;
+  transition: all 0.5s ease;
 }
 
 @keyframes float {
@@ -51,21 +29,203 @@
   100% { transform: scale(1) rotate(-15deg); }
 }
 
+.themePinkyRibbon {
+  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+  box-shadow: 0 8px 16px rgba(255, 154, 158, 0.3);
+}
+.themePinkyRibbon::before { content: "✨"; position: absolute; top: 15px; left: 20px; font-size: 20px; opacity: 0.8; animation: float 3s ease-in-out infinite; }
+.themePinkyRibbon::after { content: "💖"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; opacity: 0.9; transform: rotate(-15deg); animation: pulseHeart 2s infinite; }
+
+.themeMintyBubble {
+  background: linear-gradient(135deg, #A0E7D2 0%, #E0F7FA 100%);
+  box-shadow: 0 8px 16px rgba(160, 231, 210, 0.3);
+  color: #337A6F;
+}
+.themeMintyBubble::before { content: "🫧"; position: absolute; top: 15px; left: 20px; font-size: 24px; opacity: 0.8; animation: float 4s ease-in-out infinite; }
+.themeMintyBubble::after { content: "🐬"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; opacity: 0.9; animation: float 3s ease-in-out infinite reverse; }
+
+.themeMilkyStar {
+  background: linear-gradient(135deg, #4A148C 0%, #9B7CC3 100%);
+  box-shadow: 0 8px 16px rgba(155, 124, 195, 0.3);
+}
+.themeMilkyStar::before { content: "🌟"; position: absolute; top: 15px; left: 20px; font-size: 20px; opacity: 0.9; animation: pulseHeart 3s infinite; }
+.themeMilkyStar::after { content: "🌙"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; opacity: 0.8; animation: float 5s ease-in-out infinite; }
+
+.themeSunnyCitrus {
+  background: linear-gradient(135deg, #FFD166 0%, #FF9A9E 100%);
+  box-shadow: 0 8px 16px rgba(255, 209, 102, 0.3);
+}
+.themeSunnyCitrus::before { content: "🍋"; position: absolute; top: 15px; left: 20px; font-size: 20px; opacity: 0.9; animation: float 3s ease-in-out infinite; }
+.themeSunnyCitrus::after { content: "🍊"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; opacity: 0.9; animation: pulseHeart 2.5s infinite; }
+
+.themeCottonCandy {
+  background: linear-gradient(135deg, #B2EBF2 0%, #F8BBD0 100%);
+  box-shadow: 0 8px 16px rgba(248, 187, 208, 0.3);
+  color: #6A1B9A;
+}
+.themeCottonCandy::before { content: "☁️"; position: absolute; top: 15px; left: 20px; font-size: 24px; opacity: 0.8; animation: float 4s ease-in-out infinite; }
+.themeCottonCandy::after { content: "🍭"; position: absolute; bottom: 20px; right: 20px; font-size: 24px; opacity: 0.9; animation: float 3.5s ease-in-out infinite reverse; }
+
+/* 6. Classic Pastel (Analog) */
+.themeClassicPastel {
+  background: linear-gradient(135deg, #FFB7B2 0%, #E2F0CB 100%);
+  box-shadow: 0 8px 16px rgba(255, 183, 178, 0.3);
+}
+.themeClassicPastel .analogFace { border-color: #FFB7B2; }
+.themeClassicPastel .analogHour { background: #FFB7B2; }
+.themeClassicPastel .analogMinute { background: #E2F0CB; }
+.themeClassicPastel .analogSecond { background: #ff6b81; }
+.themeClassicPastel .analogCenter { background: #ff6b81; }
+
+/* 7. Macaron Clock (Analog) */
+.themeMacaronClock {
+  background: linear-gradient(135deg, #B5EAD7 0%, #FFDAC1 100%);
+  box-shadow: 0 8px 16px rgba(181, 234, 215, 0.3);
+}
+.themeMacaronClock .analogFace { border-color: #B5EAD7; background: #fff; }
+.themeMacaronClock .analogHour { background: #FF9AA2; }
+.themeMacaronClock .analogMinute { background: #B5EAD7; }
+
+/* 8. Berry Pie (Analog) */
+.themeBerryPie {
+  background: linear-gradient(135deg, #E27D60 0%, #C38D9E 100%);
+  box-shadow: 0 8px 16px rgba(226, 125, 96, 0.3);
+}
+.themeBerryPie .analogFace { border-color: #E27D60; background: #F8E9A1; }
+.themeBerryPie .analogHour { background: #C38D9E; }
+.themeBerryPie .analogMinute { background: #E27D60; }
+.themeBerryPie .analogSecond { background: #e74c3c; }
+.themeBerryPie .analogCenter { background: #e74c3c; }
+
+/* 9. Ocean Pearl (Analog) */
+.themeOceanPearl {
+  background: linear-gradient(135deg, #85D8CE 0%, #085078 100%);
+  box-shadow: 0 8px 16px rgba(133, 216, 206, 0.3);
+}
+.themeOceanPearl .analogFace { border-color: #85D8CE; background: #fdfdfd; }
+.themeOceanPearl .analogHour { background: #085078; }
+.themeOceanPearl .analogMinute { background: #85D8CE; }
+
+/* 10. Night Owl (Analog) */
+.themeNightOwl {
+  background: linear-gradient(135deg, #141E30 0%, #243B55 100%);
+  box-shadow: 0 8px 16px rgba(20, 30, 48, 0.3);
+}
+.themeNightOwl .analogFace { border-color: #F39C12; background: #2C3E50; }
+.themeNightOwl .analogHour { background: #F39C12; }
+.themeNightOwl .analogMinute { background: #E74C3C; }
+.themeNightOwl .analogSecond { background: #ecf0f1; }
+.themeNightOwl .analogCenter { background: #ecf0f1; }
+
+/* Analog Structure */
+.analogClock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.analogFace {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  position: relative;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.2);
+  border: 6px solid #fff;
+  transition: all 0.5s ease;
+}
+
+.analogHour, .analogMinute, .analogSecond {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+  border-radius: 4px;
+  transition: background 0.5s ease;
+}
+
+.analogHour {
+  width: 6px;
+  height: 35px;
+  background: #555;
+  margin-left: -3px;
+}
+
+.analogMinute {
+  width: 4px;
+  height: 45px;
+  background: #888;
+  margin-left: -2px;
+}
+
+.analogSecond {
+  width: 2px;
+  height: 50px;
+  background: #ff6b81;
+  margin-left: -1px;
+}
+
+.analogCenter {
+  width: 12px;
+  height: 12px;
+  background: #ff6b81;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: background 0.5s ease;
+}
+
+.cuteDateAnalog {
+  font-size: 16px;
+  font-weight: 800;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.cycleThemeBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s;
+}
+
+.cycleThemeBtn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: rotate(180deg);
+}
+
 .cuteDate {
   font-size: 16px;
   font-weight: 800;
-  text-shadow: 1px 1px 2px rgba(255,107,129,0.3);
+  text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
   letter-spacing: 1px;
   margin-bottom: 2px;
+  z-index: 1;
 }
 
 .cuteTime {
   font-size: 48px;
   font-weight: 900;
   line-height: 1;
-  text-shadow: 2px 2px 4px rgba(255,107,129,0.4);
+  text-shadow: 2px 2px 4px rgba(255,255,255,0.4);
   font-family: 'Fredoka One', 'Varela Round', 'Inter', sans-serif;
   letter-spacing: 2px;
+  z-index: 1;
 }
 
 .welcomeSection {
