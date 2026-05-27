@@ -158,6 +158,12 @@
   font-weight: bold;
   color: #555;
   text-align: center;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
 .sundayNumber {
@@ -175,13 +181,6 @@
 .todayCircle {
   background: #9B7CC3;
   color: white !important;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
 }
 
 .eventsContainer {
@@ -189,7 +188,7 @@
   flex-direction: column;
   gap: 2px;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .eventPill {
@@ -202,22 +201,67 @@
   overflow: hidden;
   text-overflow: clip;
   box-sizing: border-box;
-  width: 100%;
   display: block;
   text-align: center;
+  height: 14px;
+  line-height: 10px;
 }
 
 .eventMe {
   background-color: #F7A8C4;
+  color: white;
+}
+
+.eventMeLight {
+  background-color: #fdf2f8; /* 薄いピンク */
+  color: #d15c85; /* 濃いピンク */
 }
 
 .eventPartner {
   background-color: #A0E7D2;
-  color: #166534;
+  color: white;
+}
+
+.eventPartnerLight {
+  background-color: #ebfcf7; /* 薄いミント */
+  color: #166534; /* 濃い緑 */
 }
 
 .eventCouple {
   background-color: #9B7CC3;
+  color: white;
+}
+
+.eventCoupleLight {
+  background-color: #f5f0fa; /* 薄い紫 */
+  color: #7a5ba0; /* 濃い紫 */
+}
+
+.eventStart {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: -14px;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+  text-align: left;
+  padding-left: 6px;
+}
+
+.eventMiddle {
+  border-radius: 0;
+  margin-left: -14px;
+  margin-right: -14px;
+  position: relative;
+  z-index: 1;
+}
+
+.eventEnd {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -14px;
+  position: relative;
+  z-index: 1;
 }
 
 .todoPill {
