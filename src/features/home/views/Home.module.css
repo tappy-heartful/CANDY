@@ -198,6 +198,41 @@
   font-weight: bold;
 }
 
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  color: white;
+  width: fit-content;
+  font-weight: 900;
+}
+
+.badgeCouple {
+  background: #9B7CC3;
+}
+
+.badgeMe {
+  background: #F7A8C4;
+}
+
+.badgePartner {
+  background: #A0E7D2;
+}
+
+.countdownBadge {
+  background: #fdf2f8;
+  color: #F7A8C4;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #F7A8C4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .badgeCouple { background: #9B7CC3; }
 .badgePersonal { background: #F7A8C4; }
 

@@ -7,8 +7,19 @@ import {
   doc,
   serverTimestamp,
   getDoc,
+  getDocs,
+  query,
+  where,
 } from "firebase/firestore";
-import { Todo, TodoStep } from "@/src/lib/firestore/types";
+import { toPlainObject } from "@/src/lib/firestore/utils";
+import { Todo, TodoStep, Group } from "@/src/lib/firestore/types";
+
+export async function getGroups(type: "todo" | "wishlist"): Promise<Group[]> {
+  const groupsRef = collection(db, "groups");
+  const q = query(groupsRef, where("type", "==", type));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => toPlainObject(doc) as Group);
+}
 
 export async function addTodo(data: Partial<Todo>) {
   const todosRef = collection(db, "todos");

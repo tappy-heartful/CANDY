@@ -4,12 +4,17 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getWishlist } from "@/src/features/wishlist/api/wishlist-server-actions";
+import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { Wishlist, User as FirestoreUser } from "@/src/lib/firestore/types";
+import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
+import { getEvents } from "@/src/features/calendar/api/calendar-client-service";
+import { getGroups } from "@/src/features/todo/api/todo-client-service";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group } from "@/src/lib/firestore/types";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
+import DailyStatusCard from "../components/DailyStatusCard";
+import DailyStatusModal from "../components/DailyStatusModal";
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
@@ -18,6 +23,13 @@ export default function HomeClient() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
   const [activeProfileModal, setActiveProfileModal] = useState<'partner' | 'me' | null>(null);
+  const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
+  const [partnerDailyStatus, setPartnerDailyStatus] = useState<DailyStatus | null>(null);
+  const [isDailyStatusModalOpen, setIsDailyStatusModalOpen] = useState(false);
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
+  const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -46,20 +58,61 @@ export default function HomeClient() {
       userData?.dislikedThings;
 
     if (user && hasRequired) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
       Promise.all([
-        getWishlist(user.uid),
-        getPartnerData(user.uid)
-      ]).then(([wishData, partner]) => {
+        getWishlist(),
+        getPartnerData(user.uid),
+        getDailyStatuses(todayStr),
+        getEvents(),
+        getGroups("wishlist")
+      ]).then(([wishData, partner, statuses, allEvents, groups]) => {
         const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 5);
-        const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 5);
+        const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 3);
+        const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 3);
         const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
         setRecentWishlist(combined);
         setPartnerData(partner);
+
+        const myStatus = statuses.find(s => s.uid === user.uid) || null;
+        const pStatus = statuses.find(s => s.uid !== user.uid) || null;
+        setMyDailyStatus(myStatus);
+        setPartnerDailyStatus(pStatus);
+
+        const futureEvents = allEvents
+          .filter(e => e.startDate >= todayStr)
+          .slice(0, 3);
+        setUpcomingEvents(futureEvents);
+        setWishlistGroups(groups);
+
         setLoading(false);
       });
     }
   }, [user, userData]);
+
+  const handleSaveDailyStatus = async (data: Partial<DailyStatus>) => {
+    setIsStatusSubmitting(true);
+    try {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const submitData = {
+        ...data,
+        uid: user?.uid,
+        date: todayStr,
+        ...(myDailyStatus ? { id: myDailyStatus.id } : {})
+      };
+      await saveDailyStatus(submitData);
+      setMyDailyStatus({ ...myDailyStatus, ...submitData } as DailyStatus);
+      setIsDailyStatusModalOpen(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsStatusSubmitting(false);
+    }
+  };
 
   return (
     <AuthGuard>
@@ -99,7 +152,7 @@ export default function HomeClient() {
                 <i className="fa-solid fa-pen"></i>
               </Link>
             </div>
-            
+
             {/* Heart connector */}
             <div className={styles.heartConnector}>
               <i className="fa-solid fa-heart"></i>
@@ -116,57 +169,123 @@ export default function HomeClient() {
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <DailyStatusCard
+            user={userData as FirestoreUser}
+            status={myDailyStatus}
+            isMe={true}
+            onEdit={() => setIsDailyStatusModalOpen(true)}
+          />
+          <DailyStatusCard
+            user={partnerData}
+            status={partnerDailyStatus}
+            isMe={false}
+          />
+        </div>
+
         <div className="content-card">
           <div className="card-title-main">
-            <i className="fa-solid fa-bell" style={{color: "#A0E7D2"}}></i> 最新のお知らせ
+            <i className="fa-solid fa-bell" style={{ color: "#A0E7D2" }}></i> 最新のお知らせ
           </div>
           <div className={styles.notificationList}>
             {loading ? (
               <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : recentWishlist.length > 0 ? (
-              (() => {
-                const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
-                let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
-                
-                recentWishlist.forEach((w) => {
-                  if (!currentGroup || currentGroup.uid !== w.uid) {
-                    if (currentGroup) grouped.push(currentGroup);
-                    currentGroup = {
-                      uid: w.uid,
-                      creatorName: w.uid === user?.uid 
-                        ? (userData?.nickname || userData?.displayName || "自分") 
-                        : (partnerData?.nickname || "パートナー"),
-                      items: [w]
-                    };
-                  } else {
-                    currentGroup.items.push(w);
-                  }
-                });
-                if (currentGroup) grouped.push(currentGroup);
-
-                return grouped.map((group, idx) => (
-                  <div key={idx} className={styles.notificationGroup}>
+            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0) ? (
+              <>
+                {upcomingEvents.length > 0 && (
+                  <div className={styles.notificationGroup}>
                     <div className={styles.notificationHeader}>
-                      <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
+                      <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
                       <span className={styles.notificationText}>
-                        {group.creatorName}がWishlistを追加しました
+                        直近のイベント
                       </span>
                     </div>
                     <div className={styles.notificationItems}>
-                      {group.items.map(item => {
-                        const dateObj = item.createdAt ? new Date(item.createdAt) : new Date();
-                        const dateStr = `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+                      {upcomingEvents.map(e => {
+                        const [y, m, d] = e.startDate.split('-').map(Number);
+                        const eventDateOnly = new Date(y, m - 1, d);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const diffTime = eventDateOnly.getTime() - today.getTime();
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        let countdownText = `あと${diffDays}日`;
+                        if (diffDays === 0) countdownText = "🎉 本日！";
+                        else if (diffDays === 1) countdownText = "✨ 明日！";
+
                         return (
-                          <Link href="/wishlist" key={item.id} className={styles.notificationSubItem}>
-                            <span className={styles.notificationTime}>{dateStr}</span>
-                            <span className={styles.notificationTitle}>{item.title}</span>
-                          </Link>
+                          <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                              <span className={styles.countdownBadge}>{countdownText}</span>
+                            </div>
+                            <span className={styles.notificationTitle}>{e.title}</span>
+                          </div>
                         );
                       })}
                     </div>
                   </div>
-                ));
-              })()
+                )}
+                {(() => {
+                  const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
+                  let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
+
+                  recentWishlist.forEach((w) => {
+                    if (!currentGroup || currentGroup.uid !== w.uid) {
+                      if (currentGroup) grouped.push(currentGroup);
+                      currentGroup = {
+                        uid: w.uid,
+                        creatorName: w.uid === user?.uid
+                          ? (userData?.nickname || userData?.displayName || "自分")
+                          : (partnerData?.nickname || "パートナー"),
+                        items: [w]
+                      };
+                    } else {
+                      currentGroup.items.push(w);
+                    }
+                  });
+                  if (currentGroup) grouped.push(currentGroup);
+
+                  return grouped.map((group, idx) => (
+                    <div key={idx} className={styles.notificationGroup}>
+                      <div className={styles.notificationHeader}>
+                        <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
+                        <span className={styles.notificationText}>
+                          {group.creatorName}がWishlistを追加しました
+                        </span>
+                      </div>
+                      <div className={styles.notificationItems}>
+                        {group.items.map(item => {
+                          const wGroup = wishlistGroups.find(g => g.id === item.groupId);
+                          const groupName = wGroup ? wGroup.name : '未分類';
+                          
+                          let badgeClass = styles.badgeCouple;
+                          let typeLabel = "2人";
+                          if (item.type !== 'couple') {
+                            if (item.uid === user?.uid) {
+                              badgeClass = styles.badgeMe;
+                              typeLabel = "自分";
+                            } else {
+                              badgeClass = styles.badgePartner;
+                              typeLabel = partnerData?.nickname || "パートナー";
+                            }
+                          }
+                          
+                          return (
+                            <Link href="/wishlist" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                              <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
+                                <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                                <span style={{fontWeight: 'bold'}}>{groupName}</span>
+                              </div>
+                              <span className={styles.notificationTitle}>{item.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </>
             ) : (
               <div className={styles.emptyMsg}>最近の追加はありません</div>
             )}
@@ -180,6 +299,8 @@ export default function HomeClient() {
             partnerNickname={partnerData?.nickname || "パートナー"}
             myPictureUrl={userData?.pictureUrl}
             partnerPictureUrl={partnerData?.pictureUrl}
+            openDate={openCalendarDate}
+            onOpenDateClear={() => setOpenCalendarDate(null)}
           />
         )}
 
@@ -201,6 +322,14 @@ export default function HomeClient() {
             <span className={styles.cardTitle}>自分の情報を見る</span>
           </button>
         </div>
+
+        <DailyStatusModal
+          isOpen={isDailyStatusModalOpen}
+          status={myDailyStatus}
+          onClose={() => setIsDailyStatusModalOpen(false)}
+          onSave={handleSaveDailyStatus}
+          isSubmitting={isStatusSubmitting}
+        />
       </div>
     </AuthGuard>
   );
