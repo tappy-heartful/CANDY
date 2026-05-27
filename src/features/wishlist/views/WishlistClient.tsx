@@ -8,7 +8,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./Wishlist.module.css";
-import EditWishlistModal from "@/src/features/wishlist/components/EditWishlistModal";
+import WishlistModal from "@/src/features/wishlist/components/WishlistModal";
 
 interface WishlistClientProps {
   initialWishlist: Wishlist[];
@@ -19,11 +19,12 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   const { user, userData } = useAuth();
   const [items, setItems] = useState(initialWishlist);
   const [groups, setGroups] = useState(initialGroups);
-  const [newTitle, setNewTitle] = useState("");
-  const [newUrgency, setNewUrgency] = useState<number>(50);
-  const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || "");
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
-  const [selectedEditItem, setSelectedEditItem] = useState<Wishlist | null>(null);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Wishlist | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortMode, setSortMode] = useState<"group" | "urgency" | "createdAt_desc" | "createdAt_asc">("group");
 
   const [filterState, setFilterState] = useState({
     couple: true,
@@ -36,12 +37,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
     getPartnerData(user.uid).then((p) => setPartnerData(p));
   }, [user]);
 
-  // Set default group when groups list updates and no group is selected yet
-  useEffect(() => {
-    if (!selectedGroupId && groups.length > 0) {
-      setSelectedGroupId(groups[0].id);
-    }
-  }, [groups, selectedGroupId]);
+
 
   const handleToggleAchieved = async (item: Wishlist) => {
     try {
@@ -52,52 +48,52 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
     }
   };
 
-  const handleSaveEdit = async (updatedFields: Partial<Wishlist>) => {
-    if (!selectedEditItem) return;
+  const handleSaveWishlist = async (data: { title: string; groupId: string; type: "personal" | "couple"; urgency: number; isAchieved: boolean }) => {
+    if (!data.title || !user) return;
+    setIsSubmitting(true);
     showSpinner();
     try {
-      await updateWishlist(selectedEditItem.id, updatedFields);
-      setItems((prev) =>
-        prev.map((i) => (i.id === selectedEditItem.id ? { ...i, ...updatedFields } : i))
-      );
-      setSelectedEditItem(null);
+      if (editingItem) {
+        // 更新
+        await updateWishlist(editingItem.id, {
+          title: data.title,
+          groupId: data.groupId,
+          urgency: data.urgency,
+          isAchieved: data.isAchieved,
+        });
+        setItems((prev) =>
+          prev.map((i) => (i.id === editingItem.id ? { ...i, ...data } : i))
+        );
+      } else {
+        // 新規作成
+        const docRef = await addWishlist({
+          title: data.title,
+          type: data.type,
+          uid: user.uid,
+          groupId: data.groupId,
+          showToPartner: true,
+          urgency: data.urgency,
+        });
+        const newItem: Wishlist = {
+          id: docRef.id,
+          title: data.title,
+          type: data.type,
+          uid: user.uid,
+          groupId: data.groupId,
+          showToPartner: true,
+          isAchieved: false,
+          urgency: data.urgency,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setItems((prev) => [newItem, ...prev]);
+      }
+      setIsModalOpen(false);
+      setEditingItem(null);
     } catch (e) {
-      showDialog("更新に失敗しました");
+      showDialog("保存に失敗しました");
     } finally {
-      hideSpinner();
-    }
-  };
-
-  const handleAdd = async (type: "personal" | "couple") => {
-    if (!newTitle || !user) return;
-    showSpinner();
-    try {
-      const docRef = await addWishlist({
-        title: newTitle,
-        type,
-        uid: user.uid,
-        groupId: selectedGroupId,
-        showToPartner: true,
-        urgency: newUrgency,
-      });
-      const newItem: Wishlist = {
-        id: docRef.id,
-        title: newTitle,
-        type,
-        uid: user.uid,
-        groupId: selectedGroupId,
-        showToPartner: true,
-        isAchieved: false,
-        urgency: newUrgency,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      setItems((prev) => [newItem, ...prev]);
-      setNewTitle("");
-      setNewUrgency(50);
-    } catch (e) {
-      showDialog("追加に失敗しました");
-    } finally {
+      setIsSubmitting(false);
       hideSpinner();
     }
   };
@@ -130,7 +126,6 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
         createdAt: Date.now(),
       };
       setGroups((prev) => [...prev, newGroup]);
-      setSelectedGroupId(docRef.id);
     } catch (e) {
       showDialog("グループ追加に失敗しました");
     }
@@ -169,97 +164,130 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   const myLabel = userData?.nickname || "自分";
   const partnerLabel = partnerData?.nickname || "相手";
 
+  const renderWishlistItems = (list: Wishlist[]) => {
+    return list.map((item) => {
+      const isEditable = item.uid === user?.uid;
+      return (
+        <div
+          key={item.id}
+          className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""} ${!isEditable ? styles.nonEditable : ""}`}
+        >
+          <div className={styles.cardHeader}>
+            <div className={styles.cardTitle}>{item.title}</div>
+            <div className={styles.wishActions}>
+              {isEditable && (
+                <>
+                  <button
+                    className={styles.editWishBtn}
+                    onClick={() => {
+                      setEditingItem(item);
+                      setIsModalOpen(true);
+                    }}
+                    title="編集"
+                  >
+                    <i className="fa-solid fa-pen"></i>
+                  </button>
+                  <button
+                    className={styles.deleteWishlistBtn}
+                    onClick={(e) => handleDeleteWishlist(item.id, e)}
+                    title="削除"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <div className={styles.cardMeta}>
+            <div className={styles.metaRow}>
+              <span
+                className={`${styles.badge} ${
+                  item.type === "couple"
+                    ? styles.badgeCouple
+                    : item.uid === user?.uid
+                      ? styles.badgeMe
+                      : styles.badgePartner
+                }`}
+              >
+                {item.type === "couple" ? "2人" : item.uid === user?.uid ? myLabel : partnerLabel}
+              </span>
+              <span className={styles.groupBadge}>
+                {groupNameById.get(item.groupId) || "未分類"}
+              </span>
+            </div>
+            <div className={styles.urgencyBadge}>
+              <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>
+              早くやりたい度: {item.urgency ?? 50}
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   const renderWishlist = (list: Wishlist[]) => {
     const hasAny = list.length > 0;
     if (!hasAny) {
       return <div className={styles.emptyState}>Wishlistはありません</div>;
     }
 
-    const byGroup: Record<string, Wishlist[]> = {};
-    list.forEach((w) => {
-      const key = w.groupId || "";
-      if (!byGroup[key]) byGroup[key] = [];
-      byGroup[key].push(w);
-    });
+    if (sortMode === "group") {
+      const byGroup: Record<string, Wishlist[]> = {};
+      list.forEach((w) => {
+        const key = w.groupId || "";
+        if (!byGroup[key]) byGroup[key] = [];
+        byGroup[key].push(w);
+      });
 
-    // Sort items within each group by urgency desc, then by createdAt desc
-    groupOrder.forEach((groupId) => {
-      if (byGroup[groupId]) {
-        byGroup[groupId].sort((a, b) => {
-          const urgencyA = a.urgency ?? 50;
-          const urgencyB = b.urgency ?? 50;
-          if (urgencyB !== urgencyA) {
-            return urgencyB - urgencyA;
-          }
-          return b.createdAt - a.createdAt;
-        });
-      }
-    });
+      groupOrder.forEach((groupId) => {
+        if (byGroup[groupId]) {
+          byGroup[groupId].sort((a, b) => {
+            const urgencyA = a.urgency ?? 50;
+            const urgencyB = b.urgency ?? 50;
+            if (urgencyB !== urgencyA) {
+              return urgencyB - urgencyA;
+            }
+            return b.createdAt - a.createdAt;
+          });
+        }
+      });
 
-    return (
-      <div className="grouped-list">
-        {groupOrder.map((groupId) => {
-          const groupItems = byGroup[groupId] || [];
-          if (groupItems.length === 0) return null;
-          return (
-            <div key={groupId} className={styles.groupBlock}>
-              <div className={styles.groupTitle}>{groupNameById.get(groupId) || "未分類"}</div>
-              <div className={styles.wishList}>
-                {groupItems.map((item) => {
-                  const isEditable = item.uid === user?.uid;
-                  return (
-                    <div
-                      key={item.id}
-                      className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""} ${!isEditable ? styles.nonEditable : ""}`}
-                      onClick={() => {
-                        if (isEditable) {
-                          setSelectedEditItem(item);
-                        }
-                      }}
-                    >
-                      <div className={styles.cardHeader}>
-                        <div className={styles.cardTitle}>{item.title}</div>
-                        {isEditable && (
-                          <button
-                            className={styles.deleteWishlistBtn}
-                            onClick={(e) => handleDeleteWishlist(item.id, e)}
-                            title="削除"
-                          >
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
-                        )}
-                      </div>
-                      <div className={styles.cardMeta}>
-                        <div className={styles.metaRow}>
-                          <span
-                            className={`${styles.badge} ${
-                              item.type === "couple"
-                                ? styles.badgeCouple
-                                : item.uid === user?.uid
-                                  ? styles.badgeMe
-                                  : styles.badgePartner
-                            }`}
-                          >
-                            {item.type === "couple" ? "2人" : item.uid === user?.uid ? myLabel : partnerLabel}
-                          </span>
-                          <span className={styles.groupBadge}>
-                            {groupNameById.get(item.groupId) || "未分類"}
-                          </span>
-                        </div>
-                        <div className={styles.urgencyBadge}>
-                          <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>
-                          早くやりたい度: {item.urgency ?? 50}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+      return (
+        <div className="grouped-list">
+          {groupOrder.map((groupId) => {
+            const groupItems = byGroup[groupId] || [];
+            if (groupItems.length === 0) return null;
+            return (
+              <div key={groupId} className={styles.groupBlock}>
+                <div className={styles.groupTitle}>{groupNameById.get(groupId) || "未分類"}</div>
+                <div className={styles.wishList}>
+                  {renderWishlistItems(groupItems)}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+            );
+          })}
+        </div>
+      );
+    } else {
+      const sortedList = [...list].sort((a, b) => {
+        if (sortMode === "urgency") {
+          const uA = a.urgency ?? 50;
+          const uB = b.urgency ?? 50;
+          if (uB !== uA) return uB - uA;
+          return b.createdAt - a.createdAt;
+        } else if (sortMode === "createdAt_desc") {
+          return b.createdAt - a.createdAt;
+        } else {
+          return a.createdAt - b.createdAt;
+        }
+      });
+
+      return (
+        <div className={styles.wishList}>
+          {renderWishlistItems(sortedList)}
+        </div>
+      );
+    }
   };
 
   return (
@@ -268,80 +296,47 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
         <div className="card-title-main">
           <i className="fa-solid fa-gift"></i> Wishlist
         </div>
-        <button onClick={handleAddGroup} className={styles.addGroupBtn}>
-          + グループ追加
-        </button>
+        <div className={styles.headerBtns}>
+          <button onClick={handleAddGroup} className={styles.addGroupBtn}>
+            + グループ
+          </button>
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className={styles.addWishBtn}>
+            + Wishlistを追加
+          </button>
+        </div>
       </div>
 
-      <div className={styles.inputSection}>
-        <input
-          type="text"
-          className={styles.wishInput}
-          placeholder="例: 北海道旅行に行きたい"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-        />
-
+      <div className={styles.controlsRow}>
+        <div className={styles.filterTabs}>
+          <button
+            className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
+            onClick={() => toggleFilter("couple")}
+          >
+            2人
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
+            onClick={() => toggleFilter("me")}
+          >
+            {myLabel}
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
+            onClick={() => toggleFilter("partner")}
+          >
+            {partnerLabel}
+          </button>
+        </div>
         <select
-          className={styles.groupSelect}
-          value={selectedGroupId}
-          onChange={(e) => setSelectedGroupId(e.target.value)}
+          className={styles.sortSelect}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as any)}
         >
-          <option value="">グループを選択</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
+          <option value="group">グループごと</option>
+          <option value="urgency">早くやりたい度</option>
+          <option value="createdAt_desc">新しい順</option>
+          <option value="createdAt_asc">古い順</option>
         </select>
-
-        <div className={styles.urgencyRow}>
-          <div className={styles.urgencyLabel}>早くやりたい度: {newUrgency}</div>
-          <input
-            type="range"
-            min="1"
-            max="100"
-            className={styles.urgencySlider}
-            value={newUrgency}
-            onChange={(e) => setNewUrgency(Number(e.target.value))}
-          />
-        </div>
-
-        <div className={styles.btnGroup}>
-          <button
-            className={`${styles.btnAdd} ${styles.btnPersonal}`}
-            onClick={() => handleAdd("personal")}
-          >
-            自分の願い
-          </button>
-          <button
-            className={`${styles.btnAdd} ${styles.btnCouple}`}
-            onClick={() => handleAdd("couple")}
-          >
-            2人の願い
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.filterTabs}>
-        <button
-          className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
-          onClick={() => toggleFilter("couple")}
-        >
-          2人
-        </button>
-        <button
-          className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
-          onClick={() => toggleFilter("me")}
-        >
-          {myLabel}
-        </button>
-        <button
-          className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
-          onClick={() => toggleFilter("partner")}
-        >
-          {partnerLabel}
-        </button>
       </div>
 
       <div className="content-card">
@@ -358,12 +353,16 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
         {renderWishlist(visibleWishlist.filter((w) => w.isAchieved))}
       </div>
 
-      {selectedEditItem && (
-        <EditWishlistModal
-          wishlist={selectedEditItem}
+      {isModalOpen && (
+        <WishlistModal
+          wishlist={editingItem}
           groups={groups}
-          onClose={() => setSelectedEditItem(null)}
-          onSave={handleSaveEdit}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSaveWishlist}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
