@@ -35,7 +35,6 @@ export interface Todo {
   steps?: TodoStep[];
   isCompleted: boolean;
   type: "personal" | "couple";
-  showToPartner: boolean; // type="personal" の場合のみ有効
   groupId: string;
   uid: string; // 作成者
   createdAt: number;
@@ -56,7 +55,6 @@ export interface Wishlist {
   note?: string;
   isAchieved: boolean;
   type: "personal" | "couple";
-  showToPartner: boolean;
   groupId: string;
   uid: string;
   createdAt: number;
@@ -84,6 +82,17 @@ export interface CalendarEvent {
   link?: string;
   type: "personal" | "couple";
   uid: string; // 作成者
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DailyStatus {
+  id: string;
+  uid: string;
+  date: string; // "YYYY-MM-DD"
+  mood: number; // 1 to 5
+  health: number; // 1 to 5
+  comment: string;
   createdAt: number;
   updatedAt: number;
 }

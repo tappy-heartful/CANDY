@@ -71,7 +71,6 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: true,
           urgency: data.urgency,
         });
         const newItem: Wishlist = {
@@ -80,7 +79,6 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: true,
           isAchieved: false,
           urgency: data.urgency,
           createdAt: Date.now(),

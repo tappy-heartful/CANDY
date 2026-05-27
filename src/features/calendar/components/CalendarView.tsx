@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarEvent } from "@/src/lib/firestore/types";
-import { getEvents } from "@/src/features/calendar/api/calendar-server-actions";
-import { getTodos } from "@/src/features/todo/api/todo-server-actions";
-import { addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
+import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
@@ -16,6 +14,8 @@ interface CalendarViewProps {
   partnerNickname?: string;
   myPictureUrl?: string;
   partnerPictureUrl?: string;
+  openDate?: string | null;
+  onOpenDateClear?: () => void;
 }
 
 export default function CalendarView({
@@ -24,6 +24,8 @@ export default function CalendarView({
   partnerNickname = "パートナー",
   myPictureUrl,
   partnerPictureUrl,
+  openDate,
+  onOpenDateClear,
 }: CalendarViewProps) {
   const today = useMemo(() => new Date(), []);
   const thisYear = today.getFullYear();
@@ -49,7 +51,7 @@ export default function CalendarView({
   // Fetch events and todos on mount
   useEffect(() => {
     showSpinner();
-    Promise.all([getEvents(), getTodos(currentUserId)])
+    Promise.all([getEvents(), getTodosForCalendar()])
       .then(([eventData, todoData]) => {
         setEvents(eventData);
         setTodos(todoData);
@@ -80,6 +82,21 @@ export default function CalendarView({
       return filterState.partner;
     });
   }, [todos, filterState, currentUserId]);
+
+  useEffect(() => {
+    if (openDate) {
+      setActiveDateStr(openDate);
+      setIsDailyAgendaOpen(true);
+      const [y, m] = openDate.split("-").map(Number);
+      if (!isNaN(y) && !isNaN(m)) {
+        setCurrentYear(y);
+        setCurrentMonth(m - 1);
+      }
+      if (onOpenDateClear) {
+        onOpenDateClear();
+      }
+    }
+  }, [openDate, onOpenDateClear]);
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {

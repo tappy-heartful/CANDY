@@ -4,12 +4,16 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getWishlist } from "@/src/features/wishlist/api/wishlist-server-actions";
+import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { Wishlist, User as FirestoreUser } from "@/src/lib/firestore/types";
+import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
+import { getEvents } from "@/src/features/calendar/api/calendar-client-service";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent } from "@/src/lib/firestore/types";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
+import DailyStatusCard from "../components/DailyStatusCard";
+import DailyStatusModal from "../components/DailyStatusModal";
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
@@ -18,6 +22,12 @@ export default function HomeClient() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
   const [activeProfileModal, setActiveProfileModal] = useState<'partner' | 'me' | null>(null);
+  const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
+  const [partnerDailyStatus, setPartnerDailyStatus] = useState<DailyStatus | null>(null);
+  const [isDailyStatusModalOpen, setIsDailyStatusModalOpen] = useState(false);
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -46,20 +56,59 @@ export default function HomeClient() {
       userData?.dislikedThings;
 
     if (user && hasRequired) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
       Promise.all([
         getWishlist(user.uid),
-        getPartnerData(user.uid)
-      ]).then(([wishData, partner]) => {
+        getPartnerData(user.uid),
+        getDailyStatuses(todayStr),
+        getEvents()
+      ]).then(([wishData, partner, statuses, allEvents]) => {
         const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 5);
         const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 5);
         const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        
         setRecentWishlist(combined);
         setPartnerData(partner);
+
+        const myStatus = statuses.find(s => s.uid === user.uid) || null;
+        const pStatus = statuses.find(s => s.uid !== user.uid) || null;
+        setMyDailyStatus(myStatus);
+        setPartnerDailyStatus(pStatus);
+
+        const futureEvents = allEvents
+          .filter(e => e.startDate >= todayStr)
+          .slice(0, 3);
+        setUpcomingEvents(futureEvents);
+
         setLoading(false);
       });
     }
   }, [user, userData]);
+
+  const handleSaveDailyStatus = async (data: Partial<DailyStatus>) => {
+    setIsStatusSubmitting(true);
+    try {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const submitData = {
+        ...data,
+        uid: user?.uid,
+        date: todayStr,
+        ...(myDailyStatus ? { id: myDailyStatus.id } : {})
+      };
+      await saveDailyStatus(submitData);
+      setMyDailyStatus({ ...myDailyStatus, ...submitData } as DailyStatus);
+      setIsDailyStatusModalOpen(false);
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setIsStatusSubmitting(false);
+    }
+  };
 
   return (
     <AuthGuard>
@@ -116,6 +165,20 @@ export default function HomeClient() {
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <DailyStatusCard 
+            user={userData as FirestoreUser} 
+            status={myDailyStatus} 
+            isMe={true} 
+            onEdit={() => setIsDailyStatusModalOpen(true)} 
+          />
+          <DailyStatusCard 
+            user={partnerData} 
+            status={partnerDailyStatus} 
+            isMe={false} 
+          />
+        </div>
+
         <div className="content-card">
           <div className="card-title-main">
             <i className="fa-solid fa-bell" style={{color: "#A0E7D2"}}></i> 最新のお知らせ
@@ -123,8 +186,34 @@ export default function HomeClient() {
           <div className={styles.notificationList}>
             {loading ? (
               <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : recentWishlist.length > 0 ? (
-              (() => {
+            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0) ? (
+              <>
+                {upcomingEvents.map(e => {
+                  const eventDate = new Date(e.startDate);
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  const diffTime = eventDate.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const countdownText = diffDays === 0 ? "今日" : `あと${diffDays}日`;
+
+                  return (
+                    <div key={e.id} className={styles.notificationGroup} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer' }}>
+                      <div className={styles.notificationHeader}>
+                        <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
+                        <span className={styles.notificationText}>
+                          イベントまで{countdownText}
+                        </span>
+                      </div>
+                      <div className={styles.notificationItems}>
+                        <div className={styles.notificationSubItem}>
+                          <span className={styles.notificationTime}>{e.startDate}</span>
+                          <span className={styles.notificationTitle}>{e.title}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(() => {
                 const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
                 let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
                 
@@ -166,7 +255,8 @@ export default function HomeClient() {
                     </div>
                   </div>
                 ));
-              })()
+              })()}
+              </>
             ) : (
               <div className={styles.emptyMsg}>最近の追加はありません</div>
             )}
@@ -180,6 +270,8 @@ export default function HomeClient() {
             partnerNickname={partnerData?.nickname || "パートナー"}
             myPictureUrl={userData?.pictureUrl}
             partnerPictureUrl={partnerData?.pictureUrl}
+            openDate={openCalendarDate}
+            onOpenDateClear={() => setOpenCalendarDate(null)}
           />
         )}
 
@@ -201,6 +293,14 @@ export default function HomeClient() {
             <span className={styles.cardTitle}>自分の情報を見る</span>
           </button>
         </div>
+
+        <DailyStatusModal
+          isOpen={isDailyStatusModalOpen}
+          status={myDailyStatus}
+          onClose={() => setIsDailyStatusModalOpen(false)}
+          onSave={handleSaveDailyStatus}
+          isSubmitting={isStatusSubmitting}
+        />
       </div>
     </AuthGuard>
   );
