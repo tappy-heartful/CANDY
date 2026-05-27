@@ -15,9 +15,10 @@ interface TodoModalProps {
     dateMode: "due" | "on";
   }) => Promise<void>;
   isSubmitting: boolean;
+  onAddGroup?: () => void;
 }
 
-export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSubmitting }: TodoModalProps) {
+export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
@@ -71,14 +72,22 @@ export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSub
           
           <div className={styles.formGroup}>
             <label className={styles.inputLabel}>グループ</label>
-            <select
-              className={styles.modalSelect}
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-            >
-              <option value="">グループを選択</option>
-              {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                className={styles.modalSelect}
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">グループを選択</option>
+                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              {!todo && onAddGroup && (
+                <button type="button" className={styles.addGroupBtn} onClick={onAddGroup}>
+                  + 追加
+                </button>
+              )}
+            </div>
           </div>
 
           <div className={styles.formGroup}>

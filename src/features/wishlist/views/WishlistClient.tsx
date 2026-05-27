@@ -297,12 +297,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           <i className="fa-solid fa-gift"></i> Wishlist
         </div>
         <div className={styles.headerBtns}>
-          <button onClick={handleAddGroup} className={styles.addGroupBtn}>
-            + グループ
-          </button>
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className={styles.addWishBtn}>
-            + Wishlistを追加
-          </button>
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className={styles.addWishBtn}>+ Wishlistを追加</button>
         </div>
       </div>
 
@@ -363,6 +358,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           }}
           onSave={handleSaveWishlist}
           isSubmitting={isSubmitting}
+          onAddGroup={handleAddGroup}
         />
       )}
     </div>

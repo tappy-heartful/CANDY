@@ -402,7 +402,6 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       <div className={styles.todoHeader}>
         <div className="card-title-main"><i className="fa-solid fa-list-check"></i> TODO List</div>
         <div className={styles.headerBtns}>
-          <button onClick={handleAddGroup} className={styles.addGroupBtn}>+ グループ</button>
           <button onClick={() => { setEditingTodo(null); setIsModalOpen(true); }} className={styles.addTodoBtn}>+ TODOを追加</button>
         </div>
       </div>
@@ -460,6 +459,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         }}
         onSave={handleSaveTodo}
         isSubmitting={isSubmitting}
+        onAddGroup={handleAddGroup}
       />
     </div>
   );

@@ -16,6 +16,7 @@ interface WishlistModalProps {
     isAchieved: boolean;
   }) => Promise<void>;
   isSubmitting?: boolean;
+  onAddGroup?: () => void;
 }
 
 export default function WishlistModal({
@@ -24,6 +25,7 @@ export default function WishlistModal({
   onClose,
   onSave,
   isSubmitting,
+  onAddGroup,
 }: WishlistModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
@@ -96,19 +98,27 @@ export default function WishlistModal({
             <label className={styles.fieldLabel} htmlFor="edit-group">
               グループ
             </label>
-            <select
-              id="edit-group"
-              className={styles.groupSelect}
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-            >
-              <option value="">グループを選択</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                id="edit-group"
+                className={styles.groupSelect}
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">グループを選択</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              {!wishlist && onAddGroup && (
+                <button type="button" className={styles.addGroupBtn} onClick={onAddGroup}>
+                  + 追加
+                </button>
+              )}
+            </div>
           </div>
 
           <div className={styles.formGroup}>
