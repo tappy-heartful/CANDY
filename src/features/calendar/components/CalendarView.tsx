@@ -343,22 +343,31 @@ export default function CalendarView({
           ];
 
           combinedItems.sort((a, b) => {
-            // 複数日イベントを優先
+            // 1. 複数日イベントを優先
             const aMulti = a.startDate !== a.endDate ? 1 : 0;
             const bMulti = b.startDate !== b.endDate ? 1 : 0;
             if (aMulti !== bMulti) return bMulti - aMulti;
             
-            // 開始日が早い順
+            // 2. 開始日が早い順
             const aStart = a.startDate || a.date;
             const bStart = b.startDate || b.date;
             if (aStart !== bStart) return aStart.localeCompare(bStart);
             
-            // 終了日が遅い順
+            // 3. 終了日が遅い順
             const aEnd = a.endDate || a.date;
             const bEnd = b.endDate || b.date;
             if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
+
+            // 4. 終日の予定を優先
+            if (a.isAllDay && !b.isAllDay) return -1;
+            if (!a.isAllDay && b.isAllDay) return 1;
+
+            // 5. 開始時間（startTime）が早い順
+            if (a.startTime && b.startTime && a.startTime !== b.startTime) {
+              return a.startTime.localeCompare(b.startTime);
+            }
             
-            // それ以外はタイトル順
+            // 6. それ以外はタイトル順
             return a.title.localeCompare(b.title);
           });
 
@@ -391,12 +400,16 @@ export default function CalendarView({
               <div className={styles.eventsContainer}>
                 {combinedItems.slice(0, 3).map((item) => {
                   const isMe = item.uid === currentUserId;
-                  const pillClass =
-                    item.type === "couple"
-                      ? styles.eventCouple
-                      : isMe
-                        ? styles.eventMe
-                        : styles.eventPartner;
+                  const isSolid = item.isAllDay || item.startDate !== item.endDate;
+
+                  let pillClass = "";
+                  if (item.type === "couple") {
+                    pillClass = isSolid ? styles.eventCouple : styles.eventCoupleLight;
+                  } else if (isMe) {
+                    pillClass = isSolid ? styles.eventMe : styles.eventMeLight;
+                  } else {
+                    pillClass = isSolid ? styles.eventPartner : styles.eventPartnerLight;
+                  }
 
                   if (item.isTodo) {
                     return (

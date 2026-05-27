@@ -38,17 +38,30 @@ export default function DailyAgendaModal({
     return `${month}月${date}日 ${dayStr}`;
   }, [activeDateStr]);
 
-  // Sort events: All-day first, then by start time
+  // Sort events:
+  // 1. Continued from previous days (activeDateStr > startDate)
+  // 2. Starts today, sorted by start time
+  // 3. All-day events at the end
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
-      if (a.isAllDay && !b.isAllDay) return -1;
-      if (!a.isAllDay && b.isAllDay) return 1;
+      const aIsContinued = activeDateStr > a.startDate;
+      const bIsContinued = activeDateStr > b.startDate;
+      
+      // 前日から続きの予定を最優先
+      if (aIsContinued && !bIsContinued) return -1;
+      if (!aIsContinued && bIsContinued) return 1;
+
+      // 終日の予定は一番最後
+      if (a.isAllDay && !b.isAllDay) return 1;
+      if (!a.isAllDay && b.isAllDay) return -1;
+
+      // 時間が指定されている場合は開始時間昇順
       if (!a.isAllDay && !b.isAllDay && a.startTime && b.startTime) {
         return a.startTime.localeCompare(b.startTime);
       }
       return 0;
     });
-  }, [events]);
+  }, [events, activeDateStr]);
 
   const getEventColor = (e: CalendarEvent) => {
     if (e.type === "couple") return "#9B7CC3";
@@ -95,16 +108,59 @@ export default function DailyAgendaModal({
             sortedEvents.map((e) => {
               const color = getEventColor(e);
               return (
-                <div key={e.id} className={styles.eventRow} onClick={() => onEditEvent(e)}>
-                  <div className={styles.timeCol}>
-                    {e.isAllDay ? (
-                      <span className={styles.timeText}>終日</span>
-                    ) : (
-                      <>
-                        <span className={styles.timeText}>{e.startTime}</span>
-                        <span className={styles.timeTextSub}>{e.endTime}</span>
-                      </>
-                    )}
+                <div key={e.id} className={styles.eventRow} onClick={() => onEditEvent(e)} style={{ alignItems: 'stretch' }}>
+                  <div className={styles.timeCol} style={{ alignItems: 'center' }}>
+                    {(() => {
+                      if (e.startDate !== e.endDate) {
+                        const isStart = activeDateStr === e.startDate;
+                        const isEnd = activeDateStr === e.endDate;
+                        const isMiddle = activeDateStr > e.startDate && activeDateStr < e.endDate;
+
+                        const wavyLineStyle: React.CSSProperties = {
+                          width: '6px',
+                          flex: 1,
+                          backgroundColor: color,
+                          WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                          WebkitMaskRepeat: "repeat-y",
+                          WebkitMaskSize: "6px 12px",
+                          maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                          maskRepeat: "repeat-y",
+                          maskSize: "6px 12px",
+                        };
+
+                        if (isStart) {
+                          return (
+                            <>
+                              <span className={styles.timeText} style={{ marginTop: '8px' }}>{e.isAllDay ? "終日" : e.startTime}</span>
+                              <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
+                            </>
+                          );
+                        }
+                        if (isMiddle) {
+                          return (
+                            <div style={{ ...wavyLineStyle }}></div>
+                          );
+                        }
+                        if (isEnd) {
+                          return (
+                            <>
+                              <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
+                              <span className={styles.timeText} style={{ marginBottom: '8px' }}>{e.isAllDay ? "終日" : e.endTime}</span>
+                            </>
+                          );
+                        }
+                      }
+                      
+                      // 単日イベントの場合
+                      return e.isAllDay ? (
+                        <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
+                          <span className={styles.timeText}>{e.startTime}</span>
+                          <span className={styles.timeTextSub}>{e.endTime}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className={styles.mainCol} style={{ borderLeftColor: color }}>
                     <div className={styles.eventTitle}>
