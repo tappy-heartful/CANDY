@@ -117,6 +117,9 @@ export default function HomeClient() {
           if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
             if (e.endTime < currentHourMin) return false;
           }
+          // 相手のみのイベントを除外（自分または2人のみ表示）
+          if (e.type !== "couple" && e.uid !== user.uid) return false;
+          
           return true;
         });
 
