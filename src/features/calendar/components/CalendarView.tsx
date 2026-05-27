@@ -37,9 +37,12 @@ export default function CalendarView({
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<any[]>([]); // will be typed as Todo[]
   const [filterState, setFilterState] = useState({
-    couple: true,
-    me: true,
-    partner: true,
+    eventsCouple: true,
+    eventsMe: true,
+    eventsPartner: true,
+    todosCouple: true,
+    todosMe: true,
+    todosPartner: true,
   });
   const [activeModalEvent, setActiveModalEvent] = useState<Partial<CalendarEvent> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,19 +70,19 @@ export default function CalendarView({
 
   const visibleEvents = useMemo(() => {
     return events.filter((e) => {
-      if (e.type === "couple") return filterState.couple;
+      if (e.type === "couple") return filterState.eventsCouple;
       const isMe = e.uid === currentUserId;
-      if (isMe) return filterState.me;
-      return filterState.partner;
+      if (isMe) return filterState.eventsMe;
+      return filterState.eventsPartner;
     });
   }, [events, filterState, currentUserId]);
 
   const visibleTodos = useMemo(() => {
     return todos.filter((t) => {
-      if (t.type === "couple") return filterState.couple;
+      if (t.type === "couple") return filterState.todosCouple;
       const isMe = t.uid === currentUserId;
-      if (isMe) return filterState.me;
-      return filterState.partner;
+      if (isMe) return filterState.todosMe;
+      return filterState.todosPartner;
     });
   }, [todos, filterState, currentUserId]);
 
@@ -278,26 +281,52 @@ export default function CalendarView({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <div className={styles.controlsRow}>
-        <div className={styles.filterTabs}>
-          <button
-            className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
-            onClick={() => setFilterState((prev) => ({ ...prev, couple: !prev.couple }))}
-          >
-            2人の予定
-          </button>
-          <button
-            className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
-            onClick={() => setFilterState((prev) => ({ ...prev, me: !prev.me }))}
-          >
-            {myNickname}
-          </button>
-          <button
-            className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
-            onClick={() => setFilterState((prev) => ({ ...prev, partner: !prev.partner }))}
-          >
-            {partnerNickname}
-          </button>
+      <div className={styles.controlsRow} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', width: '40px' }}>予定:</span>
+          <div className={styles.filterTabs}>
+            <button
+              className={`${styles.tab} ${filterState.eventsCouple ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, eventsCouple: !prev.eventsCouple }))}
+            >
+              2人
+            </button>
+            <button
+              className={`${styles.tab} ${filterState.eventsMe ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, eventsMe: !prev.eventsMe }))}
+            >
+              {myNickname}
+            </button>
+            <button
+              className={`${styles.tab} ${filterState.eventsPartner ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, eventsPartner: !prev.eventsPartner }))}
+            >
+              {partnerNickname}
+            </button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', width: '40px' }}>TODO:</span>
+          <div className={styles.filterTabs}>
+            <button
+              className={`${styles.tab} ${filterState.todosCouple ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, todosCouple: !prev.todosCouple }))}
+            >
+              2人
+            </button>
+            <button
+              className={`${styles.tab} ${filterState.todosMe ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, todosMe: !prev.todosMe }))}
+            >
+              {myNickname}
+            </button>
+            <button
+              className={`${styles.tab} ${filterState.todosPartner ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, todosPartner: !prev.todosPartner }))}
+            >
+              {partnerNickname}
+            </button>
+          </div>
         </div>
       </div>
 

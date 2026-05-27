@@ -68,7 +68,11 @@ export default function HomeClient() {
         getEvents(),
         getGroups("wishlist")
       ]).then(([wishData, partner, statuses, allEvents, groups]) => {
-        const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const nowTime = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        
+        const recentWishes = wishData.filter(w => w.createdAt && (nowTime - w.createdAt) <= oneDayMs);
+        const sortedByDate = [...recentWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 3);
         const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 3);
         const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -81,10 +85,29 @@ export default function HomeClient() {
         setMyDailyStatus(myStatus);
         setPartnerDailyStatus(pStatus);
 
-        const futureEvents = allEvents
-          .filter(e => e.startDate >= todayStr)
-          .slice(0, 3);
-        setUpcomingEvents(futureEvents);
+        const currentHourMin = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+
+        const validEvents = allEvents.filter(e => {
+          if (e.endDate < todayStr) return false;
+          if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
+            if (e.endTime < currentHourMin) return false;
+          }
+          return true;
+        });
+
+        validEvents.sort((a, b) => {
+          if (a.isAllDay && !b.isAllDay) return 1;
+          if (!a.isAllDay && b.isAllDay) return -1;
+          
+          if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+          
+          if (a.startTime && b.startTime) {
+            return a.startTime.localeCompare(b.startTime);
+          }
+          return 0;
+        });
+
+        setUpcomingEvents(validEvents.slice(0, 3));
         setWishlistGroups(groups);
 
         setLoading(false);
@@ -112,6 +135,29 @@ export default function HomeClient() {
     } finally {
       setIsStatusSubmitting(false);
     }
+  };
+
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    const h = date.getHours();
+    const m = String(date.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  const formatDate = (date: Date) => {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const day = days[date.getDay()];
+    return `${m}月${d}日 (${day})`;
   };
 
   return (
@@ -142,6 +188,11 @@ export default function HomeClient() {
             </div>
           </div>
         )}
+
+        <div className={styles.cuteClockContainer}>
+          <div className={styles.cuteDate}>{formatDate(currentTime)}</div>
+          <div className={styles.cuteTime}>{formatTime(currentTime)}</div>
+        </div>
 
         <div className={styles.welcomeSection}>
           <div className={styles.profileRow}>
