@@ -79,11 +79,11 @@
 }
 
 .starActive {
-  color: #F7A8C4;
+  color: #F7A8C4 !important;
 }
 
 .starActiveHealth {
-  color: #A0E7D2;
+  color: #A0E7D2 !important;
 }
 
 .commentBox {
@@ -95,6 +95,7 @@
   margin-top: 4px;
   min-height: 40px;
   border-left: 3px solid #9B7CC3;
+  white-space: pre-wrap;
 }
 
 .emptyState {
