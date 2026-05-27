@@ -5,6 +5,27 @@
   margin-bottom: 20px;
 }
 
+.headerBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.addWishBtn {
+  background: #F7A8C4;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.addWishBtn:active {
+  transform: scale(0.95);
+}
+
 .addGroupBtn {
   background: #f3e5f5;
   border: none;
@@ -21,12 +42,39 @@
   transform: scale(0.95);
 }
 
+.controlsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .filterTabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
   overflow-x: auto;
   padding-bottom: 4px;
+  flex: 1;
+}
+
+.sortSelect {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  outline: none;
+  font-size: 13px;
+  font-weight: bold;
+  background-color: white;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  padding-right: 28px;
+  color: #666;
 }
 
 .tab {
@@ -197,6 +245,32 @@
   flex: 1;
 }
 
+.wishActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.editWishBtn {
+  background: none;
+  border: none;
+  color: #c5a9df;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  margin-top: -2px;
+}
+
+.editWishBtn:hover {
+  background: #fdf2f8;
+  color: #9B7CC3;
+}
+
 .deleteWishlistBtn {
   background: none;
   border: none;
@@ -211,7 +285,6 @@
   transition: all 0.2s ease;
   margin-top: -2px;
   margin-right: -2px;
-  flex-shrink: 0;
 }
 
 .deleteWishlistBtn:hover {
@@ -380,6 +453,27 @@
   color: #9B7CC3;
   margin-bottom: 6px;
   display: block;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.radioGroup {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #666;
 }
 
 .achievedRow {

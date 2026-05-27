@@ -13,6 +13,6 @@ export async function getWishlist(uid: string) {
   return all.filter(w => 
     w.uid === uid || 
     w.type === "couple" || 
-    (w.type === "personal" && w.showToPartner)
+    w.type === "personal"
   );
 }

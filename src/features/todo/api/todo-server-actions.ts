@@ -21,9 +21,9 @@ export async function getTodos(uid: string) {
   // フィルタリング:
   // 1. 自分のTODO (uid == currentUid)
   // 2. 2人のTODO (type == "couple")
-  // 3. 相手のTODOで公開されているもの (type == "personal" && showToPartner == true)
+  // 3. 相手のTODOで公開されているもの (暫定仕様として全て表示)
   return allTodos.filter(
-    (t) => t.uid === uid || t.type === "couple" || (t.type === "personal" && t.showToPartner),
+    (t) => t.uid === uid || t.type === "couple" || t.type === "personal"
   );
 }
 

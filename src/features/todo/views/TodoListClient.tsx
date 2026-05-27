@@ -28,6 +28,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stepInputs, setStepInputs] = useState<Record<string, string>>({});
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
+  const [sortMode, setSortMode] = useState<"group" | "date" | "createdAt_desc" | "createdAt_asc">("group");
 
   useEffect(() => {
     if (!user) return;
@@ -68,7 +69,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: data.type === "couple",
+          showToPartner: true,
           dateMode: data.dateMode,
           date: data.date,
         });
@@ -78,7 +79,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           type: data.type,
           uid: user.uid,
           groupId: data.groupId,
-          showToPartner: data.type === "couple",
+          showToPartner: true,
           dateMode: data.dateMode,
           date: data.date,
           isCompleted: false,
@@ -232,135 +233,167 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     setFilterState(next);
   };
 
+  const renderTodoItems = (list: Todo[]) => {
+    return list.map((todo) => (
+      <div key={todo.id} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
+        <div className={styles.todoTop}>
+          <input
+            type="checkbox"
+            className={styles.todoCheckbox}
+            checked={todo.isCompleted}
+            onChange={() => handleToggleComplete(todo)}
+            disabled={todo.uid !== user?.uid}
+          />
+          <div className={styles.todoInfo}>
+            <div className={styles.todoTitle}>
+              <span
+                className={`${styles.badge} ${
+                  todo.type === "couple"
+                    ? styles.badgeCouple
+                    : todo.uid === user?.uid
+                      ? styles.badgeMe
+                      : styles.badgePartner
+                }`}
+              >
+                {todo.type === "couple" ? "2人" : todo.uid === user?.uid ? myLabel : partnerLabel}
+              </span>
+              {todo.title}
+            </div>
+            <div className={styles.todoMeta}>
+              {todo.date && (
+                <span className={styles.dateText}>
+                  <i className="fa-regular fa-calendar" style={{marginRight: "4px"}}></i>
+                  {todo.date.replace(/-/g, '/')} {todo.dateMode === 'on' ? 'に' : 'まで'}
+                </span>
+              )}
+            </div>
+          </div>
+          {todo.uid === user?.uid && (
+            <div className={styles.todoActions}>
+              <button
+                className={styles.editTodoBtn}
+                onClick={() => {
+                  setEditingTodo(todo);
+                  setIsModalOpen(true);
+                }}
+                title="TODOを編集"
+              >
+                <i className="fa-solid fa-pen"></i>
+              </button>
+              <button
+                className={styles.deleteTodoBtn}
+                onClick={() => handleDeleteTodo(todo.id)}
+                title="TODOを削除"
+              >
+                <i className="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.steps}>
+          {(todo.steps || []).length > 0 && (
+            <div className={styles.stepsList}>
+              {(todo.steps || []).map((step) => (
+                <div key={step.id} className={`${styles.stepItem} ${step.isCompleted ? styles.completed : ""}`}>
+                  <input
+                    type="checkbox"
+                    className={styles.stepCheckbox}
+                    checked={step.isCompleted}
+                    onChange={() => handleToggleStep(todo.id, step)}
+                    disabled={todo.uid !== user?.uid}
+                  />
+                  <span className={styles.stepTitle}>{step.title}</span>
+                  {todo.uid === user?.uid && (
+                    <button
+                      className={styles.deleteStepBtn}
+                      onClick={() => handleDeleteStep(todo.id, step.id)}
+                      title="ステップを削除"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {todo.uid === user?.uid && (
+            <div className={styles.stepAdd}>
+              <input
+                type="text"
+                className={styles.stepInput}
+                placeholder="例: お店に電話する"
+                value={stepInputs[todo.id] || ""}
+                onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
+              />
+              <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
+                + ステップ追加
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    ));
+  };
+
   const renderTodoList = (list: Todo[]) => {
     const hasAny = list.length > 0;
     if (!hasAny) {
       return <div style={{ textAlign: "center", color: "#ccc", padding: "20px" }}>TODOはありません</div>;
     }
 
-    const byGroup: Record<string, Todo[]> = {};
-    list.forEach((t) => {
-      const key = t.groupId || "";
-      if (!byGroup[key]) byGroup[key] = [];
-      byGroup[key].push(t);
-    });
+    if (sortMode === "group") {
+      const byGroup: Record<string, Todo[]> = {};
+      list.forEach((t) => {
+        const key = t.groupId || "";
+        if (!byGroup[key]) byGroup[key] = [];
+        byGroup[key].push(t);
+      });
 
-    return (
-      <div className="grouped-list">
-        {groupOrder.map((groupId) => {
-          const groupTodos = byGroup[groupId] || [];
-          if (groupTodos.length === 0) return null;
-          return (
-            <div key={groupId} className={styles.groupBlock}>
-              <div className={styles.groupTitle}>{groupNameById.get(groupId) || "未分類"}</div>
-              <div className={styles.todoList}>
-                {groupTodos.map((todo) => (
-                  <div key={todo.id} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
-                    <div className={styles.todoTop}>
-                      <input
-                        type="checkbox"
-                        className={styles.todoCheckbox}
-                        checked={todo.isCompleted}
-                        onChange={() => handleToggleComplete(todo)}
-                        disabled={todo.uid !== user?.uid}
-                      />
-                      <div className={styles.todoInfo}>
-                        <div className={styles.todoTitle}>
-                          <span
-                            className={`${styles.badge} ${
-                              todo.type === "couple"
-                                ? styles.badgeCouple
-                                : todo.uid === user?.uid
-                                  ? styles.badgeMe
-                                  : styles.badgePartner
-                            }`}
-                          >
-                            {todo.type === "couple" ? "2人" : todo.uid === user?.uid ? myLabel : partnerLabel}
-                          </span>
-                          {todo.title}
-                        </div>
-                        <div className={styles.todoMeta}>
-                          {todo.date && (
-                            <span className={styles.dateText}>
-                              <i className="fa-regular fa-calendar" style={{marginRight: "4px"}}></i>
-                              {todo.date.replace(/-/g, '/')} {todo.dateMode === 'on' ? 'に' : 'まで'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {todo.uid === user?.uid && (
-                        <div className={styles.todoActions}>
-                          <button
-                            className={styles.editTodoBtn}
-                            onClick={() => {
-                              setEditingTodo(todo);
-                              setIsModalOpen(true);
-                            }}
-                            title="TODOを編集"
-                          >
-                            <i className="fa-solid fa-pen"></i>
-                          </button>
-                          <button
-                            className={styles.deleteTodoBtn}
-                            onClick={() => handleDeleteTodo(todo.id)}
-                            title="TODOを削除"
-                          >
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className={styles.steps}>
-                      {(todo.steps || []).length > 0 && (
-                        <div className={styles.stepsList}>
-                          {(todo.steps || []).map((step) => (
-                            <div key={step.id} className={`${styles.stepItem} ${step.isCompleted ? styles.completed : ""}`}>
-                              <input
-                                type="checkbox"
-                                className={styles.stepCheckbox}
-                                checked={step.isCompleted}
-                                onChange={() => handleToggleStep(todo.id, step)}
-                                disabled={todo.uid !== user?.uid}
-                              />
-                              <span className={styles.stepTitle}>{step.title}</span>
-                              {todo.uid === user?.uid && (
-                                <button
-                                  className={styles.deleteStepBtn}
-                                  onClick={() => handleDeleteStep(todo.id, step.id)}
-                                  title="ステップを削除"
-                                >
-                                  <i className="fa-solid fa-xmark"></i>
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {todo.uid === user?.uid && (
-                        <div className={styles.stepAdd}>
-                          <input
-                            type="text"
-                            className={styles.stepInput}
-                            placeholder="例: お店に電話する"
-                            value={stepInputs[todo.id] || ""}
-                            onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
-                          />
-                          <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
-                            + ステップ追加
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      return (
+        <div className="grouped-list">
+          {groupOrder.map((groupId) => {
+            const groupTodos = byGroup[groupId] || [];
+            if (groupTodos.length === 0) return null;
+            return (
+              <div key={groupId} className={styles.groupBlock}>
+                <div className={styles.groupTitle}>{groupNameById.get(groupId) || "未分類"}</div>
+                <div className={styles.todoList}>
+                  {renderTodoItems(groupTodos)}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+            );
+          })}
+        </div>
+      );
+    } else {
+      const sortedList = [...list].sort((a, b) => {
+        if (sortMode === "date") {
+          if (a.date && b.date) {
+            if (a.date < b.date) return -1;
+            if (a.date > b.date) return 1;
+            return a.createdAt - b.createdAt;
+          } else if (a.date) {
+            return -1;
+          } else if (b.date) {
+            return 1;
+          } else {
+            return a.createdAt - b.createdAt;
+          }
+        } else if (sortMode === "createdAt_desc") {
+          return b.createdAt - a.createdAt;
+        } else {
+          return a.createdAt - b.createdAt;
+        }
+      });
+
+      return (
+        <div className={styles.todoList}>
+          {renderTodoItems(sortedList)}
+        </div>
+      );
+    }
   };
 
   return (
@@ -369,30 +402,41 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       <div className={styles.todoHeader}>
         <div className="card-title-main"><i className="fa-solid fa-list-check"></i> TODO List</div>
         <div className={styles.headerBtns}>
-          <button onClick={handleAddGroup} className={styles.addGroupBtn}>+ グループ</button>
           <button onClick={() => { setEditingTodo(null); setIsModalOpen(true); }} className={styles.addTodoBtn}>+ TODOを追加</button>
         </div>
       </div>
 
-      <div className={styles.filterTabs}>
-        <button
-          className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
-          onClick={() => toggleFilter("couple")}
+      <div className={styles.controlsRow}>
+        <div className={styles.filterTabs}>
+          <button
+            className={`${styles.tab} ${filterState.couple ? styles.active : ""}`}
+            onClick={() => toggleFilter("couple")}
+          >
+            2人
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
+            onClick={() => toggleFilter("me")}
+          >
+            {myLabel}
+          </button>
+          <button
+            className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
+            onClick={() => toggleFilter("partner")}
+          >
+            {partnerLabel}
+          </button>
+        </div>
+        <select
+          className={styles.sortSelect}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as any)}
         >
-          2人
-        </button>
-        <button
-          className={`${styles.tab} ${filterState.me ? styles.active : ""}`}
-          onClick={() => toggleFilter("me")}
-        >
-          {myLabel}
-        </button>
-        <button
-          className={`${styles.tab} ${filterState.partner ? styles.active : ""}`}
-          onClick={() => toggleFilter("partner")}
-        >
-          {partnerLabel}
-        </button>
+          <option value="group">グループごと</option>
+          <option value="date">日付順</option>
+          <option value="createdAt_desc">新しい順</option>
+          <option value="createdAt_asc">古い順</option>
+        </select>
       </div>
 
       <div className="content-card">
@@ -415,6 +459,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         }}
         onSave={handleSaveTodo}
         isSubmitting={isSubmitting}
+        onAddGroup={handleAddGroup}
       />
     </div>
   );
