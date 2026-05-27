@@ -169,6 +169,13 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
         <div
           key={item.id}
           className={`${styles.wishCard} ${item.isAchieved ? styles.achieved : ""} ${!isEditable ? styles.nonEditable : ""}`}
+          onClick={() => {
+            if (isEditable) {
+              setEditingItem(item);
+              setIsModalOpen(true);
+            }
+          }}
+          style={{ cursor: isEditable ? "pointer" : "default" }}
         >
           <div className={styles.cardHeader}>
             <div className={styles.cardTitle}>{item.title}</div>
