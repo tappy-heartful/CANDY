@@ -360,3 +360,193 @@
   background: #F7A8C4;
   color: white;
 }
+
+.headerBtns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.addTodoBtn {
+  background: #9B7CC3;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.addTodoBtn:active {
+  transform: scale(0.95);
+}
+
+.todoActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.editTodoBtn {
+  background: none;
+  border: none;
+  color: #c5a9df;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+.editTodoBtn:hover {
+  background: #f3e5f5;
+  color: #9B7CC3;
+}
+
+.dateText {
+  display: inline-block;
+  background: #fdf2f8;
+  color: #F7A8C4;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.todoModal {
+  background: white;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+}
+.modalHeader {
+  padding: 24px 20px 16px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #444;
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+.modalBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inputLabel {
+  font-size: 13px;
+  font-weight: bold;
+  color: #666;
+}
+.modalInput, .modalSelect {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  outline: none;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+.modalInput:focus, .modalSelect:focus {
+  border-color: #9B7CC3;
+}
+.radioGroup {
+  display: flex;
+  gap: 16px;
+}
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.dateRowModal {
+  display: flex;
+  gap: 8px;
+}
+.modalInputDate {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  outline: none;
+  font-size: 15px;
+  min-height: 48px;
+}
+.modalSelectMode {
+  width: 80px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  outline: none;
+  font-size: 15px;
+  min-height: 48px;
+}
+.modalFooter {
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.btnCancel, .btnSave {
+  flex: 1;
+  padding: 14px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btnCancel {
+  background: #eee;
+  color: #666;
+}
+.btnSave {
+  background: #9B7CC3;
+  color: white;
+}
+.btnSave:disabled {
+  opacity: 0.6;
+}
