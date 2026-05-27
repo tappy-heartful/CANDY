@@ -23,6 +23,7 @@ export interface User {
   createdAt?: number;
   updatedAt?: number;
   isSystemAdmin?: boolean;
+  clockTheme?: string;
   [key: string]: any;
 }
 
