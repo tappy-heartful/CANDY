@@ -3,6 +3,7 @@
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
@@ -36,6 +37,7 @@ const CLOCK_THEMES = [
 
 export default function HomeClient() {
   const { user, userData } = useAuth();
+  const searchParams = useSearchParams();
   const [recentWishlist, setRecentWishlist] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -44,6 +46,12 @@ export default function HomeClient() {
   const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
   const [partnerDailyStatus, setPartnerDailyStatus] = useState<DailyStatus | null>(null);
   const [isDailyStatusModalOpen, setIsDailyStatusModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "status") {
+      setIsDailyStatusModalOpen(true);
+    }
+  }, [searchParams]);
   const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);

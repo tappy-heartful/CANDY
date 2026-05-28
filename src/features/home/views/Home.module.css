@@ -459,9 +459,7 @@
 .cardPartner { background-color: #9B7CC3 !important; }
 .cardMe { background-color: #FFD166 !important; }
 
-.cardPartner, .cardMe {
-  /* remove the grid-column: 1 / -1 to allow 2x2 layout */
-}
+
 
 .cardIcon {
   font-size: 32px;
