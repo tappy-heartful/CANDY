@@ -18,21 +18,21 @@ import DailyStatusCard from "../components/DailyStatusCard";
 import DailyStatusModal from "../components/DailyStatusModal";
 
 const CLOCK_THEMES = [
-  { id: "themePinkyRibbon", type: "digital" },
-  { id: "themeMintyBubble", type: "digital" },
-  { id: "themeMilkyStar", type: "digital" },
-  { id: "themeSunnyCitrus", type: "digital" },
-  { id: "themeCottonCandy", type: "digital" },
-  { id: "themeClassicPastel", type: "analog" },
-  { id: "themeMacaronClock", type: "analog" },
-  { id: "themeBerryPie", type: "analog" },
-  { id: "themeOceanPearl", type: "analog" },
-  { id: "themeNightOwl", type: "analog" },
-  { id: "themeRainbowPop", type: "digital" },
-  { id: "themeNeonCyber", type: "digital" },
-  { id: "themeMatchaLatte", type: "analog" },
-  { id: "themeSweetDonut", type: "analog" },
-  { id: "themeGalaxyMagic", type: "digital" },
+  "themePinkyRibbon",
+  "themeMintyBubble",
+  "themeMilkyStar",
+  "themeSunnyCitrus",
+  "themeCottonCandy",
+  "themeClassicPastel",
+  "themeMacaronClock",
+  "themeBerryPie",
+  "themeOceanPearl",
+  "themeNightOwl",
+  "themeRainbowPop",
+  "themeNeonCyber",
+  "themeMatchaLatte",
+  "themeSweetDonut",
+  "themeGalaxyMagic",
 ];
 
 export default function HomeClient() {
@@ -57,6 +57,7 @@ export default function HomeClient() {
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
+  const [clockType, setClockType] = useState<"digital" | "analog">("digital");
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -71,6 +72,9 @@ export default function HomeClient() {
   useEffect(() => {
     if (userData?.clockTheme) {
       setCurrentTheme(userData.clockTheme);
+    }
+    if (userData?.clockType) {
+      setClockType(userData.clockType);
     }
   }, [userData]);
 
@@ -106,11 +110,8 @@ export default function HomeClient() {
         
         const recentWishes = wishData.filter(w => w.createdAt && (nowTime - w.createdAt) <= oneDayMs);
         const sortedByDate = [...recentWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const myWishes = sortedByDate.filter(w => w.uid === user.uid).slice(0, 3);
-        const partnerWishes = sortedByDate.filter(w => w.uid !== user.uid).slice(0, 3);
-        const combined = [...myWishes, ...partnerWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        setRecentWishlist(combined);
+        setRecentWishlist(sortedByDate);
         setPartnerData(partner);
 
         const myStatus = statuses.find(s => s.uid === user.uid) || null;
@@ -174,9 +175,9 @@ export default function HomeClient() {
   };
 
   const handleCycleTheme = async () => {
-    const currentIndex = CLOCK_THEMES.findIndex((t) => t.id === currentTheme);
+    const currentIndex = CLOCK_THEMES.indexOf(currentTheme);
     const nextIndex = (currentIndex + 1) % CLOCK_THEMES.length;
-    const nextThemeId = CLOCK_THEMES[nextIndex].id;
+    const nextThemeId = CLOCK_THEMES[nextIndex];
     setCurrentTheme(nextThemeId);
     
     if (user) {
@@ -184,6 +185,19 @@ export default function HomeClient() {
         await updateProfile(user.uid, { clockTheme: nextThemeId });
       } catch (e) {
         console.error("Failed to save clock theme", e);
+      }
+    }
+  };
+
+  const handleToggleType = async () => {
+    const nextType = clockType === "digital" ? "analog" : "digital";
+    setClockType(nextType);
+    
+    if (user) {
+      try {
+        await updateProfile(user.uid, { clockType: nextType });
+      } catch (e) {
+        console.error("Failed to save clock type", e);
       }
     }
   };
@@ -211,7 +225,6 @@ export default function HomeClient() {
     return `${m}月${d}日 (${day})`;
   };
 
-  const activeThemeObj = CLOCK_THEMES.find(t => t.id === currentTheme) || CLOCK_THEMES[0];
 
   return (
     <AuthGuard>
@@ -243,11 +256,16 @@ export default function HomeClient() {
         )}
 
         <div className={`${styles.cuteClockContainer} ${styles[currentTheme]}`}>
-          <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
-            <i className="fa-solid fa-arrows-rotate"></i>
-          </button>
+          <div className={styles.clockControls}>
+            <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
+              <i className="fa-solid fa-palette"></i>
+            </button>
+            <button className={styles.cycleThemeBtn} onClick={handleToggleType} title="デジタル/アナログ切替">
+              <i className="fa-solid fa-clock"></i>
+            </button>
+          </div>
 
-          {activeThemeObj.type === "digital" ? (
+          {clockType === "digital" ? (
             <>
               <div className={styles.cuteDate}>{formatDate(currentTime)}</div>
               <div className={styles.cuteTime}>{formatTime(currentTime)}</div>
