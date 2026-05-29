@@ -24,6 +24,7 @@ export interface User {
   updatedAt?: number;
   isSystemAdmin?: boolean;
   clockTheme?: string;
+  clockType?: "digital" | "analog";
   [key: string]: any;
 }
 
