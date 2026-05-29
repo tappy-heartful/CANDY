@@ -131,7 +131,6 @@ export default function WishlistModal({
                   value="personal"
                   checked={type === "personal"}
                   onChange={() => setType("personal")}
-                  disabled={wishlist !== null}
                 />
                 自分の願い
               </label>
@@ -142,7 +141,6 @@ export default function WishlistModal({
                   value="couple"
                   checked={type === "couple"}
                   onChange={() => setType("couple")}
-                  disabled={wishlist !== null}
                 />
                 2人の願い
               </label>
