@@ -4,9 +4,8 @@ import { adminDb } from "@/src/lib/firebase-admin";
 import { Anniversary, Group } from "@/src/lib/firestore/types";
 
 export async function fetchAnniversaries(uid: string, partnerUid?: string | null): Promise<Anniversary[]> {
-  const uids = partnerUid ? [uid, partnerUid] : [uid];
   const ref = adminDb.collection("anniversaries");
-  const snap = await ref.where("uid", "in", uids).get();
+  const snap = await ref.get();
   
   const results = snap.docs.map(doc => {
     const data = doc.data();

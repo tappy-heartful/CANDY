@@ -111,6 +111,7 @@ export default function AnniversaryClient({ initialAnniversaries }: AnniversaryC
                 key={item.id}
                 className={styles.card}
                 onClick={() => {
+                  if (item.uid !== user?.uid) return;
                   setEditingItem(item);
                   setIsModalOpen(true);
                 }}
@@ -132,12 +133,14 @@ export default function AnniversaryClient({ initialAnniversaries }: AnniversaryC
                         <>あと<span>{diffDays}</span>日</>
                       )}
                     </div>
-                    <button
-                      className={styles.deleteBtn}
-                      onClick={(e) => handleDelete(e, item.id)}
-                    >
-                      <i className="fa-solid fa-trash-can"></i>
-                    </button>
+                    {item.uid === user?.uid && (
+                      <button
+                        className={styles.deleteBtn}
+                        onClick={(e) => handleDelete(e, item.id)}
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -31,10 +31,8 @@ export async function deleteAnniversary(id: string) {
 import { getDocs, query, where } from "firebase/firestore";
 
 export async function getAnniversaries(uid: string, partnerUid?: string | null): Promise<Anniversary[]> {
-  const uids = partnerUid ? [uid, partnerUid] : [uid];
   const colRef = collection(db, COLLECTION_NAME);
-  const q = query(colRef, where("uid", "in", uids));
-  const snap = await getDocs(q);
+  const snap = await getDocs(colRef);
   
   const results = snap.docs.map(docSnap => {
     const data = docSnap.data();
