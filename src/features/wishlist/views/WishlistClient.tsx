@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Wishlist, Group, User as FirestoreUser } from "@/src/lib/firestore/types";
 import { addWishlist, updateWishlist, deleteWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { addGroup } from "@/src/features/todo/api/todo-client-service";
@@ -25,12 +26,17 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Wishlist | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sortMode, setSortMode] = useState<"group" | "urgency" | "createdAt_desc" | "createdAt_asc">("group");
+  
+  const searchParams = useSearchParams();
+  const initialSort = (searchParams.get("sort") as "group" | "urgency" | "createdAt_desc" | "createdAt_asc") || "group";
+  const [sortMode, setSortMode] = useState<"group" | "urgency" | "createdAt_desc" | "createdAt_asc">(initialSort);
+
+  const initialFilterAll = searchParams.get("filter") === "all";
 
   const [filterState, setFilterState] = useState({
     couple: true,
     me: true,
-    partner: false,
+    partner: initialFilterAll ? true : false,
   });
 
   useEffect(() => {
