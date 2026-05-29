@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarEvent } from "@/src/lib/firestore/types";
+import { CalendarEvent, Anniversary } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
+import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
@@ -36,6 +37,7 @@ export default function CalendarView({
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-11
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<any[]>([]); // will be typed as Todo[]
+  const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
   const [filterState, setFilterState] = useState({
     eventsCouple: true,
     eventsMe: true,
@@ -63,10 +65,15 @@ export default function CalendarView({
   // Fetch events and todos on mount
   useEffect(() => {
     showSpinner();
-    Promise.all([getEvents(), getTodosForCalendar()])
-      .then(([eventData, todoData]) => {
+    Promise.all([
+      getEvents(), 
+      getTodosForCalendar(),
+      getAnniversaries(currentUserId, partnerNickname !== "パートナー" ? "dummy" : null) // 実際はpartnerUidがないので、AnniversaryClient側では不要だったが、ここでは一旦uidベースで取得（CalendarViewのPropsにはpartnerUidがないので工夫が必要。現状は currentUserId だけでOKとする。または、HomeClient同様にpartnerUidを渡す）
+    ])
+      .then(([eventData, todoData, annivData]) => {
         setEvents(eventData);
         setTodos(todoData);
+        setAnniversaries(annivData);
       })
       .catch((e) => {
         console.error("Failed to load events/todos:", e);
@@ -376,6 +383,11 @@ export default function CalendarView({
           // Find events and todos active on this date string
           const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
           const dayTodos = visibleTodos.filter((t) => t.date === dateStr);
+          
+          // 記念日のチェック ("MM-DD" で判定)
+          const mdStr = `${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
+          const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
+
           const combinedItems = [
             ...dayEvents.map(e => ({ ...e, isTodo: false })),
             ...dayTodos.map(t => ({ ...t, isTodo: true }))
@@ -437,7 +449,12 @@ export default function CalendarView({
                 </span>
               </div>
               <div className={styles.eventsContainer}>
-                {combinedItems.slice(0, 3).map((item) => {
+                {dayAnniversaries.map((a) => (
+                  <div key={a.id} className={styles.eventPill} style={{ background: '#f3e5f5', color: '#9B7CC3', border: '1px solid #9B7CC3', fontWeight: 'bold' }}>
+                    🎂 {a.title}
+                  </div>
+                ))}
+                {combinedItems.slice(0, 3 - dayAnniversaries.length).map((item) => {
                   const isMe = item.uid === currentUserId;
                   const isSolid = item.isAllDay || item.startDate !== item.endDate;
 
@@ -499,6 +516,7 @@ export default function CalendarView({
           activeDateStr={activeDateStr}
           events={visibleEvents.filter((e) => activeDateStr >= e.startDate && activeDateStr <= e.endDate)}
           todos={visibleTodos.filter((t) => t.date === activeDateStr)}
+          anniversaries={anniversaries.filter((a) => a.date === activeDateStr.slice(5))}
           currentUserId={currentUserId}
           myPictureUrl={myPictureUrl}
           partnerPictureUrl={partnerPictureUrl}

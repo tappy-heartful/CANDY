@@ -67,9 +67,19 @@ export interface Wishlist {
 export interface Group {
   id: string;
   name: string;
-  type: "todo" | "wishlist";
+  type: "todo" | "wishlist" | "anniversary";
   uid: string; // 作成者（2人の場合は共有だが管理上）
   createdAt: number;
+}
+
+export interface Anniversary {
+  id: string;
+  title: string;
+  date: string; // "MM-DD"
+  note?: string;
+  uid: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface CalendarEvent {

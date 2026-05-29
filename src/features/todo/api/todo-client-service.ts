@@ -100,7 +100,7 @@ export async function deleteTodoStep(todoId: string, stepId: string) {
   });
 }
 
-export async function addGroup(name: string, type: "todo" | "wishlist", uid: string) {
+export async function addGroup(name: string, type: "todo" | "wishlist" | "anniversary", uid: string) {
   const groupsRef = collection(db, "groups");
   return await addDoc(groupsRef, {
     name,

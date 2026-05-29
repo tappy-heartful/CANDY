@@ -1,0 +1,140 @@
+.container {
+  padding-bottom: 80px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #9B7CC3;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.addBtn {
+  background: #9B7CC3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+}
+
+.addBtn:hover {
+  opacity: 0.9;
+}
+
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #f0f0f0;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+.cardContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.dateText {
+  font-size: 13px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rightArea {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.countdown {
+  font-size: 13px;
+  font-weight: bold;
+  color: #666;
+  background: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.countdown span {
+  font-size: 18px;
+  color: #9B7CC3;
+  margin: 0 4px;
+}
+
+.todayText {
+  color: #e74c3c;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.deleteBtn:hover {
+  color: #e74c3c;
+}
+
+.emptyMsg {
+  text-align: center;
+  padding: 60px 0;
+  color: #888;
+}
+
+.emptyMsg i {
+  font-size: 48px;
+  color: #f1f3f5;
+  margin-bottom: 16px;
+}

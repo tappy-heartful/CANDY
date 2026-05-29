@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { DailyStatus, User as FirestoreUser } from "@/src/lib/firestore/types";
-import { getDailyStatusHistory } from "@/src/features/home/api/daily-status-client-service";
+import { getDailyStatusHistory, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import DailyStatusCard from "@/src/features/home/components/DailyStatusCard";
+import DailyStatusModal from "@/src/features/home/components/DailyStatusModal";
 import styles from "./StatusHistory.module.css";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
+import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import Link from "next/link";
 import AuthGuard from "@/src/components/AuthGuard";
 import BackToHome from "@/src/components/Common/BackToHome";
@@ -26,6 +28,28 @@ export default function StatusHistoryClient() {
   const [historyData, setHistoryData] = useState<Record<string, DailyStatus[]>>({});
   const [loading, setLoading] = useState(true);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<DailyStatus | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchHistory = async () => {
+    try {
+      const data = await getDailyStatusHistory(60);
+      const grouped: Record<string, DailyStatus[]> = {};
+      data.forEach(status => {
+        if (!grouped[status.date]) {
+          grouped[status.date] = [];
+        }
+        grouped[status.date].push(status);
+      });
+      setHistoryData(grouped);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.uid) {
       getPartnerData(user.uid).then(setPartnerData);
@@ -37,27 +61,31 @@ export default function StatusHistoryClient() {
   }, [setBreadcrumbs]);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const data = await getDailyStatusHistory(60);
-        
-        const grouped: Record<string, DailyStatus[]> = {};
-        data.forEach(status => {
-          if (!grouped[status.date]) {
-            grouped[status.date] = [];
-          }
-          grouped[status.date].push(status);
-        });
-        
-        setHistoryData(grouped);
-      } catch (err) {
-        console.error("Failed to fetch history:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchHistory();
   }, []);
+
+  const handleSaveDailyStatus = async (statusData: Partial<DailyStatus>) => {
+    if (!user) return;
+    setIsSubmitting(true);
+    showSpinner();
+    try {
+      const submitData = {
+        ...statusData,
+        uid: user.uid,
+        date: editingStatus?.date,
+        ...(editingStatus?.id ? { id: editingStatus.id } : {})
+      };
+      await saveDailyStatus(submitData);
+      await fetchHistory();
+      setIsModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      showDialog("保存に失敗しました");
+    } finally {
+      setIsSubmitting(false);
+      hideSpinner();
+    }
+  };
 
   const dates = Object.keys(historyData).sort((a, b) => b.localeCompare(a)); // 降順
 
@@ -110,6 +138,10 @@ export default function StatusHistoryClient() {
                             status={myStatus}
                             isMe={true}
                             titlePrefix="" 
+                            onEdit={() => {
+                              setEditingStatus(myStatus);
+                              setIsModalOpen(true);
+                            }}
                           />
                           <DailyStatusCard
                             user={partnerData}
@@ -128,6 +160,14 @@ export default function StatusHistoryClient() {
         )}
 
         <BackToHome />
+
+        <DailyStatusModal
+          isOpen={isModalOpen}
+          status={editingStatus}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveDailyStatus}
+          isSubmitting={isSubmitting}
+        />
       </div>
     </AuthGuard>
   );

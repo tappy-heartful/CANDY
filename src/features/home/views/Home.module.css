@@ -820,3 +820,11 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(155, 124, 195, 0.4);
 }
+
+.cardAnniversary {
+  background: linear-gradient(135deg, #ff9eb5, #ff6b9e);
+  color: white;
+}
+.cardAnniversary i {
+  color: #fff;
+}
