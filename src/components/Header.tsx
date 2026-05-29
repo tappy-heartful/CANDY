@@ -106,19 +106,17 @@ export default function Header() {
         </div>
 
         <div className={styles.headerRight}>
-          <button className={styles.headerBtn} onClick={handleRefresh}>
-            <i className="fa-solid fa-rotate"></i>
-          </button>
-          <button className={styles.headerBtn} onClick={handleShare}>
-            <i className="fa-solid fa-share-nodes"></i>
-          </button>
           {user && (
-            <img
-              className={styles.lineIcon}
-              src={pictureUrl}
-              alt="User Icon"
-              onClick={toggleMenu}
-            />
+            <>
+              <img
+                className={styles.lineIcon}
+                src={pictureUrl}
+                alt="User Icon"
+              />
+              <button className={styles.hamburgerBtn} onClick={toggleMenu}>
+                <i className="fa-solid fa-bars"></i>
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -143,6 +141,14 @@ export default function Header() {
                   )}
                 </Fragment>
               ))}
+            </div>
+            <div className={styles.breadcrumbRight}>
+              <button className={styles.breadcrumbBtn} onClick={handleRefresh}>
+                <i className="fa-solid fa-rotate"></i>
+              </button>
+              <button className={styles.breadcrumbBtn} onClick={handleShare}>
+                <i className="fa-solid fa-share-nodes"></i>
+              </button>
             </div>
           </div>
           <div className={styles.breadcrumbSpacer}></div>
