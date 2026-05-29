@@ -113,7 +113,7 @@ export default function WishlistModal({
                   </option>
                 ))}
               </select>
-              {!wishlist && onAddGroup && (
+              {onAddGroup && (
                 <button type="button" className={styles.addGroupBtn} onClick={onAddGroup}>
                   + 追加
                 </button>

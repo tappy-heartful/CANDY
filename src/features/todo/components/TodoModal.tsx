@@ -82,7 +82,7 @@ export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSub
                 <option value="">グループを選択</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
-              {!todo && onAddGroup && (
+              {onAddGroup && (
                 <button type="button" className={styles.addGroupBtn} onClick={onAddGroup}>
                   + 追加
                 </button>

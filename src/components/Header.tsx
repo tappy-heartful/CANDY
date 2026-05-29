@@ -175,6 +175,12 @@ export default function Header() {
           <Link href="/wishlist" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-gift ${styles.menuIcon}`}></i> Wishlist
           </Link>
+          <Link href="/status-history" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-clock-rotate-left ${styles.menuIcon}`}></i> 過去の私たち
+          </Link>
+          <Link href="/anniversaries" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-cake-candles ${styles.menuIcon}`}></i> 記念日
+          </Link>
         </div>
       </div>
     </>
