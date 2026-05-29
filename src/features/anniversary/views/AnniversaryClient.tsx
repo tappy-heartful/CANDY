@@ -18,11 +18,11 @@ export default function AnniversaryClient({ initialAnniversaries }: AnniversaryC
   const { user } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
   const [items, setItems] = useState(initialAnniversaries);
-
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Anniversary | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   useEffect(() => {
     setBreadcrumbs([{ title: "記念日" }]);
   }, [setBreadcrumbs]);
@@ -121,10 +121,10 @@ export default function AnniversaryClient({ initialAnniversaries }: AnniversaryC
                     <h3 className={styles.cardTitle}>{item.title}</h3>
                     <div className={styles.dateText}>
                       <i className="fa-regular fa-calendar"></i>
-                      {displayDate}
+                      毎年 {displayDate}
                     </div>
                   </div>
-
+                  
                   <div className={styles.rightArea}>
                     <div className={styles.countdown}>
                       {isToday ? (
