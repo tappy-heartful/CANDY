@@ -57,7 +57,7 @@ export default function AnniversaryModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例: 付き合った記念日"
+              placeholder="例: 誕生日"
               required
               className={styles.input}
             />

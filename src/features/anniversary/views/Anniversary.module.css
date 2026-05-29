@@ -79,11 +79,17 @@
 }
 
 .dateText {
-  font-size: 13px;
-  color: #888;
+  font-size: 16px;
+  font-weight: 900;
+  color: #9B7CC3;
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: 4px;
+  background: #f3e5f5;
+  padding: 4px 10px;
+  border-radius: 8px;
+  display: inline-flex;
 }
 
 .rightArea {

@@ -44,10 +44,12 @@ function execDailyMorningNotification() {
     const eventsDocs = firestore.getDocuments('events');
     const todosDocs = firestore.getDocuments('todos');
     const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
+    const anniversariesDocs = firestore.getDocuments('anniversaries');
 
     const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const todos = todosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     
     // LINE Messaging IDsをマッピング
     const lineMessagingIds = {};
@@ -85,6 +87,16 @@ function execDailyMorningNotification() {
 
       // 直近の未来TODO（明日以降が期限）
       const nextTodos = userTodos.filter(t => t.date > todayStr).slice(0, 3);
+
+      // 直近の記念日（今年または来年で最も近いもの3件）
+      const userAnniversaries = anniversaries
+        .filter(a => a.uid === user.id || a.uid === user.partnerUid)
+        .map(a => {
+          const diffInfo = calculateAnniversaryDiff(a.date);
+          return { ...a, diffDays: diffInfo.diffDays, isToday: diffInfo.isToday };
+        })
+        .sort((a, b) => a.diffDays - b.diffDays)
+        .slice(0, 3);
 
       const cuteMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)].replace(/〇〇/g, nickname);
 
@@ -136,9 +148,21 @@ function execDailyMorningNotification() {
       }
       message += `\n`;
 
+      // 🎂記念日 セクション
+      if (userAnniversaries.length > 0) {
+        message += `🎂もうすぐ記念日\n`;
+        userAnniversaries.forEach(a => {
+          const countdownText = a.isToday ? "🎉今日！" : (a.diffDays === 1 ? "✨明日！" : `あと${a.diffDays}日`);
+          message += `・${a.title} (${countdownText})\n`;
+        });
+        message += `\n`;
+      }
+
       // リンク
       message += `📅 カレンダーはこちら\n${BASE_URL}/home\n\n`;
-      message += `📝 TODOリストはこちら\n${BASE_URL}/todo`;
+      message += `📝 TODOリストはこちら\n${BASE_URL}/todo\n\n`;
+      message += `🎁 Wishlistはこちら\n${BASE_URL}/wishlist\n\n`;
+      message += `🎂 記念日はこちら\n${BASE_URL}/anniversaries`;
 
       // LINEメッセージ送信
       sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
@@ -154,6 +178,27 @@ function calculateDiffDays(d1Str, d2Str) {
   const d1 = new Date(d1Str.replace(/-/g, '/'));
   const d2 = new Date(d2Str.replace(/-/g, '/'));
   return Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// 記念日のMM-DD形式から、次の記念日までの日数を計算する関数
+function calculateAnniversaryDiff(dateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const parts = dateStr.split("-");
+  const m = parseInt(parts[0], 10);
+  const d = parseInt(parts[1], 10);
+  let nextDate = new Date(today.getFullYear(), m - 1, d);
+  
+  // 既に今年の記念日が過ぎている場合は来年
+  if (nextDate.getTime() < today.getTime()) {
+    nextDate = new Date(today.getFullYear() + 1, m - 1, d);
+  }
+
+  const diffTime = nextDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return { diffDays: diffDays, isToday: diffDays === 0 };
 }
 
 // LINEにメッセージを送信する関数

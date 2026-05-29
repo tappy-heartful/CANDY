@@ -57,7 +57,8 @@ export default function AnniversaryClient({ initialAnniversaries }: AnniversaryC
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("本当に削除しますか？")) return;
+    const confirmed = await showDialog("本当に削除しますか？");
+    if (!confirmed) return;
     showSpinner();
     try {
       await deleteAnniversary(id);
