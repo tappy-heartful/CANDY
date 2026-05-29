@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
+import BackToHome from "@/src/components/Common/BackToHome";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
 import { showDialog, showSpinner, hideSpinner, setSession } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
@@ -350,6 +351,8 @@ export default function UserEditClient() {
           お互いのことをより深く知って、もっと仲良くなろう！🍭
         </p>
       </div>
+
+      <BackToHome />
     </div>
   );
 }

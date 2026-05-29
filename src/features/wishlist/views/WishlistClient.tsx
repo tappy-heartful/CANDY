@@ -9,6 +9,7 @@ import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./Wishlist.module.css";
 import WishlistModal from "@/src/features/wishlist/components/WishlistModal";
+import BackToHome from "@/src/components/Common/BackToHome";
 
 interface WishlistClientProps {
   initialWishlist: Wishlist[];
@@ -366,6 +367,8 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           onAddGroup={handleAddGroup}
         />
       )}
+
+      <BackToHome />
     </div>
   );
 }
