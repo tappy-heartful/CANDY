@@ -10,6 +10,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import Link from "next/link";
 import AuthGuard from "@/src/components/AuthGuard";
+import BackToHome from "@/src/components/Common/BackToHome";
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const formatDateStr = (dateStr: string) => {
@@ -60,13 +61,23 @@ export default function StatusHistoryClient() {
 
   const dates = Object.keys(historyData).sort((a, b) => b.localeCompare(a)); // 降順
 
+  // 年ごとにグループ化
+  const groupedByYear: Record<string, string[]> = {};
+  dates.forEach(dateStr => {
+    const year = new Date(dateStr).getFullYear().toString();
+    if (!isNaN(Number(year))) {
+      if (!groupedByYear[year]) {
+        groupedByYear[year] = [];
+      }
+      groupedByYear[year].push(dateStr);
+    }
+  });
+  const years = Object.keys(groupedByYear).sort((a, b) => b.localeCompare(a)); // 降順
+
   return (
     <AuthGuard>
       <div className={`page-container ${styles.historyContainer}`}>
         <div className={styles.header}>
-          <Link href="/home" className={styles.backBtn}>
-            <i className="fa-solid fa-chevron-left"></i> ホームへ戻る
-          </Link>
           <h1 className={styles.title}>
             <i className="fa-solid fa-clock-rotate-left"></i> 過去の私たち
           </h1>
@@ -81,33 +92,42 @@ export default function StatusHistoryClient() {
           </div>
         ) : (
           <div className={styles.historyList}>
-            {dates.map(dateStr => {
-              const statuses = historyData[dateStr];
-              const myStatus = statuses.find(s => s.uid === user?.uid) || null;
-              const partnerStatus = statuses.find(s => s.uid !== user?.uid) || null;
+            {years.map(year => (
+              <div key={year} className={styles.yearGroup}>
+                <h2 className={styles.yearHeader}>{year}年</h2>
+                <div className={styles.yearContent}>
+                  {groupedByYear[year].map(dateStr => {
+                    const statuses = historyData[dateStr];
+                    const myStatus = statuses.find(s => s.uid === user?.uid) || null;
+                    const partnerStatus = statuses.find(s => s.uid !== user?.uid) || null;
 
-              return (
-                <div key={dateStr} className={styles.dateBlock}>
-                  <div className={styles.dateHeader}>{formatDateStr(dateStr)}</div>
-                  <div className={styles.cardsRow}>
-                    <DailyStatusCard
-                      user={userData as FirestoreUser}
-                      status={myStatus}
-                      isMe={true}
-                      titlePrefix="" 
-                    />
-                    <DailyStatusCard
-                      user={partnerData}
-                      status={partnerStatus}
-                      isMe={false}
-                      titlePrefix="" 
-                    />
-                  </div>
+                    return (
+                      <div key={dateStr} className={styles.dateBlock}>
+                        <div className={styles.dateHeader}>{formatDateStr(dateStr)}</div>
+                        <div className={styles.cardsRow}>
+                          <DailyStatusCard
+                            user={userData as FirestoreUser}
+                            status={myStatus}
+                            isMe={true}
+                            titlePrefix="" 
+                          />
+                          <DailyStatusCard
+                            user={partnerData}
+                            status={partnerStatus}
+                            isMe={false}
+                            titlePrefix="" 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
+
+        <BackToHome />
       </div>
     </AuthGuard>
   );

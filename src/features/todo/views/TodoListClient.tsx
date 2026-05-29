@@ -8,6 +8,7 @@ import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./TodoList.module.css";
 import TodoModal from "../components/TodoModal";
+import BackToHome from "@/src/components/Common/BackToHome";
 
 interface TodoListClientProps {
   initialTodos: Todo[];
@@ -459,6 +460,8 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         isSubmitting={isSubmitting}
         onAddGroup={handleAddGroup}
       />
+
+      <BackToHome />
     </div>
   );
 }

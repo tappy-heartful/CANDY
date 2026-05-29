@@ -349,6 +349,7 @@ export default function HomeClient() {
             user={partnerData}
             status={partnerDailyStatus}
             isMe={false}
+            onOpenHistory={() => router.push('/status-history')}
           />
         </div>
 
@@ -441,7 +442,7 @@ export default function HomeClient() {
                           }
 
                           return (
-                            <Link href="/wishlist" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <Link href="/wishlist?sort=createdAt_desc&filter=all" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                               <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
                                 <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                                 <span style={{ fontWeight: 'bold' }}>{groupName}</span>
