@@ -8,9 +8,11 @@ interface DailyStatusCardProps {
   status: DailyStatus | null;
   isMe: boolean;
   onEdit?: () => void;
+  onOpenHistory?: () => void;
+  titlePrefix?: string;
 }
 
-export default function DailyStatusCard({ user, status, isMe, onEdit }: DailyStatusCardProps) {
+export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, titlePrefix = "今日の" }: DailyStatusCardProps) {
   if (!user) return null;
 
   const renderStars = (value: number, type: "mood" | "health") => {
@@ -34,13 +36,20 @@ export default function DailyStatusCard({ user, status, isMe, onEdit }: DailySta
       <div className={styles.cardHeader}>
         <div className={styles.userInfo}>
           <img src={user.pictureUrl || "/icon.png"} alt={user.nickname} className={styles.userIcon} />
-          <span className={styles.title}>今日の{user.nickname || "わたし"}</span>
+          <span className={styles.title}>{titlePrefix}{user.nickname || (isMe ? "わたし" : "パートナー")}</span>
         </div>
-        {isMe && (
-          <button className={styles.editBtn} onClick={onEdit}>
-            <i className="fa-solid fa-pen"></i>
-          </button>
-        )}
+        <div className={styles.actions}>
+          {onOpenHistory && (
+            <button className={styles.historyBtn} onClick={onOpenHistory} title="過去の履歴を見る">
+              <i className="fa-solid fa-clock-rotate-left"></i>
+            </button>
+          )}
+          {isMe && (
+            <button className={styles.editBtn} onClick={onEdit}>
+              <i className="fa-solid fa-pen"></i>
+            </button>
+          )}
+        </div>
       </div>
 
       {status ? (

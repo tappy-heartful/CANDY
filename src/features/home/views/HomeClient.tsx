@@ -3,7 +3,7 @@
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
@@ -46,6 +46,7 @@ export default function HomeClient() {
   const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
   const [partnerDailyStatus, setPartnerDailyStatus] = useState<DailyStatus | null>(null);
   const [isDailyStatusModalOpen, setIsDailyStatusModalOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (searchParams.get("action") === "status") {
@@ -107,7 +108,7 @@ export default function HomeClient() {
       ]).then(([wishData, partner, statuses, allEvents, groups]) => {
         const nowTime = Date.now();
         const oneDayMs = 24 * 60 * 60 * 1000;
-        
+
         const recentWishes = wishData.filter(w => w.createdAt && (nowTime - w.createdAt) <= oneDayMs);
         const sortedByDate = [...recentWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
@@ -128,16 +129,16 @@ export default function HomeClient() {
           }
           // 相手のみのイベントを除外（自分または2人のみ表示）
           if (e.type !== "couple" && e.uid !== user.uid) return false;
-          
+
           return true;
         });
 
         validEvents.sort((a, b) => {
           if (a.isAllDay && !b.isAllDay) return 1;
           if (!a.isAllDay && b.isAllDay) return -1;
-          
+
           if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-          
+
           if (a.startTime && b.startTime) {
             return a.startTime.localeCompare(b.startTime);
           }
@@ -179,7 +180,7 @@ export default function HomeClient() {
     const nextIndex = (currentIndex + 1) % CLOCK_THEMES.length;
     const nextThemeId = CLOCK_THEMES[nextIndex];
     setCurrentTheme(nextThemeId);
-    
+
     if (user) {
       try {
         await updateProfile(user.uid, { clockTheme: nextThemeId });
@@ -192,7 +193,7 @@ export default function HomeClient() {
   const handleToggleType = async () => {
     const nextType = clockType === "digital" ? "analog" : "digital";
     setClockType(nextType);
-    
+
     if (user) {
       try {
         await updateProfile(user.uid, { clockType: nextType });
@@ -277,12 +278,12 @@ export default function HomeClient() {
                   const num = i + 1;
                   const angle = num * 30;
                   return (
-                    <div 
-                      key={num} 
+                    <div
+                      key={num}
                       className={styles.clockNumberContainer}
                       style={{ transform: `rotate(${angle}deg)` }}
                     >
-                      <div 
+                      <div
                         className={styles.clockNumber}
                         style={{ transform: `rotate(${-angle}deg)` }}
                       >
@@ -291,17 +292,17 @@ export default function HomeClient() {
                     </div>
                   );
                 })}
-                <div 
-                  className={styles.analogHour} 
-                  style={{ transform: `rotate(${(currentTime.getHours() % 12) * 30 + currentTime.getMinutes() * 0.5}deg)` }} 
+                <div
+                  className={styles.analogHour}
+                  style={{ transform: `rotate(${(currentTime.getHours() % 12) * 30 + currentTime.getMinutes() * 0.5}deg)` }}
                 />
-                <div 
-                  className={styles.analogMinute} 
-                  style={{ transform: `rotate(${currentTime.getMinutes() * 6 + currentTime.getSeconds() * 0.1}deg)` }} 
+                <div
+                  className={styles.analogMinute}
+                  style={{ transform: `rotate(${currentTime.getMinutes() * 6 + currentTime.getSeconds() * 0.1}deg)` }}
                 />
-                <div 
-                  className={styles.analogSecond} 
-                  style={{ transform: `rotate(${currentTime.getSeconds() * 6}deg)` }} 
+                <div
+                  className={styles.analogSecond}
+                  style={{ transform: `rotate(${currentTime.getSeconds() * 6}deg)` }}
                 />
                 <div className={styles.analogCenter} />
               </div>
@@ -342,6 +343,7 @@ export default function HomeClient() {
             status={myDailyStatus}
             isMe={true}
             onEdit={() => setIsDailyStatusModalOpen(true)}
+            onOpenHistory={() => router.push('/status-history')}
           />
           <DailyStatusCard
             user={partnerData}
@@ -375,7 +377,7 @@ export default function HomeClient() {
                         today.setHours(0, 0, 0, 0);
                         const diffTime = eventDateOnly.getTime() - today.getTime();
                         const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                        
+
                         let countdownText = `あと${diffDays}日`;
                         if (diffDays === 0) countdownText = "🎉 本日！";
                         else if (diffDays === 1) countdownText = "✨ 明日！";
@@ -425,7 +427,7 @@ export default function HomeClient() {
                         {group.items.map(item => {
                           const wGroup = wishlistGroups.find(g => g.id === item.groupId);
                           const groupName = wGroup ? wGroup.name : '未分類';
-                          
+
                           let badgeClass = styles.badgeCouple;
                           let typeLabel = "2人";
                           if (item.type !== 'couple') {
@@ -437,12 +439,12 @@ export default function HomeClient() {
                               typeLabel = partnerData?.nickname || "パートナー";
                             }
                           }
-                          
+
                           return (
                             <Link href="/wishlist" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                               <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
                                 <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                                <span style={{fontWeight: 'bold'}}>{groupName}</span>
+                                <span style={{ fontWeight: 'bold' }}>{groupName}</span>
                               </div>
                               <span className={styles.notificationTitle}>{item.title}</span>
                             </Link>
@@ -480,6 +482,12 @@ export default function HomeClient() {
             <span className={styles.cardIcon}><i className="fa-solid fa-list-check"></i></span>
             <span className={styles.cardTitle}>TODO</span>
           </Link>
+          <Link href="/status-history" className={`${styles.menuCard} ${styles.cardHistory}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-clock-rotate-left"></i></span>
+            <span className={styles.cardTitle}>過去の私たち</span>
+          </Link>
+        </div>
+        <div className={styles.menuGrid}>
           <button className={`${styles.menuCard} ${styles.cardPartner}`} onClick={() => setActiveProfileModal('partner')}>
             <span className={styles.cardIcon}><i className="fa-solid fa-heart-pulse"></i></span>
             <span className={styles.cardTitle}>パートナーの情報を見る</span>

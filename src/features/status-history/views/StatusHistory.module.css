@@ -1,0 +1,93 @@
+.historyContainer {
+  padding-bottom: 40px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #888;
+  text-decoration: none;
+  font-weight: 700;
+  margin-bottom: 12px;
+  transition: color 0.2s;
+}
+
+.backBtn:hover {
+  color: #666;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #9b7cc3;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dateBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dateHeader {
+  font-size: 16px;
+  font-weight: 800;
+  color: #555;
+  text-align: center;
+  position: relative;
+}
+
+.dateHeader::before, .dateHeader::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 25%;
+  height: 2px;
+  background: #eee;
+}
+
+.dateHeader::before {
+  left: 0;
+}
+
+.dateHeader::after {
+  right: 0;
+}
+
+.cardsRow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* モバイルでは1列、PCでは2列並びになるようにFlexBoxで調整 */
+.cardsRow > * {
+  flex: 1;
+  min-width: 300px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 0;
+  color: #888;
+}
+
+.emptyState i {
+  font-size: 48px;
+  color: #ddd;
+  margin-bottom: 16px;
+}
