@@ -137,3 +137,22 @@ export async function writeLog({ dataId, action, status = 'success', errorDetail
 }
 
 export { showDialog };
+
+// 次の記念日までの日数を計算するロジック（MM-DD 形式）
+export function getNextAnniversaryDiff(dateStr: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const [m, d] = dateStr.split("-").map(Number);
+  let nextDate = new Date(today.getFullYear(), m - 1, d);
+  
+  // 既に今年の記念日が過ぎている場合は来年
+  if (nextDate.getTime() < today.getTime()) {
+    nextDate = new Date(today.getFullYear() + 1, m - 1, d);
+  }
+
+  const diffTime = nextDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return { diffDays, isToday: diffDays === 0 };
+}

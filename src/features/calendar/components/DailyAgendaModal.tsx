@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { CalendarEvent, Todo } from "@/src/lib/firestore/types";
+import { CalendarEvent, Todo, Anniversary } from "@/src/lib/firestore/types";
 import styles from "./DailyAgenda.module.css";
 
 interface DailyAgendaModalProps {
   activeDateStr: string;
   events: CalendarEvent[];
   todos?: Todo[];
+  anniversaries?: Anniversary[];
   currentUserId: string;
   myPictureUrl?: string;
   partnerPictureUrl?: string;
@@ -20,6 +21,7 @@ export default function DailyAgendaModal({
   activeDateStr,
   events,
   todos = [],
+  anniversaries = [],
   currentUserId,
   myPictureUrl = "/icon.png",
   partnerPictureUrl = "/icon.png",
@@ -102,10 +104,22 @@ export default function DailyAgendaModal({
         </div>
 
         <div className={styles.eventList}>
-          {sortedEvents.length === 0 && todos.length === 0 ? (
+          {sortedEvents.length === 0 && todos.length === 0 && anniversaries.length === 0 ? (
             <div className={styles.emptyState}>予定・TODOはありません</div>
           ) : (
-            sortedEvents.map((e) => {
+            <>
+              {anniversaries.map((a) => (
+                <div key={`anniv-${a.id}`} className={styles.eventRow} style={{ alignItems: 'center', background: '#fcf3f8', borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
+                  <div className={styles.timeCol} style={{ width: 'auto', marginRight: '16px' }}>
+                    <span style={{ fontSize: '24px' }}>🎂</span>
+                  </div>
+                  <div className={styles.eventContent}>
+                    <div className={styles.eventTitle} style={{ color: '#9B7CC3', fontWeight: 'bold' }}>{a.title}</div>
+                    <div className={styles.eventNote} style={{ color: '#F7A8C4' }}>記念日です！🎉</div>
+                  </div>
+                </div>
+              ))}
+              {sortedEvents.map((e) => {
               const color = getEventColor(e);
               return (
                 <div key={e.id} className={styles.eventRow} onClick={() => onEditEvent(e)} style={{ alignItems: 'stretch' }}>
@@ -170,7 +184,8 @@ export default function DailyAgendaModal({
                   </div>
                 </div>
               );
-            })
+              })}
+            </>
           )}
 
           {todos.length > 0 && (

@@ -10,7 +10,9 @@ import { getPartnerData, updateProfile } from "@/src/features/user/api/user-clie
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { getEvents } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups } from "@/src/features/todo/api/todo-client-service";
-import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group } from "@/src/lib/firestore/types";
+import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary } from "@/src/lib/firestore/types";
+import { getNextAnniversaryDiff } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
@@ -53,12 +55,14 @@ export default function HomeClient() {
       setIsDailyStatusModalOpen(true);
     }
   }, [searchParams]);
-  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [upcomingAnniversaries, setUpcomingAnniversaries] = useState<Anniversary[]>([]);
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
   const [clockType, setClockType] = useState<"digital" | "analog">("digital");
+
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -104,8 +108,9 @@ export default function HomeClient() {
         getPartnerData(user.uid),
         getDailyStatuses(todayStr),
         getEvents(),
-        getGroups("wishlist")
-      ]).then(([wishData, partner, statuses, allEvents, groups]) => {
+        getGroups("wishlist"),
+        getAnniversaries(user.uid, userData?.partnerUid || null)
+      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries]) => {
         const nowTime = Date.now();
         const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -147,6 +152,12 @@ export default function HomeClient() {
 
         setUpcomingEvents(validEvents.slice(0, 3));
         setWishlistGroups(groups);
+        
+        // 記念日のソート（直近のもの3件）
+        const sortedAnniversaries = [...anniversaries].sort((a, b) => {
+          return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
+        });
+        setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
 
         setLoading(false);
       });
@@ -360,8 +371,9 @@ export default function HomeClient() {
           <div className={styles.notificationList}>
             {loading ? (
               <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0) ? (
+            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0 || upcomingAnniversaries.length > 0) ? (
               <>
+
                 {upcomingEvents.length > 0 && (
                   <div className={styles.notificationGroup}>
                     <div className={styles.notificationHeader}>
@@ -455,6 +467,36 @@ export default function HomeClient() {
                     </div>
                   ));
                 })()}
+                {upcomingAnniversaries.length > 0 && (
+                  <div className={styles.notificationGroup}>
+                    <div className={styles.notificationHeader}>
+                      <i className={`fa-solid fa-cake-candles ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
+                      <span className={styles.notificationText}>
+                        もうすぐ記念日
+                      </span>
+                    </div>
+                    <div className={styles.notificationItems}>
+                      {upcomingAnniversaries.map(a => {
+                        const { diffDays, isToday } = getNextAnniversaryDiff(a.date);
+                        let countdownText = `あと${diffDays}日`;
+                        if (isToday) countdownText = "🎉 今日です！";
+                        else if (diffDays === 1) countdownText = "✨ 明日！";
+                        
+                        const displayDate = a.date.replace("-", "/"); // MM/DD
+
+                        return (
+                          <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
+                              <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
+                            </div>
+                            <span className={styles.notificationTitle}>{a.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className={styles.emptyMsg}>最近の追加はありません</div>
@@ -486,6 +528,10 @@ export default function HomeClient() {
           <Link href="/status-history" className={`${styles.menuCard} ${styles.cardHistory}`}>
             <span className={styles.cardIcon}><i className="fa-solid fa-clock-rotate-left"></i></span>
             <span className={styles.cardTitle}>過去の私たち</span>
+          </Link>
+          <Link href="/anniversaries" className={`${styles.menuCard} ${styles.cardAnniversary}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-cake-candles"></i></span>
+            <span className={styles.cardTitle}>記念日</span>
           </Link>
         </div>
         <div className={styles.menuGrid}>
