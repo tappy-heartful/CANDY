@@ -6,7 +6,7 @@
   z-index: 1000;
   width: 100%;
   max-width: 768px;
-  padding: 10px 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -66,7 +66,7 @@
 
 .breadcrumbContainer {
   position: fixed;
-  top: 56px;
+  top: 66px;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -77,6 +77,49 @@
   border-bottom: 1px solid #f3e5f5;
   box-sizing: border-box;
   backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.breadcrumbRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.breadcrumbBtn {
+  background: none;
+  border: none;
+  color: #9B7CC3;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.breadcrumbBtn:active {
+  transform: scale(0.9);
+}
+
+.hamburgerBtn {
+  background: none;
+  border: none;
+  color: #9B7CC3;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.hamburgerBtn:active {
+  transform: scale(0.9);
 }
 
 .breadcrumbList {
