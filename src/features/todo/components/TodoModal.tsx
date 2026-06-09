@@ -6,6 +6,7 @@ interface TodoModalProps {
   isOpen: boolean;
   todo: Todo | null; // null if creating new
   groups: Group[];
+  defaultDate?: string;
   onClose: () => void;
   onSave: (data: {
     title: string;
@@ -18,7 +19,7 @@ interface TodoModalProps {
   onAddGroup?: () => void;
 }
 
-export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
+export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
@@ -37,11 +38,11 @@ export default function TodoModal({ isOpen, todo, groups, onClose, onSave, isSub
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
         setType("personal");
-        setDate("");
+        setDate(defaultDate || "");
         setDateMode("due");
       }
     }
-  }, [isOpen, todo, groups]);
+  }, [isOpen, todo, groups, defaultDate]);
 
   if (!isOpen) return null;
 
