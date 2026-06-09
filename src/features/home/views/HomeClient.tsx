@@ -165,18 +165,16 @@ export default function HomeClient() {
         });
         setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
 
-        // TODOのフィルタとソート（直近の未完了TODO3件）
+        // TODOのフィルタとソート（日付設定されている未完了TODO3件）
         const validTodos = allTodos.filter(t => {
           if (t.isCompleted) return false;
+          if (!t.date) return false;
           if (t.type !== "couple" && t.uid !== user.uid) return false;
           return true;
         });
 
         validTodos.sort((a, b) => {
-          if (a.date && b.date) return a.date.localeCompare(b.date);
-          if (a.date) return -1;
-          if (b.date) return 1;
-          return b.createdAt - a.createdAt;
+          return a.date!.localeCompare(b.date!);
         });
 
         setUpcomingTodos(validTodos.slice(0, 3));
@@ -511,13 +509,30 @@ export default function HomeClient() {
                           }
                         }
 
-                        const displayDate = t.date ? t.date.replace(/-/g, '/') : '期限なし';
+                        const [y, m, d] = t.date!.split('-').map(Number);
+                        const todoDateOnly = new Date(y, m - 1, d);
+                        const todayVal = new Date();
+                        todayVal.setHours(0, 0, 0, 0);
+                        const diffTime = todoDateOnly.getTime() - todayVal.getTime();
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                        let countdownText = `あと${diffDays}日`;
+                        let badgeStyle: React.CSSProperties = {};
+                        if (diffDays === 0) {
+                          countdownText = "🎉 本日！";
+                        } else if (diffDays === 1) {
+                          countdownText = "✨ 明日！";
+                        } else if (diffDays < 0) {
+                          countdownText = `⚠️ 遅延(${Math.abs(diffDays)}日)`;
+                          badgeStyle = { background: '#ffebee', color: '#c62828', borderColor: '#c62828' };
+                        }
 
                         return (
                           <Link href="/todo" key={t.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                              <span style={{ fontWeight: 'bold' }}>{displayDate}</span>
+                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                              <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
                             </div>
                             <span className={styles.notificationTitle}>{t.title}</span>
                           </Link>
