@@ -65,6 +65,10 @@ function execDailyMorningNotification() {
 
       const nickname = user.nickname || "あなた";
       
+      // パートナーのIDを特定（自分以外のユーザー）
+      const partner = users.find(u => u.id !== user.id);
+      const partnerUid = partner ? partner.id : null;
+      
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events.filter(e => e.type === 'couple' || e.uid === user.id);
       
@@ -90,7 +94,7 @@ function execDailyMorningNotification() {
 
       // 直近の記念日（今年または来年で最も近いもの3件）
       const userAnniversaries = anniversaries
-        .filter(a => a.uid === user.id || a.uid === user.partnerUid)
+        .filter(a => a.uid === user.id || (partnerUid && a.uid === partnerUid))
         .map(a => {
           const diffInfo = calculateAnniversaryDiff(a.date);
           return { ...a, diffDays: diffInfo.diffDays, isToday: diffInfo.isToday };
