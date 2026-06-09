@@ -122,40 +122,42 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
                 onSavePartnerComment ? (
                   isEditing || !status.partnerComment ? (
                     <div className={styles.commentInputRow}>
-                      <input
-                        type="text"
-                        className={styles.commentInputInline}
+                      <textarea
+                        className={styles.commentInputInlineTextarea}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="コメントを返す..."
                         disabled={isSaving}
-                        maxLength={100}
+                        rows={2}
+                        maxLength={200}
                       />
-                      <button
-                        className={styles.commentSendBtn}
-                        onClick={handleSaveComment}
-                        disabled={isSaving || !commentText.trim()}
-                        title="送信"
-                      >
-                        {isSaving ? (
-                          <i className="fa-solid fa-spinner fa-spin"></i>
-                        ) : (
-                          <i className="fa-solid fa-paper-plane"></i>
-                        )}
-                      </button>
-                      {status.partnerComment && (
+                      <div className={styles.commentInputActions}>
                         <button
-                          className={styles.commentCancelBtn}
-                          onClick={() => {
-                            setCommentText(status.partnerComment || "");
-                            setIsEditing(false);
-                          }}
-                          disabled={isSaving}
-                          title="キャンセル"
+                          className={styles.commentSendBtn}
+                          onClick={handleSaveComment}
+                          disabled={isSaving || !commentText.trim()}
+                          title="送信"
                         >
-                          <i className="fa-solid fa-xmark"></i>
+                          {isSaving ? (
+                            <i className="fa-solid fa-spinner fa-spin"></i>
+                          ) : (
+                            <i className="fa-solid fa-paper-plane"></i>
+                          )}
                         </button>
-                      )}
+                        {status.partnerComment && (
+                          <button
+                            className={styles.commentCancelBtn}
+                            onClick={() => {
+                              setCommentText(status.partnerComment || "");
+                              setIsEditing(false);
+                            }}
+                            disabled={isSaving}
+                            title="キャンセル"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className={styles.partnerCommentBox}>

@@ -243,27 +243,37 @@
 
 .commentInputRow {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
+  align-items: flex-end;
+  width: 100%;
 }
 
-.commentInputInline {
-  flex: 1;
+.commentInputInlineTextarea {
+  width: 100%;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 6px 12px;
+  border-radius: 12px;
+  padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
   box-sizing: border-box;
   background-color: #f8fafc;
   transition: all 0.2s;
+  resize: vertical;
+  min-height: 50px;
 }
 
-.commentInputInline:focus {
+.commentInputInlineTextarea:focus {
   outline: none;
   border-color: #F7A8C4;
   background-color: white;
   box-shadow: 0 0 0 2px rgba(247, 168, 196, 0.1);
+}
+
+.commentInputActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .commentSendBtn {
