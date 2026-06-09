@@ -1,6 +1,6 @@
 /**
  * CANDY 毎朝の通知自動送信スクリプト (GAS用)
- * 
+ *
  * 【このスクリプトがやること】
  * 1. 毎朝（例: 7時や8時）にトリガー実行。
  * 2. Firestoreの users コレクションから全ユーザーを取得。
@@ -33,7 +33,7 @@ const cuteMessages = [
 function execDailyMorningNotification() {
   try {
     const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
-    
+
     // 今日の日付文字列を日本時間(JST)で確実に取得
     // GASのタイムゾーン設定(UTC)によるズレを防ぐため Utilities を使用
     const todayDate = new Date();
@@ -50,7 +50,7 @@ function execDailyMorningNotification() {
     const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const todos = todosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
-    
+
     // LINE Messaging IDsをマッピング
     const lineMessagingIds = {};
     lineMessagingIdsDocs.forEach(doc => {
@@ -60,21 +60,21 @@ function execDailyMorningNotification() {
 
     users.forEach(user => {
       // lineMessagingIdsコレクションから対象のlineUidを取得
-      const lineUid = lineMessagingIds[user.id]; 
+      const lineUid = lineMessagingIds[user.id];
       if (!lineUid) return;
 
       const nickname = user.nickname || "あなた";
-      
+
       // パートナーのIDを特定（自分以外のユーザー）
       const partner = users.find(u => u.id !== user.id);
       const partnerUid = partner ? partner.id : null;
-      
+
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events.filter(e => e.type === 'couple' || e.uid === user.id);
-      
+
       // 今日のイベント
       const todaysEvents = userEvents.filter(e => e.startDate <= todayStr && e.endDate >= todayStr);
-      
+
       // 直近の未来イベント（明日以降開始）をソート
       const nextEvents = userEvents
         .filter(e => e.startDate > todayStr)
@@ -118,7 +118,7 @@ function execDailyMorningNotification() {
       } else {
         message += `予定は特にないよ✨\n`;
       }
-      
+
       message += `📋TODO\n`;
       if (todaysTodos.length > 0) {
         todaysTodos.forEach(t => {
@@ -140,7 +140,7 @@ function execDailyMorningNotification() {
       } else {
         message += `直近のイベントはないみたい！\n`;
       }
-      
+
       message += `📋TODO\n`;
       if (nextTodos.length > 0) {
         nextTodos.forEach(t => {
@@ -162,12 +162,6 @@ function execDailyMorningNotification() {
         message += `\n`;
       }
 
-      // リンク
-      message += `📅 カレンダーはこちら\n${BASE_URL}/home\n\n`;
-      message += `📝 TODOリストはこちら\n${BASE_URL}/todo\n\n`;
-      message += `🎁 Wishlistはこちら\n${BASE_URL}/wishlist\n\n`;
-      message += `🎂 記念日はこちら\n${BASE_URL}/anniversaries`;
-
       // LINEメッセージ送信
       sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
     });
@@ -188,12 +182,12 @@ function calculateDiffDays(d1Str, d2Str) {
 function calculateAnniversaryDiff(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const parts = dateStr.split("-");
   const m = parseInt(parts[0], 10);
   const d = parseInt(parts[1], 10);
   let nextDate = new Date(today.getFullYear(), m - 1, d);
-  
+
   // 既に今年の記念日が過ぎている場合は来年
   if (nextDate.getTime() < today.getTime()) {
     nextDate = new Date(today.getFullYear() + 1, m - 1, d);
@@ -201,7 +195,7 @@ function calculateAnniversaryDiff(dateStr) {
 
   const diffTime = nextDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   return { diffDays: diffDays, isToday: diffDays === 0 };
 }
 
