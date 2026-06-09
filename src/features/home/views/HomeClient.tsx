@@ -209,6 +209,23 @@ export default function HomeClient() {
     }
   };
 
+  const handleSavePartnerComment = async (comment: string) => {
+    if (!partnerDailyStatus?.id) return;
+    try {
+      const submitData = {
+        id: partnerDailyStatus.id,
+        partnerComment: comment,
+      };
+      await saveDailyStatus(submitData);
+      setPartnerDailyStatus({
+        ...partnerDailyStatus,
+        partnerComment: comment,
+      });
+    } catch (e) {
+      console.error("Failed to save partner comment", e);
+    }
+  };
+
   const handleCycleTheme = async () => {
     const currentIndex = CLOCK_THEMES.indexOf(currentTheme);
     const nextIndex = (currentIndex + 1) % CLOCK_THEMES.length;
@@ -384,6 +401,7 @@ export default function HomeClient() {
             status={partnerDailyStatus}
             isMe={false}
             onOpenHistory={() => router.push('/status-history')}
+            onSavePartnerComment={handleSavePartnerComment}
           />
         </div>
 

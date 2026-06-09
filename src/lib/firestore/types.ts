@@ -105,6 +105,7 @@ export interface DailyStatus {
   mood: number; // 1 to 5
   health: number; // 1 to 5
   comment: string;
+  partnerComment?: string;
   createdAt: number;
   updatedAt: number;
 }

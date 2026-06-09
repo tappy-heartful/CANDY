@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { User as FirestoreUser, DailyStatus } from "@/src/lib/firestore/types";
 import styles from "./DailyStatus.module.css";
+import { showDialog } from "@/src/components/CommonDialog";
 
 interface DailyStatusCardProps {
   user: FirestoreUser | null;
@@ -9,11 +11,49 @@ interface DailyStatusCardProps {
   isMe: boolean;
   onEdit?: () => void;
   onOpenHistory?: () => void;
+  onSavePartnerComment?: (comment: string) => Promise<void>;
   titlePrefix?: string;
 }
 
-export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, titlePrefix = "今日の" }: DailyStatusCardProps) {
-  if (!user) return null;
+export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, onSavePartnerComment, titlePrefix = "今日の" }: DailyStatusCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [commentText, setCommentText] = useState(status?.partnerComment || "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setCommentText(status?.partnerComment || "");
+    setIsEditing(false);
+  }, [status?.partnerComment]);
+
+  const handleSaveComment = async () => {
+    if (!onSavePartnerComment) return;
+    setIsSaving(true);
+    try {
+      await onSavePartnerComment(commentText);
+      setIsEditing(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    if (!onSavePartnerComment) return;
+    const ok = await showDialog("コメントを削除しますか？");
+    if (!ok) return;
+
+    setIsSaving(true);
+    try {
+      await onSavePartnerComment("");
+      setCommentText("");
+      setIsEditing(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const renderStars = (value: number, type: "mood" | "health") => {
     const stars = [];
@@ -30,6 +70,13 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
     }
     return <div className={styles.stars}>{stars}</div>;
   };
+
+  if (!user) return null;
+
+  const showCommentSection = status && (
+    (!isMe && (onSavePartnerComment || status.partnerComment)) ||
+    (isMe && status.partnerComment)
+  );
 
   return (
     <div className={`${styles.cardContainer} ${!isMe ? styles.partnerCard : ""}`}>
@@ -65,6 +112,87 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
           {status.comment && (
             <div className={styles.commentBox}>
               {status.comment}
+            </div>
+          )}
+
+          {/* コメントセクション */}
+          {showCommentSection && (
+            <div className={styles.commentSection}>
+              {!isMe ? (
+                onSavePartnerComment ? (
+                  isEditing || !status.partnerComment ? (
+                    <div className={styles.commentInputRow}>
+                      <input
+                        type="text"
+                        className={styles.commentInputInline}
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="コメントを返す..."
+                        disabled={isSaving}
+                        maxLength={100}
+                      />
+                      <button
+                        className={styles.commentSendBtn}
+                        onClick={handleSaveComment}
+                        disabled={isSaving || !commentText.trim()}
+                        title="送信"
+                      >
+                        {isSaving ? (
+                          <i className="fa-solid fa-spinner fa-spin"></i>
+                        ) : (
+                          <i className="fa-solid fa-paper-plane"></i>
+                        )}
+                      </button>
+                      {status.partnerComment && (
+                        <button
+                          className={styles.commentCancelBtn}
+                          onClick={() => {
+                            setCommentText(status.partnerComment || "");
+                            setIsEditing(false);
+                          }}
+                          disabled={isSaving}
+                          title="キャンセル"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={styles.partnerCommentBox}>
+                      <div className={styles.commentHeader}>
+                        <span className={styles.commentAuthor}>わたしのコメント</span>
+                        <div className={styles.commentActions}>
+                          <button className={styles.commentEditBtn} onClick={() => setIsEditing(true)} title="編集">
+                            <i className="fa-solid fa-pen"></i>
+                          </button>
+                          <button className={styles.commentDeleteBtn} onClick={handleDeleteComment} title="削除">
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div className={styles.commentBody}>{status.partnerComment}</div>
+                    </div>
+                  )
+                ) : (
+                  status.partnerComment && (
+                    <div className={styles.partnerCommentBox}>
+                      <div className={styles.commentHeader}>
+                        <span className={styles.commentAuthor}>わたしのコメント</span>
+                      </div>
+                      <div className={styles.commentBody}>{status.partnerComment}</div>
+                    </div>
+                  )
+                )
+              ) : (
+                status.partnerComment && (
+                  <div className={styles.myCommentBox}>
+                    <div className={styles.commentHeader}>
+                      <span className={styles.commentAuthor}>パートナーからのコメント</span>
+                    </div>
+                    <div className={styles.commentBody}>{status.partnerComment}</div>
+                  </div>
+                )
+              )}
             </div>
           )}
         </div>
