@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ログイン済みか
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // 自分のデータか
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // 2人以外の新規登録を禁止（Admin側でも制限していますが、ルール側でもガード）
+    function canRegister() {
+      return getCount(/databases/$(database)/documents/users) < 2;
+    }
+
+    // ユーザー情報
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid);
+      allow update, delete: if isOwner(uid);
+    }
+
+    // ====== 各種共有データ ======
+    // 相手に見せない考慮が不要になったため、すべて双方が読み取り可能（isSignedIn）
+
+    match /events/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /daily_statuses/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // 自分が作成したドキュメントの場合
+        resource.data.uid == request.auth.uid ||
+        // パートナーがコメントを書き込む場合（partnerComment と updatedAt のみ変更可能）
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'updatedAt'])
+      );
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /todos/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /wishlist/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /groups/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ★追加: 記念日機能
+    match /anniversaries/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ============================
+
+    // ログ・認証系（システム用）
+    match /logs/{id} { allow create: if isSignedIn(); }
+    match /oauthStates/{id} { allow read, write: if false; }
+  }
+}

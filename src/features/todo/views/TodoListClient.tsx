@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Group, Todo, TodoStep, User as FirestoreUser } from "@/src/lib/firestore/types";
 import { addTodo, addTodoStep, addGroup, toggleTodoStep, updateTodo, deleteTodo, deleteTodoStep } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -31,10 +32,43 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
   const [sortMode, setSortMode] = useState<"group" | "date" | "createdAt_desc" | "createdAt_asc">("group");
 
+  const searchParams = useSearchParams();
+  const [defaultDate, setDefaultDate] = useState("");
+
   useEffect(() => {
     if (!user) return;
     getPartnerData(user.uid).then((p) => setPartnerData(p));
   }, [user]);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const date = searchParams.get("date");
+    if (action === "new") {
+      setEditingTodo(null);
+      if (date) {
+        setDefaultDate(date);
+      } else {
+        setDefaultDate("");
+      }
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const scrollTo = searchParams.get("scrollTo");
+    if (scrollTo) {
+      setTimeout(() => {
+        const el = document.getElementById(`todo-${scrollTo}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add(styles.highlighted);
+          setTimeout(() => {
+            el.classList.remove(styles.highlighted);
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [searchParams]);
 
   const handleToggleComplete = async (todo: Todo) => {
     try {
@@ -234,7 +268,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
 
   const renderTodoItems = (list: Todo[]) => {
     return list.map((todo) => (
-      <div key={todo.id} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
+      <div key={todo.id} id={`todo-${todo.id}`} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
         <div className={styles.todoTop}>
           <input
             type="checkbox"
@@ -452,6 +486,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         isOpen={isModalOpen}
         todo={editingTodo}
         groups={groups}
+        defaultDate={defaultDate}
         onClose={() => {
           setIsModalOpen(false);
           setEditingTodo(null);

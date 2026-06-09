@@ -87,6 +87,33 @@ export default function StatusHistoryClient() {
     }
   };
 
+  const handleSavePartnerComment = async (statusId: string, comment: string) => {
+    if (!statusId) return;
+    try {
+      const submitData = {
+        id: statusId,
+        partnerComment: comment,
+      };
+      await saveDailyStatus(submitData);
+      
+      setHistoryData(prev => {
+        const updated = { ...prev };
+        for (const dateStr in updated) {
+          updated[dateStr] = updated[dateStr].map(status => {
+            if (status.id === statusId) {
+              return { ...status, partnerComment: comment };
+            }
+            return status;
+          });
+        }
+        return updated;
+      });
+    } catch (e) {
+      console.error("Failed to save partner comment in history", e);
+      showDialog("保存に失敗しました");
+    }
+  };
+
   const dates = Object.keys(historyData).sort((a, b) => b.localeCompare(a)); // 降順
 
   // 年ごとにグループ化
@@ -148,6 +175,11 @@ export default function StatusHistoryClient() {
                             status={partnerStatus}
                             isMe={false}
                             titlePrefix="" 
+                            onSavePartnerComment={
+                              partnerStatus
+                                ? (comment) => handleSavePartnerComment(partnerStatus.id, comment)
+                                : undefined
+                            }
                           />
                         </div>
                       </div>

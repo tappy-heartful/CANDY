@@ -122,25 +122,33 @@ export default function Header() {
       </header>
 
       {/* Breadcrumbs */}
-      {items.length > 0 && pathname !== "/home" && (
+      {(items.length > 0 || pathname === "/home") && (
         <>
           <div className={styles.breadcrumbContainer}>
             <div className={styles.breadcrumbList}>
-              <Link href="/home" className={styles.breadcrumbItem}>
-                <i className={`fa-solid fa-house ${styles.homeIcon}`}></i>ホーム
-              </Link>
-              {items.map((item, index) => (
-                <Fragment key={index}>
-                  <span className={styles.breadcrumbSeparator}>/</span>
-                  {item.href ? (
-                    <Link href={item.href} className={styles.breadcrumbItem}>
-                      {item.title}
-                    </Link>
-                  ) : (
-                    <span className={`${styles.breadcrumbItem} ${styles.breadcrumbItemActive}`}>{item.title}</span>
-                  )}
-                </Fragment>
-              ))}
+              {pathname === "/home" ? (
+                <span className={`${styles.breadcrumbItem} ${styles.breadcrumbItemActive}`}>
+                  <i className={`fa-solid fa-house ${styles.homeIcon}`}></i>ホーム
+                </span>
+              ) : (
+                <>
+                  <Link href="/home" className={styles.breadcrumbItem}>
+                    <i className={`fa-solid fa-house ${styles.homeIcon}`}></i>ホーム
+                  </Link>
+                  {items.map((item, index) => (
+                    <Fragment key={index}>
+                      <span className={styles.breadcrumbSeparator}>/</span>
+                      {item.href ? (
+                        <Link href={item.href} className={styles.breadcrumbItem}>
+                          {item.title}
+                        </Link>
+                      ) : (
+                        <span className={`${styles.breadcrumbItem} ${styles.breadcrumbItemActive}`}>{item.title}</span>
+                      )}
+                    </Fragment>
+                  ))}
+                </>
+              )}
             </div>
             <div className={styles.breadcrumbRight}>
               <button className={styles.breadcrumbBtn} onClick={handleRefresh}>

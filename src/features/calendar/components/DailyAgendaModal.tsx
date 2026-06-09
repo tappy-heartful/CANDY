@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarEvent, Todo, Anniversary } from "@/src/lib/firestore/types";
 import styles from "./DailyAgenda.module.css";
 
@@ -29,6 +30,8 @@ export default function DailyAgendaModal({
   onAddEvent,
   onEditEvent,
 }: DailyAgendaModalProps) {
+  const router = useRouter();
+
   // Format the date like "5月30日 土曜日"
   const formattedDate = useMemo(() => {
     if (!activeDateStr) return "";
@@ -97,8 +100,11 @@ export default function DailyAgendaModal({
           <h2 className={styles.dateTitle}>{formattedDate}</h2>
           <div className={styles.headerActions}>
             <img src={myPictureUrl} alt="User" className={styles.userIcon} />
-            <button className={styles.addBtn} onClick={() => onAddEvent(activeDateStr)}>
-              <i className="fa-solid fa-plus"></i>
+            <button className={styles.addBtn} onClick={() => onAddEvent(activeDateStr)} title="予定を追加">
+              <i className="fa-solid fa-calendar-plus"></i>
+            </button>
+            <button className={styles.addTodoBtn} onClick={() => router.push(`/todo?action=new&date=${activeDateStr}`)} title="TODOを追加">
+              <i className="fa-solid fa-list-check"></i>
             </button>
           </div>
         </div>
@@ -210,7 +216,7 @@ export default function DailyAgendaModal({
                 ));
 
                 return (
-                  <div key={t.id} className={styles.eventRow}>
+                  <div key={t.id} className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${t.id}`)}>
                     <div className={styles.timeCol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span className={styles.timeText} style={{ fontSize: '20px' }}>
                         {t.isCompleted ? (
