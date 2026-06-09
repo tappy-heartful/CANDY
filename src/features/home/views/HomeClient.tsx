@@ -18,6 +18,7 @@ import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
 import DailyStatusCard from "../components/DailyStatusCard";
 import DailyStatusModal from "../components/DailyStatusModal";
+import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 
 const CLOCK_THEMES = [
   "themePinkyRibbon",
@@ -40,6 +41,12 @@ const CLOCK_THEMES = [
 export default function HomeClient() {
   const { user, userData } = useAuth();
   const searchParams = useSearchParams();
+  const { setBreadcrumbs } = useBreadcrumb();
+
+  useEffect(() => {
+    setBreadcrumbs([]);
+  }, [setBreadcrumbs]);
+
   const [recentWishlist, setRecentWishlist] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
