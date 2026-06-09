@@ -54,6 +54,22 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const scrollTo = searchParams.get("scrollTo");
+    if (scrollTo) {
+      setTimeout(() => {
+        const el = document.getElementById(`todo-${scrollTo}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add(styles.highlighted);
+          setTimeout(() => {
+            el.classList.remove(styles.highlighted);
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [searchParams]);
+
   const handleToggleComplete = async (todo: Todo) => {
     try {
       await updateTodo(todo.id, { isCompleted: !todo.isCompleted });
@@ -252,7 +268,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
 
   const renderTodoItems = (list: Todo[]) => {
     return list.map((todo) => (
-      <div key={todo.id} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
+      <div key={todo.id} id={`todo-${todo.id}`} className={`${styles.todoItem} ${todo.isCompleted ? styles.completed : ""}`}>
         <div className={styles.todoTop}>
           <input
             type="checkbox"

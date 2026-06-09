@@ -216,7 +216,7 @@ export default function DailyAgendaModal({
                 ));
 
                 return (
-                  <div key={t.id} className={styles.eventRow}>
+                  <div key={t.id} className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${t.id}`)}>
                     <div className={styles.timeCol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span className={styles.timeText} style={{ fontSize: '20px' }}>
                         {t.isCompleted ? (

@@ -598,3 +598,12 @@
 .btnSave:disabled {
   opacity: 0.6;
 }
+
+@keyframes highlightFlash {
+  0% { background-color: rgba(155, 124, 195, 0.25); }
+  100% { background-color: transparent; }
+}
+
+.highlighted {
+  animation: highlightFlash 2.5s ease-out;
+}
