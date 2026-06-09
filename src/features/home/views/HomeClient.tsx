@@ -190,14 +190,17 @@ export default function HomeClient() {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      const submitData = {
+      const submitData: any = {
         ...data,
         uid: user?.uid,
         date: todayStr,
-        ...(myDailyStatus ? { id: myDailyStatus.id } : {})
       };
-      await saveDailyStatus(submitData);
-      setMyDailyStatus({ ...myDailyStatus, ...submitData } as DailyStatus);
+      if (myDailyStatus?.id) {
+        submitData.id = myDailyStatus.id;
+      }
+
+      const docRef = await saveDailyStatus(submitData);
+      setMyDailyStatus({ ...myDailyStatus, ...submitData, id: docRef.id } as DailyStatus);
       setIsDailyStatusModalOpen(false);
     } catch (e) {
       console.error(e);

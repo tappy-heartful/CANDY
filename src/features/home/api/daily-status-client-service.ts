@@ -13,9 +13,10 @@ export async function getDailyStatuses(dateStr: string): Promise<DailyStatus[]> 
 
 export async function saveDailyStatus(data: Partial<DailyStatus>) {
   if (data.id) {
-    const docRef = doc(db, "daily_statuses", data.id);
+    const { id, ...rest } = data;
+    const docRef = doc(db, "daily_statuses", id);
     await updateDoc(docRef, {
-      ...data,
+      ...rest,
       updatedAt: serverTimestamp(),
     });
     return docRef;
