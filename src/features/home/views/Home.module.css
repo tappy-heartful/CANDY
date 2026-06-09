@@ -773,6 +773,9 @@
   flex-direction: column;
   gap: 6px;
   padding-left: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .notificationSubItem {
@@ -784,6 +787,9 @@
   border-radius: 8px;
   transition: background-color 0.2s;
   margin-left: -8px; /* Offset the padding */
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .notificationSubItem:hover {
@@ -802,6 +808,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .editProfileBtn {

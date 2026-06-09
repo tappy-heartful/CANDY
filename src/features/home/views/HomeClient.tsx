@@ -8,10 +8,10 @@ import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
-import { getEvents } from "@/src/features/calendar/api/calendar-client-service";
+import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
-import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary } from "@/src/lib/firestore/types";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo } from "@/src/lib/firestore/types";
 import { getNextAnniversaryDiff } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
@@ -64,6 +64,7 @@ export default function HomeClient() {
   }, [searchParams]);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [upcomingAnniversaries, setUpcomingAnniversaries] = useState<Anniversary[]>([]);
+  const [upcomingTodos, setUpcomingTodos] = useState<Todo[]>([]);
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
@@ -116,15 +117,12 @@ export default function HomeClient() {
         getDailyStatuses(todayStr),
         getEvents(),
         getGroups("wishlist"),
-        getAnniversaries(user.uid, userData?.partnerUid || null)
-      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries]) => {
-        const nowTime = Date.now();
-        const oneDayMs = 24 * 60 * 60 * 1000;
-
-        const recentWishes = wishData.filter(w => w.createdAt && (nowTime - w.createdAt) <= oneDayMs);
-        const sortedByDate = [...recentWishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-        setRecentWishlist(sortedByDate);
+        getAnniversaries(user.uid, userData?.partnerUid || null),
+        getTodosForCalendar()
+      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries, allTodos]) => {
+        // Wishlist：時間制限なし、新しい順、最大3件
+        const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setRecentWishlist(sortedByDate.slice(0, 3));
         setPartnerData(partner);
 
         const myStatus = statuses.find(s => s.uid === user.uid) || null;
@@ -157,6 +155,7 @@ export default function HomeClient() {
           return 0;
         });
 
+        // 予定：最大3件
         setUpcomingEvents(validEvents.slice(0, 3));
         setWishlistGroups(groups);
         
@@ -165,6 +164,22 @@ export default function HomeClient() {
           return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
         });
         setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
+
+        // TODOのフィルタとソート（直近の未完了TODO3件）
+        const validTodos = allTodos.filter(t => {
+          if (t.isCompleted) return false;
+          if (t.type !== "couple" && t.uid !== user.uid) return false;
+          return true;
+        });
+
+        validTodos.sort((a, b) => {
+          if (a.date && b.date) return a.date.localeCompare(b.date);
+          if (a.date) return -1;
+          if (b.date) return 1;
+          return b.createdAt - a.createdAt;
+        });
+
+        setUpcomingTodos(validTodos.slice(0, 3));
 
         setLoading(false);
       });
@@ -378,7 +393,7 @@ export default function HomeClient() {
           <div className={styles.notificationList}>
             {loading ? (
               <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0 || upcomingAnniversaries.length > 0) ? (
+            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0 || upcomingAnniversaries.length > 0 || upcomingTodos.length > 0) ? (
               <>
 
                 {upcomingEvents.length > 0 && (
@@ -403,7 +418,7 @@ export default function HomeClient() {
                         else if (diffDays === 1) countdownText = "✨ 明日！";
 
                         return (
-                          <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                          <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                               <span className={styles.countdownBadge}>{countdownText}</span>
@@ -461,7 +476,7 @@ export default function HomeClient() {
                           }
 
                           return (
-                            <Link href="/wishlist?sort=createdAt_desc&filter=all" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <Link href="/wishlist?sort=createdAt_desc&filter=all" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
                               <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
                                 <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                                 <span style={{ fontWeight: 'bold' }}>{groupName}</span>
@@ -474,6 +489,43 @@ export default function HomeClient() {
                     </div>
                   ));
                 })()}
+                {upcomingTodos.length > 0 && (
+                  <div className={styles.notificationGroup}>
+                    <div className={styles.notificationHeader}>
+                      <i className={`fa-solid fa-list-check ${styles.notificationIcon}`} style={{ color: '#A0E7D2' }}></i>
+                      <span className={styles.notificationText}>
+                        直近のTODO
+                      </span>
+                    </div>
+                    <div className={styles.notificationItems}>
+                      {upcomingTodos.map(t => {
+                        let badgeClass = styles.badgeCouple;
+                        let typeLabel = "2人";
+                        if (t.type !== 'couple') {
+                          if (t.uid === user?.uid) {
+                            badgeClass = styles.badgeMe;
+                            typeLabel = userData?.nickname || "自分";
+                          } else {
+                            badgeClass = styles.badgePartner;
+                            typeLabel = partnerData?.nickname || "パートナー";
+                          }
+                        }
+
+                        const displayDate = t.date ? t.date.replace(/-/g, '/') : '期限なし';
+
+                        return (
+                          <Link href="/todo" key={t.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                            <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
+                              <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                              <span style={{ fontWeight: 'bold' }}>{displayDate}</span>
+                            </div>
+                            <span className={styles.notificationTitle}>{t.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {upcomingAnniversaries.length > 0 && (
                   <div className={styles.notificationGroup}>
                     <div className={styles.notificationHeader}>
@@ -492,7 +544,7 @@ export default function HomeClient() {
                         const displayDate = a.date.replace("-", "/"); // MM/DD
 
                         return (
-                          <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                          <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
                               <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
