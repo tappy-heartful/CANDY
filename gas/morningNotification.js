@@ -107,54 +107,52 @@ function execDailyMorningNotification() {
       // ---- メッセージの構築 ----
       let message = `おはよう！CANDYだよ🍬\n${cuteMessage}\n\nきょうの${nickname}ちゃんはどんな調子かな？ぜひ教えてね🍀\n${BASE_URL}/home?action=status\n\n`;
 
-      // 🎉本日🎉 セクション
-      message += `🎉本日🎉\n`;
+      // 📅イベント セクション
       message += `📅イベント\n`;
+      let hasEvents = false;
       if (todaysEvents.length > 0) {
         todaysEvents.forEach(e => {
           const timeStr = e.isAllDay ? "終日" : (e.startTime ? `${e.startTime}〜` : "時間未定");
-          message += `・${timeStr} ${e.title}\n`;
+          message += `・本日 ${timeStr} ${e.title}\n`;
+          hasEvents = true;
         });
-      } else {
-        message += `予定は特にないよ✨\n`;
       }
-
-      message += `📋TODO\n`;
-      if (todaysTodos.length > 0) {
-        todaysTodos.forEach(t => {
-          message += `・${t.title}\n`;
-        });
-      } else {
-        message += `TODOはクリア済み！👏\n`;
-      }
-      message += `\n`;
-
-      // ✨もうすぐ✨ セクション
-      message += `✨もうすぐ✨\n`;
-      message += `📅イベント\n`;
       if (nextEvents.length > 0) {
         nextEvents.forEach(e => {
           const diffDays = calculateDiffDays(todayStr, e.startDate);
           message += `・${e.title} (あと${diffDays}日)\n`;
+          hasEvents = true;
         });
-      } else {
-        message += `直近のイベントはないみたい！\n`;
       }
+      if (!hasEvents) {
+        message += `予定は特にないよ✨\n`;
+      }
+      message += `\n`;
 
+      // 📋TODO セクション
       message += `📋TODO\n`;
+      let hasTodos = false;
+      if (todaysTodos.length > 0) {
+        todaysTodos.forEach(t => {
+          message += `・本日 ${t.title}\n`;
+          hasTodos = true;
+        });
+      }
       if (nextTodos.length > 0) {
         nextTodos.forEach(t => {
           const diffDays = calculateDiffDays(todayStr, t.date);
           message += `・${t.title} (あと${diffDays}日)\n`;
+          hasTodos = true;
         });
-      } else {
-        message += `直近のTODOは全部クリア済み！👏\n`;
+      }
+      if (!hasTodos) {
+        message += `TODOはクリア済み！👏\n`;
       }
       message += `\n`;
 
       // 🎂記念日 セクション
       if (userAnniversaries.length > 0) {
-        message += `🎂もうすぐ記念日\n`;
+        message += `🎂記念日\n`;
         userAnniversaries.forEach(a => {
           const countdownText = a.isToday ? "🎉今日！" : (a.diffDays === 1 ? "✨明日！" : `あと${a.diffDays}日`);
           message += `・${a.title} (${countdownText})\n`;
