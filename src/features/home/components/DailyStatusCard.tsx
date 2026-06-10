@@ -13,9 +13,11 @@ interface DailyStatusCardProps {
   onOpenHistory?: () => void;
   onSavePartnerComment?: (comment: string) => Promise<void>;
   titlePrefix?: string;
+  currentUser?: FirestoreUser | null;
+  partnerUser?: FirestoreUser | null;
 }
 
-export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, onSavePartnerComment, titlePrefix = "今日の" }: DailyStatusCardProps) {
+export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, onSavePartnerComment, titlePrefix = "今日の", currentUser, partnerUser }: DailyStatusCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [commentText, setCommentText] = useState(status?.partnerComment || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -54,6 +56,14 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
       setIsSaving(false);
     }
   };
+
+  const commentAuthorName = isMe
+    ? (partnerUser?.nickname || "パートナー")
+    : (currentUser?.nickname || "わたし");
+
+  const commentAuthorIcon = isMe
+    ? (partnerUser?.pictureUrl || "/icon.png")
+    : (currentUser?.pictureUrl || "/icon.png");
 
   const renderStars = (value: number, type: "mood" | "health") => {
     const stars = [];
@@ -160,38 +170,47 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
                       </div>
                     </div>
                   ) : (
-                    <div className={styles.partnerCommentBox}>
-                      <div className={styles.commentHeader}>
-                        <span className={styles.commentAuthor}>わたしのコメント</span>
-                        <div className={styles.commentActions}>
-                          <button className={styles.commentEditBtn} onClick={() => setIsEditing(true)} title="編集">
-                            <i className="fa-solid fa-pen"></i>
-                          </button>
-                          <button className={styles.commentDeleteBtn} onClick={handleDeleteComment} title="削除">
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
+                    <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
+                      <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                      <div className={styles.commentBubbleContent}>
+                        <div className={styles.commentHeader}>
+                          <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                          <div className={styles.commentActions}>
+                            <button className={styles.commentEditBtn} onClick={() => setIsEditing(true)} title="編集">
+                              <i className="fa-solid fa-pen"></i>
+                            </button>
+                            <button className={styles.commentDeleteBtn} onClick={handleDeleteComment} title="削除">
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
                         </div>
+                        <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                       </div>
-                      <div className={styles.commentBody}>{status.partnerComment}</div>
                     </div>
                   )
                 ) : (
                   status.partnerComment && (
-                    <div className={styles.partnerCommentBox}>
-                      <div className={styles.commentHeader}>
-                        <span className={styles.commentAuthor}>わたしのコメント</span>
+                    <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
+                      <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                      <div className={styles.commentBubbleContent}>
+                        <div className={styles.commentHeader}>
+                          <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                        </div>
+                        <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                       </div>
-                      <div className={styles.commentBody}>{status.partnerComment}</div>
                     </div>
                   )
                 )
               ) : (
                 status.partnerComment && (
-                  <div className={styles.myCommentBox}>
-                    <div className={styles.commentHeader}>
-                      <span className={styles.commentAuthor}>パートナーからのコメント</span>
+                  <div className={`${styles.commentBubbleContainer} ${styles.myCommentBg}`}>
+                    <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                    <div className={styles.commentBubbleContent}>
+                      <div className={styles.commentHeader}>
+                        <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                      </div>
+                      <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                     </div>
-                    <div className={styles.commentBody}>{status.partnerComment}</div>
                   </div>
                 )
               )}

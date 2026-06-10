@@ -393,6 +393,8 @@ export default function HomeClient() {
             user={userData as FirestoreUser}
             status={myDailyStatus}
             isMe={true}
+            currentUser={userData as FirestoreUser}
+            partnerUser={partnerData}
             onEdit={() => setIsDailyStatusModalOpen(true)}
             onOpenHistory={() => router.push('/status-history')}
           />
@@ -400,6 +402,8 @@ export default function HomeClient() {
             user={partnerData}
             status={partnerDailyStatus}
             isMe={false}
+            currentUser={userData as FirestoreUser}
+            partnerUser={partnerData}
             onOpenHistory={() => router.push('/status-history')}
             onSavePartnerComment={handleSavePartnerComment}
           />
