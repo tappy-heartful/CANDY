@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Group, Todo } from "@/src/lib/firestore/types";
 import styles from "../views/TodoList.module.css";
 
@@ -42,7 +42,23 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setDateMode("due");
       }
     }
-  }, [isOpen, todo, groups, defaultDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, todo, defaultDate]);
+
+  const prevGroupsLength = useRef(groups.length);
+  useEffect(() => {
+    if (isOpen) {
+      if (groups.length > 0 && !groupId) {
+        setGroupId(groups[0].id);
+      } else if (groups.length > prevGroupsLength.current) {
+        const newGroup = groups[groups.length - 1];
+        if (newGroup) {
+          setGroupId(newGroup.id);
+        }
+      }
+    }
+    prevGroupsLength.current = groups.length;
+  }, [groups, groupId, isOpen]);
 
   if (!isOpen) return null;
 

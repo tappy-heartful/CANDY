@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Wishlist, Group } from "@/src/lib/firestore/types";
 import styles from "../views/Wishlist.module.css";
 
@@ -47,7 +47,21 @@ export default function WishlistModal({
       setUrgency(50);
       setIsAchieved(false);
     }
-  }, [wishlist, groups]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wishlist]);
+
+  const prevGroupsLength = useRef(groups.length);
+  useEffect(() => {
+    if (groups.length > 0 && !groupId) {
+      setGroupId(groups[0].id);
+    } else if (groups.length > prevGroupsLength.current) {
+      const newGroup = groups[groups.length - 1];
+      if (newGroup) {
+        setGroupId(newGroup.id);
+      }
+    }
+    prevGroupsLength.current = groups.length;
+  }, [groups, groupId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
