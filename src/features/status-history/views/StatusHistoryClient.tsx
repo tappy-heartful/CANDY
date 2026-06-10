@@ -164,6 +164,8 @@ export default function StatusHistoryClient() {
                             user={userData as FirestoreUser}
                             status={myStatus}
                             isMe={true}
+                            currentUser={userData as FirestoreUser}
+                            partnerUser={partnerData}
                             titlePrefix="" 
                             onEdit={() => {
                               setEditingStatus(myStatus);
@@ -174,6 +176,8 @@ export default function StatusHistoryClient() {
                             user={partnerData}
                             status={partnerStatus}
                             isMe={false}
+                            currentUser={userData as FirestoreUser}
+                            partnerUser={partnerData}
                             titlePrefix="" 
                             onSavePartnerComment={
                               partnerStatus
