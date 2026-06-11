@@ -16,8 +16,9 @@ import BackToHome from "@/src/components/Common/BackToHome";
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const formatDateStr = (dateStr: string) => {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length < 3 || parts.some(isNaN)) return dateStr;
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
   return `${d.getMonth() + 1}月${d.getDate()}日(${DAYS[d.getDay()]})`;
 };
 
@@ -119,7 +120,7 @@ export default function StatusHistoryClient() {
   // 年ごとにグループ化
   const groupedByYear: Record<string, string[]> = {};
   dates.forEach(dateStr => {
-    const year = new Date(dateStr).getFullYear().toString();
+    const year = dateStr.split("-")[0];
     if (!isNaN(Number(year))) {
       if (!groupedByYear[year]) {
         groupedByYear[year] = [];

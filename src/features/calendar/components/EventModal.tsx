@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarEvent } from "@/src/lib/firestore/types";
-import { showDialog } from "@/src/lib/functions";
+import { showDialog, getJSTDate } from "@/src/lib/functions";
 import styles from "./Calendar.module.css";
 
 interface EventModalProps {
@@ -38,7 +38,8 @@ export default function EventModal({
   const [link, setLink] = useState("");
 
   useEffect(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const today = getJSTDate();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     setTitle(event?.title || "");
     setType(event?.type || "couple");
     setIsAllDay(event?.isAllDay ?? true);

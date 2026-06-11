@@ -138,9 +138,18 @@ export async function writeLog({ dataId, action, status = 'success', errorDetail
 
 export { showDialog };
 
+/**
+ * 実行環境のタイムゾーンに関わらず、常に日本時間 (JST, UTC+9) の Date オブジェクトを返す
+ */
+export function getJSTDate(): Date {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (3600000 * 9));
+}
+
 // 次の記念日までの日数を計算するロジック（MM-DD 形式）
 export function getNextAnniversaryDiff(dateStr: string) {
-  const today = new Date();
+  const today = getJSTDate();
   today.setHours(0, 0, 0, 0);
   
   const [m, d] = dateStr.split("-").map(Number);
