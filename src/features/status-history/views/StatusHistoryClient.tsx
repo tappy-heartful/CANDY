@@ -115,6 +115,16 @@ export default function StatusHistoryClient() {
     }
   };
 
+  const handleStatusUpdate = (updated: DailyStatus) => {
+    setHistoryData(prev => {
+      const next = { ...prev };
+      if (next[updated.date]) {
+        next[updated.date] = next[updated.date].map(s => s.id === updated.id ? updated : s);
+      }
+      return next;
+    });
+  };
+
   const dates = Object.keys(historyData).sort((a, b) => b.localeCompare(a)); // 降順
 
   // 年ごとにグループ化
@@ -172,6 +182,7 @@ export default function StatusHistoryClient() {
                               setEditingStatus(myStatus);
                               setIsModalOpen(true);
                             }}
+                            onStatusUpdate={handleStatusUpdate}
                           />
                           <DailyStatusCard
                             user={partnerData}
@@ -185,6 +196,7 @@ export default function StatusHistoryClient() {
                                 ? (comment) => handleSavePartnerComment(partnerStatus.id, comment)
                                 : undefined
                             }
+                            onStatusUpdate={handleStatusUpdate}
                           />
                         </div>
                       </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { User as FirestoreUser, DailyStatus } from "@/src/lib/firestore/types";
 import styles from "./DailyStatus.module.css";
 import { showDialog } from "@/src/components/CommonDialog";
+import { saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 
 interface DailyStatusCardProps {
   user: FirestoreUser | null;
@@ -15,17 +16,138 @@ interface DailyStatusCardProps {
   titlePrefix?: string;
   currentUser?: FirestoreUser | null;
   partnerUser?: FirestoreUser | null;
+  onStatusUpdate?: (updated: DailyStatus) => void;
 }
 
-export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, onSavePartnerComment, titlePrefix = "今日の", currentUser, partnerUser }: DailyStatusCardProps) {
+export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHistory, onSavePartnerComment, titlePrefix = "今日の", currentUser, partnerUser, onStatusUpdate }: DailyStatusCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [commentText, setCommentText] = useState(status?.partnerComment || "");
   const [isSaving, setIsSaving] = useState(false);
+
+  const [currentStatus, setCurrentStatus] = useState<DailyStatus | null>(status);
+  const [pickerTarget, setPickerTarget] = useState<"commentReactions" | "partnerCommentReactions" | null>(null);
+
+  const PRESET_EMOJIS = ["😊", "👍", "❤️", "🎉", "😭", "👏", "😮", "🙏"];
+
+  useEffect(() => {
+    setCurrentStatus(status);
+  }, [status]);
 
   useEffect(() => {
     setCommentText(status?.partnerComment || "");
     setIsEditing(false);
   }, [status?.partnerComment]);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setPickerTarget(null);
+    };
+    if (pickerTarget) {
+      window.addEventListener("click", handleGlobalClick);
+    }
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, [pickerTarget]);
+
+  const handleToggleReaction = async (
+    targetField: "commentReactions" | "partnerCommentReactions",
+    emoji: string
+  ) => {
+    if (!currentUser || !currentStatus?.id) return;
+    const userId = currentUser.id;
+    
+    const reactions = { ...(currentStatus[targetField] || {}) };
+    const currentList = reactions[emoji] ? [...reactions[emoji]] : [];
+    
+    const index = currentList.indexOf(userId);
+    if (index >= 0) {
+      currentList.splice(index, 1);
+    } else {
+      currentList.push(userId);
+    }
+    
+    if (currentList.length === 0) {
+      delete reactions[emoji];
+    } else {
+      reactions[emoji] = currentList;
+    }
+    
+    const updatedStatus = {
+      ...currentStatus,
+      [targetField]: reactions,
+    };
+    
+    setCurrentStatus(updatedStatus);
+    if (onStatusUpdate) {
+      onStatusUpdate(updatedStatus);
+    }
+    
+    try {
+      await saveDailyStatus({
+        id: currentStatus.id,
+        [targetField]: reactions,
+      });
+    } catch (e) {
+      console.error("Failed to save reaction", e);
+      setCurrentStatus(currentStatus);
+      if (onStatusUpdate) {
+        onStatusUpdate(currentStatus);
+      }
+    }
+  };
+
+  const renderReactions = (targetField: "commentReactions" | "partnerCommentReactions", className?: string) => {
+    if (!currentStatus) return null;
+    const reactions = currentStatus[targetField] || {};
+    const userId = currentUser?.id;
+
+    return (
+      <div className={`${styles.reactionsContainer} ${className || ""}`} onClick={(e) => e.stopPropagation()}>
+        {Object.entries(reactions).map(([emoji, uids]) => {
+          if (!uids || uids.length === 0) return null;
+          const isActive = userId ? uids.includes(userId) : false;
+          return (
+            <button
+              key={emoji}
+              className={`${styles.reactionBadge} ${isActive ? styles.reactionBadgeActive : ""}`}
+              onClick={() => handleToggleReaction(targetField, emoji)}
+            >
+              <span>{emoji}</span>
+              <span>{uids.length}</span>
+            </button>
+          );
+        })}
+        
+        <div style={{ position: "relative" }}>
+          <button
+            className={styles.addReactionBtn}
+            onClick={() => setPickerTarget(pickerTarget === targetField ? null : targetField)}
+            title="リアクションを追加"
+          >
+            <i className="fa-regular fa-face-smile"></i>
+          </button>
+          
+          {pickerTarget === targetField && (
+            <div className={styles.pickerPopover}>
+              {PRESET_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  className={styles.pickerEmoji}
+                  onClick={() => {
+                    handleToggleReaction(targetField, emoji);
+                    setPickerTarget(null);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const handleSaveComment = async () => {
     if (!onSavePartnerComment) return;
@@ -120,8 +242,11 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
             {renderStars(status.health, "health")}
           </div>
           {status.comment && (
-            <div className={styles.commentBox}>
-              {status.comment}
+            <div>
+              <div className={styles.commentBox}>
+                {status.comment}
+              </div>
+              {renderReactions("commentReactions")}
             </div>
           )}
 
@@ -170,48 +295,57 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
                       </div>
                     </div>
                   ) : (
-                    <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
-                      <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
-                      <div className={styles.commentBubbleContent}>
-                        <div className={styles.commentHeader}>
-                          <span className={styles.commentAuthorName}>{commentAuthorName}</span>
-                          <div className={styles.commentActions}>
-                            <button className={styles.commentEditBtn} onClick={() => setIsEditing(true)} title="編集">
-                              <i className="fa-solid fa-pen"></i>
-                            </button>
-                            <button className={styles.commentDeleteBtn} onClick={handleDeleteComment} title="削除">
-                              <i className="fa-solid fa-trash-can"></i>
-                            </button>
+                    <>
+                      <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
+                        <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                        <div className={styles.commentBubbleContent}>
+                          <div className={styles.commentHeader}>
+                            <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                            <div className={styles.commentActions}>
+                              <button className={styles.commentEditBtn} onClick={() => setIsEditing(true)} title="編集">
+                                <i className="fa-solid fa-pen"></i>
+                              </button>
+                              <button className={styles.commentDeleteBtn} onClick={handleDeleteComment} title="削除">
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            </div>
                           </div>
+                          <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                         </div>
-                        <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                       </div>
-                    </div>
+                      {renderReactions("partnerCommentReactions")}
+                    </>
                   )
                 ) : (
                   status.partnerComment && (
-                    <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
-                      <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
-                      <div className={styles.commentBubbleContent}>
-                        <div className={styles.commentHeader}>
-                          <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                    <>
+                      <div className={`${styles.commentBubbleContainer} ${styles.partnerCommentBg}`}>
+                        <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                        <div className={styles.commentBubbleContent}>
+                          <div className={styles.commentHeader}>
+                            <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                          </div>
+                          <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                         </div>
-                        <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                       </div>
-                    </div>
+                      {renderReactions("partnerCommentReactions")}
+                    </>
                   )
                 )
               ) : (
                 status.partnerComment && (
-                  <div className={`${styles.commentBubbleContainer} ${styles.myCommentBg}`}>
-                    <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
-                    <div className={styles.commentBubbleContent}>
-                      <div className={styles.commentHeader}>
-                        <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                  <>
+                    <div className={`${styles.commentBubbleContainer} ${styles.myCommentBg}`}>
+                      <img src={commentAuthorIcon} alt={commentAuthorName} className={styles.commentAvatar} />
+                      <div className={styles.commentBubbleContent}>
+                        <div className={styles.commentHeader}>
+                          <span className={styles.commentAuthorName}>{commentAuthorName}</span>
+                        </div>
+                        <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                       </div>
-                      <div className={styles.commentBubbleBody}>{status.partnerComment}</div>
                     </div>
-                  </div>
+                    {renderReactions("partnerCommentReactions")}
+                  </>
                 )
               )}
             </div>

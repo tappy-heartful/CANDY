@@ -226,6 +226,14 @@ export default function HomeClient() {
     }
   };
 
+  const handleStatusUpdate = (updated: DailyStatus) => {
+    if (updated.uid === user?.uid) {
+      setMyDailyStatus(updated);
+    } else {
+      setPartnerDailyStatus(updated);
+    }
+  };
+
   const handleCycleTheme = async () => {
     const currentIndex = CLOCK_THEMES.indexOf(currentTheme);
     const nextIndex = (currentIndex + 1) % CLOCK_THEMES.length;
@@ -397,6 +405,7 @@ export default function HomeClient() {
             partnerUser={partnerData}
             onEdit={() => setIsDailyStatusModalOpen(true)}
             onOpenHistory={() => router.push('/status-history')}
+            onStatusUpdate={handleStatusUpdate}
           />
           <DailyStatusCard
             user={partnerData}
@@ -406,6 +415,7 @@ export default function HomeClient() {
             partnerUser={partnerData}
             onOpenHistory={() => router.push('/status-history')}
             onSavePartnerComment={handleSavePartnerComment}
+            onStatusUpdate={handleStatusUpdate}
           />
         </div>
 
