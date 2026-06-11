@@ -414,3 +414,119 @@
   color: #dc2626;
   background: rgba(220, 38, 38, 0.05);
 }
+
+/* リアクションコンテナ */
+.reactionsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+  margin-left: 10px;
+}
+
+/* 各リアクションバッジ */
+.reactionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.reactionBadge:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+/* 自分がリアクションしている場合のバッジ（アクティブ状態） */
+.reactionBadgeActive {
+  background: #fdf2f8 !important;
+  border-color: #fbcfe8 !important;
+  color: #db2777 !important;
+}
+
+/* パートナーカード内のアクティブバッジ */
+.partnerCard .reactionBadgeActive {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+  color: #16a34a !important;
+}
+
+/* リアクション追加ボタン（笑顔マーク） */
+.addReactionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.addReactionBtn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #64748b;
+  transform: scale(1.1);
+}
+
+/* リアクションピッカーポップオーバー */
+.pickerPopover {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  padding: 4px 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 100;
+  white-space: nowrap;
+  animation: popoverFadeIn 0.15s ease-out;
+}
+
+/* ポップオーバーのアニメーション */
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pickerEmoji {
+  font-size: 16px;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s ease, transform 0.15s ease;
+  border: none;
+  background: none;
+}
+
+.pickerEmoji:hover {
+  background: #f1f5f9;
+  transform: scale(1.25);
+}
+

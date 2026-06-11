@@ -106,6 +106,8 @@ export interface DailyStatus {
   health: number; // 1 to 5
   comment: string;
   partnerComment?: string;
+  commentReactions?: { [emoji: string]: string[] };
+  partnerCommentReactions?: { [emoji: string]: string[] };
   createdAt: number;
   updatedAt: number;
 }

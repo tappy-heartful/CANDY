@@ -39,8 +39,8 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         // 自分が作成したドキュメントの場合
         resource.data.uid == request.auth.uid ||
-        // パートナーがコメントを書き込む場合（partnerComment と updatedAt のみ変更可能）
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'updatedAt'])
+        // パートナーがコメントやリアクションを書き込む場合
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'commentReactions', 'partnerCommentReactions', 'updatedAt'])
       );
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
