@@ -27,7 +27,7 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
   const [currentStatus, setCurrentStatus] = useState<DailyStatus | null>(status);
   const [pickerTarget, setPickerTarget] = useState<"commentReactions" | "partnerCommentReactions" | null>(null);
 
-  const PRESET_EMOJIS = ["😊", "👍", "❤️", "🎉", "😭", "👏", "😮", "🙏"];
+  const PRESET_EMOJIS = ["😊", "❤️", "🎉", "😭", "👏", "😮", "🫂", "‼️", "✨"];
 
   useEffect(() => {
     setCurrentStatus(status);
@@ -56,33 +56,33 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
   ) => {
     if (!currentUser || !currentStatus?.id) return;
     const userId = currentUser.id;
-    
+
     const reactions = { ...(currentStatus[targetField] || {}) };
     const currentList = reactions[emoji] ? [...reactions[emoji]] : [];
-    
+
     const index = currentList.indexOf(userId);
     if (index >= 0) {
       currentList.splice(index, 1);
     } else {
       currentList.push(userId);
     }
-    
+
     if (currentList.length === 0) {
       delete reactions[emoji];
     } else {
       reactions[emoji] = currentList;
     }
-    
+
     const updatedStatus = {
       ...currentStatus,
       [targetField]: reactions,
     };
-    
+
     setCurrentStatus(updatedStatus);
     if (onStatusUpdate) {
       onStatusUpdate(updatedStatus);
     }
-    
+
     try {
       await saveDailyStatus({
         id: currentStatus.id,
@@ -118,33 +118,31 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
             </button>
           );
         })}
-        
-        <div style={{ position: "relative" }}>
-          <button
-            className={styles.addReactionBtn}
-            onClick={() => setPickerTarget(pickerTarget === targetField ? null : targetField)}
-            title="リアクションを追加"
-          >
-            <i className="fa-regular fa-face-smile"></i>
-          </button>
-          
-          {pickerTarget === targetField && (
-            <div className={styles.pickerPopover}>
-              {PRESET_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  className={styles.pickerEmoji}
-                  onClick={() => {
-                    handleToggleReaction(targetField, emoji);
-                    setPickerTarget(null);
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+
+        <button
+          className={styles.addReactionBtn}
+          onClick={() => setPickerTarget(pickerTarget === targetField ? null : targetField)}
+          title="リアクションを追加"
+        >
+          <i className="fa-regular fa-face-smile"></i>
+        </button>
+
+        {pickerTarget === targetField && (
+          <div className={styles.pickerPopover}>
+            {PRESET_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                className={styles.pickerEmoji}
+                onClick={() => {
+                  handleToggleReaction(targetField, emoji);
+                  setPickerTarget(null);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -191,7 +189,7 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
     const stars = [];
     const activeClass = type === "mood" ? styles.starActive : styles.starActiveHealth;
     const iconClass = type === "mood" ? "fa-heart" : "fa-star";
-    
+
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <i
