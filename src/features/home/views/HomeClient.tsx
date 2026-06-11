@@ -120,9 +120,16 @@ export default function HomeClient() {
         getAnniversaries(user.uid, userData?.partnerUid || null),
         getTodosForCalendar()
       ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries, allTodos]) => {
-        // Wishlist：時間制限なし、新しい順、最大3件
-        const sortedByDate = [...wishData].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setRecentWishlist(sortedByDate.slice(0, 3));
+        // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
+        const myWishes = wishData
+          .filter(w => w.uid === user.uid)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 3);
+        const partnerWishes = wishData
+          .filter(w => w.uid !== user.uid)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 3);
+        setRecentWishlist([...myWishes, ...partnerWishes]);
         setPartnerData(partner);
 
         const myStatus = statuses.find(s => s.uid === user.uid) || null;
