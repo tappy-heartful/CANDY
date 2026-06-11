@@ -454,17 +454,27 @@ export default function CalendarView({
                     🎂 {a.title}
                   </div>
                 ))}
-                {combinedItems.slice(0, 3 - dayAnniversaries.length).map((item) => {
+                {combinedItems.map((item) => {
                   const isMe = item.uid === currentUserId;
                   const isSolid = item.isAllDay || item.startDate !== item.endDate;
 
                   let pillClass = "";
-                  if (item.type === "couple") {
-                    pillClass = isSolid ? styles.eventCouple : styles.eventCoupleLight;
-                  } else if (isMe) {
-                    pillClass = isSolid ? styles.eventMe : styles.eventMeLight;
+                  if (item.isTodo) {
+                    if (item.type === "couple") {
+                      pillClass = styles.todoCouple;
+                    } else if (isMe) {
+                      pillClass = styles.todoMe;
+                    } else {
+                      pillClass = styles.todoPartner;
+                    }
                   } else {
-                    pillClass = isSolid ? styles.eventPartner : styles.eventPartnerLight;
+                    if (item.type === "couple") {
+                      pillClass = isSolid ? styles.eventCouple : styles.eventCoupleLight;
+                    } else if (isMe) {
+                      pillClass = isSolid ? styles.eventMe : styles.eventMeLight;
+                    } else {
+                      pillClass = isSolid ? styles.eventPartner : styles.eventPartnerLight;
+                    }
                   }
 
                   if (item.isTodo) {
@@ -502,9 +512,6 @@ export default function CalendarView({
                     </span>
                   );
                 })}
-                {combinedItems.length > 3 && (
-                  <span className={styles.moreIndicator}>+{combinedItems.length - 3} 件</span>
-                )}
               </div>
             </div>
           );
