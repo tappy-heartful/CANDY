@@ -178,8 +178,11 @@ function calculateDiffDays(d1Str, d2Str) {
 
 // 記念日のMM-DD形式から、次の記念日までの日数を計算する関数
 function calculateAnniversaryDiff(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // GASの環境タイムゾーンによらず日本時間(JST)の今日(00:00:00)を基準にする
+  const todayDate = new Date();
+  const jstDateStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
+  const partsToday = jstDateStr.split("-").map(Number);
+  const today = new Date(partsToday[0], partsToday[1] - 1, partsToday[2], 0, 0, 0, 0);
 
   const parts = dateStr.split("-");
   const m = parseInt(parts[0], 10);
