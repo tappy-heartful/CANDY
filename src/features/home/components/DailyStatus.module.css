@@ -423,6 +423,7 @@
   margin-top: 8px;
   align-items: center;
   margin-left: 10px;
+  position: relative;
 }
 
 /* 各リアクションバッジ */
@@ -489,8 +490,9 @@
 /* リアクションピッカーポップオーバー */
 .pickerPopover {
   position: absolute;
-  bottom: 28px;
+  top: 100%;
   left: 0;
+  margin-top: 4px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
@@ -501,13 +503,14 @@
   z-index: 100;
   white-space: nowrap;
   animation: popoverFadeIn 0.15s ease-out;
+  transform-origin: left top;
 }
 
 /* ポップオーバーのアニメーション */
 @keyframes popoverFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.95);
+    transform: translateY(-6px) scale(0.95);
   }
   to {
     opacity: 1;
