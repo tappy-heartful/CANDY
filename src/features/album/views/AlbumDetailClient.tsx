@@ -218,12 +218,18 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     }
   };
 
-  // 選択写真の一括ダウンロード（各写真を新しいウィンドウ・タブで開く）
+  // 選択写真の一括ダウンロード
   const handleDownloadSelected = () => {
     if (selectedPhotos.length === 0) return;
     
     selectedPhotos.forEach((photo) => {
-      window.open(photo.url, "_blank");
+      const filename = `album_${album?.name || "photo"}_${photo.id}.jpg`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(photo.url)}&name=${encodeURIComponent(filename)}`;
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     });
     
     setSelectedPhotos([]);
@@ -300,26 +306,15 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   };
 
   // 単一写真のダウンロード
-  const handleDownloadSingle = async (photo: Photo, e: React.MouseEvent) => {
+  const handleDownloadSingle = (photo: Photo, e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      showSpinner();
-      const res = await fetch(photo.url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `album_${album?.name || "photo"}_${photo.id}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error("Direct download failed, falling back to window.open", err);
-      window.open(photo.url, "_blank");
-    } finally {
-      hideSpinner();
-    }
+    const filename = `album_${album?.name || "photo"}_${photo.id}.jpg`;
+    const downloadUrl = `/api/download?url=${encodeURIComponent(photo.url)}&name=${encodeURIComponent(filename)}`;
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // 単一写真の削除
