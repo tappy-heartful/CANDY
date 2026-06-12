@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { toPlainObject } from "@/src/lib/firestore/utils";
-
+import { compressImage } from "@/src/lib/image-compression";
 
 // TODO
 export interface Album {
@@ -71,9 +71,12 @@ export async function getPhotos(albumId: string): Promise<Photo[]> {
 
 // 写真をアップロードしてDBに追加
 export async function uploadPhoto(albumId: string, file: File, uid: string): Promise<Photo> {
-  const storagePath = `albums/${albumId}/${Date.now()}_${file.name}`;
+  // 画像ファイルをアップロード前に圧縮 (最大1200px, 品質0.75)
+  const compressedFile = await compressImage(file, 1200, 0.75);
+
+  const storagePath = `albums/${albumId}/${Date.now()}_${compressedFile.name}`;
   const storageRef = ref(storage, storagePath);
-  const snapshot = await uploadBytes(storageRef, file);
+  const snapshot = await uploadBytes(storageRef, compressedFile);
   const url = await getDownloadURL(snapshot.ref);
 
   const refPhotos = collection(db, "photos");

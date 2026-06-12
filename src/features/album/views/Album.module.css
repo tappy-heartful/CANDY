@@ -413,6 +413,58 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s;
+}
+
+.lightboxClose:hover {
+  transform: scale(1.1);
+}
+
+.lightboxPrev, .lightboxNext {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  z-index: 3100;
+  transition: all 0.2s ease;
+}
+
+.lightboxPrev:hover, .lightboxNext:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.lightboxPrev {
+  left: 24px;
+}
+
+.lightboxNext {
+  right: 24px;
+}
+
+@media (max-width: 768px) {
+  .lightboxPrev {
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  .lightboxNext {
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
 }
 
 .lightboxContent {
@@ -427,7 +479,7 @@
 
 .lightboxImg {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 70vh;
   object-fit: contain;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
@@ -454,6 +506,50 @@
 .uploadDate {
   font-size: 11px;
   color: #888;
+}
+
+/* 下部アクションバー (ダウンロード・削除) */
+.lightboxActionBar {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  z-index: 3100;
+}
+
+.lightboxActionBtn {
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.lightboxActionBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.lightboxActionBtnDanger {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+.lightboxActionBtnDanger:hover {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: rgba(255, 107, 107, 0.6);
 }
 
 /* Creation Dialog / Overlay Modal */
