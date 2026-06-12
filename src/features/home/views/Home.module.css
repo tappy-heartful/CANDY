@@ -805,9 +805,8 @@
 .notificationTitle {
   font-size: 14px;
   color: #555;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
   width: 100%;
   box-sizing: border-box;
 }
