@@ -195,6 +195,9 @@ export default function Header() {
           <Link href="/anniversaries" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-cake-candles ${styles.menuIcon}`}></i> 記念日
           </Link>
+          <Link href="/albums" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-images ${styles.menuIcon}`}></i> アルバム
+          </Link>
         </div>
       </div>
     </>

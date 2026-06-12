@@ -70,6 +70,19 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // アルバム機能
+    match /albums/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /photos/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // ============================
 
     // ログ・認証系（システム用）

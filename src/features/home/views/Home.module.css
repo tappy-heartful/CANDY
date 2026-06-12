@@ -916,3 +916,8 @@
   color: #F7A8C4;
 }
 
+.cardAlbum {
+  background: linear-gradient(135deg, #b39ddb, #ce93d8) !important;
+}
+
+

@@ -703,6 +703,10 @@ export default function HomeClient() {
             <span className={styles.cardIcon}><i className="fa-solid fa-cake-candles"></i></span>
             <span className={styles.cardTitle}>記念日</span>
           </Link>
+          <Link href="/albums" className={`${styles.menuCard} ${styles.cardAlbum}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-images"></i></span>
+            <span className={styles.cardTitle}>アルバム</span>
+          </Link>
         </div>
         <div className={styles.menuGrid}>
           <button className={`${styles.menuCard} ${styles.cardPartner}`} onClick={() => setActiveProfileModal('partner')}>
