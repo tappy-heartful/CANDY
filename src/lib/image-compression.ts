@@ -1,5 +1,5 @@
 /**
- * 画像を圧縮する (旧アプリのロジックを踏襲)
+ * 画像を圧縮する (streak-navi のロジックを踏襲)
  * @param file 圧縮対象のファイル
  * @param max 最大長 (幅または高さ)
  * @param quality 品質 (0.0 ～ 1.0)
@@ -7,8 +7,8 @@
  */
 export async function compressImage(
   file: File, 
-  max = 1000, 
-  quality = 0.7
+  max = 1200, 
+  quality = 0.75
 ): Promise<File> {
   if (!file.type.startsWith('image/')) return file;
 

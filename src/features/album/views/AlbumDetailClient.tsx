@@ -49,6 +49,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   // パートナー情報の取得
   useEffect(() => {
@@ -89,6 +91,30 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   useEffect(() => {
     fetchData();
   }, [albumId]);
+
+  // キーボードでの画像切り替え (左右矢印キー)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!activePhoto) return;
+      const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+      if (activeIndex === -1) return;
+
+      if (e.key === "ArrowLeft") {
+        if (activeIndex > 0) {
+          setActivePhoto(photos[activeIndex - 1]);
+        }
+      } else if (e.key === "ArrowRight") {
+        if (activeIndex < photos.length - 1) {
+          setActivePhoto(photos[activeIndex + 1]);
+        }
+      } else if (e.key === "Escape") {
+        setActivePhoto(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePhoto, photos]);
 
   // メニュー外部クリックで閉じる処理
   useEffect(() => {
@@ -219,6 +245,109 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const formatUploadDate = (timestamp: number) => {
     const d = new Date(timestamp);
     return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  // 前後の画像への切り替え
+  const handlePrevPhoto = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!activePhoto) return;
+    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+    if (activeIndex > 0) {
+      setActivePhoto(photos[activeIndex - 1]);
+    }
+  };
+
+  const handleNextPhoto = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!activePhoto) return;
+    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+    if (activeIndex < photos.length - 1) {
+      setActivePhoto(photos[activeIndex + 1]);
+    }
+  };
+
+  // スワイプ処理用ハンドラ
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current || !activePhoto) return;
+    const diffX = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+    if (activeIndex === -1) return;
+
+    if (diffX > minSwipeDistance) {
+      // 左スワイプ（次の画像）
+      if (activeIndex < photos.length - 1) {
+        setActivePhoto(photos[activeIndex + 1]);
+      }
+    } else if (diffX < -minSwipeDistance) {
+      // 右スワイプ（前の画像）
+      if (activeIndex > 0) {
+        setActivePhoto(photos[activeIndex - 1]);
+      }
+    }
+
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  // 単一写真のダウンロード
+  const handleDownloadSingle = async (photo: Photo, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      showSpinner();
+      const res = await fetch(photo.url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `album_${album?.name || "photo"}_${photo.id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Direct download failed, falling back to window.open", err);
+      window.open(photo.url, "_blank");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  // 単一写真の削除
+  const handleDeleteSingle = async (photo: Photo, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirm = await showDialog("この写真を削除しますか？", false);
+    if (!confirm) return;
+
+    showSpinner();
+    try {
+      await deletePhotos([photo]);
+      
+      const activeIndex = photos.findIndex((p) => p.id === photo.id);
+      const newPhotos = photos.filter((p) => p.id !== photo.id);
+      setPhotos(newPhotos);
+
+      if (newPhotos.length > 0) {
+        // 次の写真を表示する（最後の場合は1つ前）
+        const nextIndex = activeIndex < newPhotos.length ? activeIndex : newPhotos.length - 1;
+        setActivePhoto(newPhotos[nextIndex]);
+      } else {
+        setActivePhoto(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      hideSpinner();
+    }
   };
 
   if (loading || !album) {
@@ -384,12 +513,27 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
         {/* 写真詳細モーダル (ライトボックス) */}
         {activePhoto && (
-          <div className={styles.lightboxOverlay} onClick={() => setActivePhoto(null)}>
+          <div
+            className={styles.lightboxOverlay}
+            onClick={() => setActivePhoto(null)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <button className={styles.lightboxClose} onClick={() => setActivePhoto(null)}>
               <i className="fa-solid fa-xmark"></i>
             </button>
+
+            {/* 左矢印ナビゲーション */}
+            {photos.findIndex((p) => p.id === activePhoto.id) > 0 && (
+              <button className={styles.lightboxPrev} onClick={handlePrevPhoto}>
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+            )}
+
             <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
               <img src={activePhoto.url} alt="Lightbox Photo" className={styles.lightboxImg} />
+              
               <div className={styles.lightboxMeta}>
                 <span className={styles.uploaderName}>
                   アップロード: {getUploaderName(activePhoto)}
@@ -398,6 +542,31 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                   {formatUploadDate(activePhoto.createdAt)}
                 </span>
               </div>
+            </div>
+
+            {/* 右矢印ナビゲーション */}
+            {photos.findIndex((p) => p.id === activePhoto.id) < photos.length - 1 && (
+              <button className={styles.lightboxNext} onClick={handleNextPhoto}>
+                <i className="fa-solid fa-chevron-right"></i>
+              </button>
+            )}
+
+            {/* 下部アクションバー (ダウンロード・削除) */}
+            <div className={styles.lightboxActionBar} onClick={(e) => e.stopPropagation()}>
+              <button
+                className={styles.lightboxActionBtn}
+                onClick={(e) => handleDownloadSingle(activePhoto, e)}
+                title="ダウンロード"
+              >
+                <i className="fa-solid fa-download"></i>
+              </button>
+              <button
+                className={`${styles.lightboxActionBtn} ${styles.lightboxActionBtnDanger}`}
+                onClick={(e) => handleDeleteSingle(activePhoto, e)}
+                title="削除"
+              >
+                <i className="fa-solid fa-trash-can"></i>
+              </button>
             </div>
           </div>
         )}
