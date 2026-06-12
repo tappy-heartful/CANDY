@@ -485,199 +485,99 @@ export default function HomeClient() {
           />
         </div>
 
-        <div className="content-card">
-          <div className="card-title-main">
-            <i className="fa-solid fa-bell" style={{ color: "#A0E7D2" }}></i> 最新のお知らせ
-          </div>
-          <div className={styles.notificationList}>
-            {loading ? (
-              <div className={styles.emptyMsg}>読み込み中...</div>
-            ) : (recentWishlist.length > 0 || upcomingEvents.length > 0 || upcomingAnniversaries.length > 0 || upcomingTodos.length > 0) ? (
-              <>
+        {!loading && (upcomingEvents.length > 0 || upcomingTodos.length > 0) && (
+          <div className={styles.notificationList} style={{ marginBottom: '24px' }}>
+            {upcomingEvents.length > 0 && (
+              <div className={styles.notificationGroup}>
+                <div className={styles.notificationHeader}>
+                  <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
+                  <span className={styles.notificationText}>
+                    直近のイベント
+                  </span>
+                </div>
+                <div className={styles.notificationItems}>
+                  {upcomingEvents.map(e => {
+                    const [y, m, d] = e.startDate.split('-').map(Number);
+                    const eventDateOnly = new Date(y, m - 1, d);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diffTime = eventDateOnly.getTime() - today.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-                {upcomingEvents.length > 0 && (
-                  <div className={styles.notificationGroup}>
-                    <div className={styles.notificationHeader}>
-                      <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
-                      <span className={styles.notificationText}>
-                        直近のイベント
-                      </span>
-                    </div>
-                    <div className={styles.notificationItems}>
-                      {upcomingEvents.map(e => {
-                        const [y, m, d] = e.startDate.split('-').map(Number);
-                        const eventDateOnly = new Date(y, m - 1, d);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const diffTime = eventDateOnly.getTime() - today.getTime();
-                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                    let countdownText = `あと${diffDays}日`;
+                    if (diffDays === 0) countdownText = "🎉 本日！";
+                    else if (diffDays === 1) countdownText = "✨ 明日！";
 
-                        let countdownText = `あと${diffDays}日`;
-                        if (diffDays === 0) countdownText = "🎉 本日！";
-                        else if (diffDays === 1) countdownText = "✨ 明日！";
+                    return (
+                      <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span className={styles.countdownBadge}>{countdownText}</span>
+                        </div>
+                        <span className={styles.notificationTitle}>{e.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                        return (
-                          <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
-                              <span className={styles.countdownBadge}>{countdownText}</span>
-                            </div>
-                            <span className={styles.notificationTitle}>{e.title}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {(() => {
-                  const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
-                  let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
-
-                  recentWishlist.forEach((w) => {
-                    if (!currentGroup || currentGroup.uid !== w.uid) {
-                      if (currentGroup) grouped.push(currentGroup);
-                      currentGroup = {
-                        uid: w.uid,
-                        creatorName: w.uid === user?.uid
-                          ? (userData?.nickname || userData?.displayName || "自分")
-                          : (partnerData?.nickname || "パートナー"),
-                        items: [w]
-                      };
-                    } else {
-                      currentGroup.items.push(w);
+            {upcomingTodos.length > 0 && (
+              <div className={styles.notificationGroup}>
+                <div className={styles.notificationHeader}>
+                  <i className={`fa-solid fa-list-check ${styles.notificationIcon}`} style={{ color: '#A0E7D2' }}></i>
+                  <span className={styles.notificationText}>
+                    直近のTODO
+                  </span>
+                </div>
+                <div className={styles.notificationItems}>
+                  {upcomingTodos.map(t => {
+                    let badgeClass = styles.badgeCouple;
+                    let typeLabel = "2人";
+                    if (t.type !== 'couple') {
+                      if (t.uid === user?.uid) {
+                        badgeClass = styles.badgeMe;
+                        typeLabel = userData?.nickname || "自分";
+                      } else {
+                        badgeClass = styles.badgePartner;
+                        typeLabel = partnerData?.nickname || "パートナー";
+                      }
                     }
-                  });
-                  if (currentGroup) grouped.push(currentGroup);
 
-                  return grouped.map((group, idx) => (
-                    <div key={idx} className={styles.notificationGroup}>
-                      <div className={styles.notificationHeader}>
-                        <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
-                        <span className={styles.notificationText}>
-                          {group.creatorName}がWishlistを追加しました
-                        </span>
-                      </div>
-                      <div className={styles.notificationItems}>
-                        {group.items.map(item => {
-                          const wGroup = wishlistGroups.find(g => g.id === item.groupId);
-                          const groupName = wGroup ? wGroup.name : '未分類';
+                    const [y, m, d] = t.date!.split('-').map(Number);
+                    const todoDateOnly = new Date(y, m - 1, d);
+                    const todayVal = new Date();
+                    todayVal.setHours(0, 0, 0, 0);
+                    const diffTime = todoDateOnly.getTime() - todayVal.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-                          let badgeClass = styles.badgeCouple;
-                          let typeLabel = "2人";
-                          if (item.type !== 'couple') {
-                            if (item.uid === user?.uid) {
-                              badgeClass = styles.badgeMe;
-                              typeLabel = "自分";
-                            } else {
-                              badgeClass = styles.badgePartner;
-                              typeLabel = partnerData?.nickname || "パートナー";
-                            }
-                          }
+                    let countdownText = `あと${diffDays}日`;
+                    let badgeStyle: React.CSSProperties = {};
+                    if (diffDays === 0) {
+                      countdownText = "🎉 本日！";
+                    } else if (diffDays === 1) {
+                      countdownText = "✨ 明日！";
+                    } else if (diffDays < 0) {
+                      countdownText = `⚠️ 遅延(${Math.abs(diffDays)}日)`;
+                      badgeStyle = { background: '#ffebee', color: '#c62828', borderColor: '#c62828' };
+                    }
 
-                          return (
-                            <Link href="/wishlist?sort=createdAt_desc&filter=all" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                              <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
-                                <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                                <span style={{ fontWeight: 'bold' }}>{groupName}</span>
-                              </div>
-                              <span className={styles.notificationTitle}>{item.title}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ));
-                })()}
-                {upcomingTodos.length > 0 && (
-                  <div className={styles.notificationGroup}>
-                    <div className={styles.notificationHeader}>
-                      <i className={`fa-solid fa-list-check ${styles.notificationIcon}`} style={{ color: '#A0E7D2' }}></i>
-                      <span className={styles.notificationText}>
-                        直近のTODO
-                      </span>
-                    </div>
-                    <div className={styles.notificationItems}>
-                      {upcomingTodos.map(t => {
-                        let badgeClass = styles.badgeCouple;
-                        let typeLabel = "2人";
-                        if (t.type !== 'couple') {
-                          if (t.uid === user?.uid) {
-                            badgeClass = styles.badgeMe;
-                            typeLabel = userData?.nickname || "自分";
-                          } else {
-                            badgeClass = styles.badgePartner;
-                            typeLabel = partnerData?.nickname || "パートナー";
-                          }
-                        }
-
-                        const [y, m, d] = t.date!.split('-').map(Number);
-                        const todoDateOnly = new Date(y, m - 1, d);
-                        const todayVal = new Date();
-                        todayVal.setHours(0, 0, 0, 0);
-                        const diffTime = todoDateOnly.getTime() - todayVal.getTime();
-                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-                        let countdownText = `あと${diffDays}日`;
-                        let badgeStyle: React.CSSProperties = {};
-                        if (diffDays === 0) {
-                          countdownText = "🎉 本日！";
-                        } else if (diffDays === 1) {
-                          countdownText = "✨ 明日！";
-                        } else if (diffDays < 0) {
-                          countdownText = `⚠️ 遅延(${Math.abs(diffDays)}日)`;
-                          badgeStyle = { background: '#ffebee', color: '#c62828', borderColor: '#c62828' };
-                        }
-
-                        return (
-                          <Link href="/todo" key={t.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
-                              <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
-                            </div>
-                            <span className={styles.notificationTitle}>{t.title}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {upcomingAnniversaries.length > 0 && (
-                  <div className={styles.notificationGroup}>
-                    <div className={styles.notificationHeader}>
-                      <i className={`fa-solid fa-cake-candles ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
-                      <span className={styles.notificationText}>
-                        もうすぐ記念日
-                      </span>
-                    </div>
-                    <div className={styles.notificationItems}>
-                      {upcomingAnniversaries.map(a => {
-                        const { diffDays, isToday } = getNextAnniversaryDiff(a.date);
-                        let countdownText = `あと${diffDays}日`;
-                        if (isToday) countdownText = "🎉 今日です！";
-                        else if (diffDays === 1) countdownText = "✨ 明日！";
-                        
-                        const displayDate = a.date.replace("-", "/"); // MM/DD
-
-                        return (
-                          <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
-                              <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
-                            </div>
-                            <span className={styles.notificationTitle}>{a.title}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className={styles.emptyMsg}>最近の追加はありません</div>
+                    return (
+                      <Link href="/todo" key={t.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                        </div>
+                        <span className={styles.notificationTitle}>{t.title}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        )}
 
         {user && (
           <CalendarView
@@ -689,6 +589,101 @@ export default function HomeClient() {
             openDate={openCalendarDate}
             onOpenDateClear={() => setOpenCalendarDate(null)}
           />
+        )}
+
+        {!loading && (recentWishlist.length > 0 || upcomingAnniversaries.length > 0) && (
+          <div className={styles.notificationList} style={{ marginTop: '24px', marginBottom: '24px' }}>
+            {(() => {
+              const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
+              let currentGroup: { uid: string; creatorName: string; items: Wishlist[] } | null = null;
+
+              recentWishlist.forEach((w) => {
+                if (!currentGroup || currentGroup.uid !== w.uid) {
+                  if (currentGroup) grouped.push(currentGroup);
+                  currentGroup = {
+                    uid: w.uid,
+                    creatorName: w.uid === user?.uid
+                      ? (userData?.nickname || userData?.displayName || "自分")
+                      : (partnerData?.nickname || "パートナー"),
+                    items: [w]
+                  };
+                } else {
+                  currentGroup.items.push(w);
+                }
+              });
+              if (currentGroup) grouped.push(currentGroup);
+
+              return grouped.map((group, idx) => (
+                <div key={idx} className={styles.notificationGroup}>
+                  <div className={styles.notificationHeader}>
+                    <i className={`fa-solid fa-gift ${styles.notificationIcon}`}></i>
+                    <span className={styles.notificationText}>
+                      {group.creatorName}がWishlistを追加しました
+                    </span>
+                  </div>
+                  <div className={styles.notificationItems}>
+                    {group.items.map(item => {
+                      const wGroup = wishlistGroups.find(g => g.id === item.groupId);
+                      const groupName = wGroup ? wGroup.name : '未分類';
+
+                      let badgeClass = styles.badgeCouple;
+                      let typeLabel = "2人";
+                      if (item.type !== 'couple') {
+                        if (item.uid === user?.uid) {
+                          badgeClass = styles.badgeMe;
+                          typeLabel = "自分";
+                        } else {
+                          badgeClass = styles.badgePartner;
+                          typeLabel = partnerData?.nickname || "パートナー";
+                        }
+                      }
+
+                      return (
+                        <Link href="/wishlist?sort=createdAt_desc&filter=all" key={item.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                          <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
+                            <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                            <span style={{ fontWeight: 'bold' }}>{groupName}</span>
+                          </div>
+                          <span className={styles.notificationTitle}>{item.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
+
+            {upcomingAnniversaries.length > 0 && (
+              <div className={styles.notificationGroup}>
+                <div className={styles.notificationHeader}>
+                  <i className={`fa-solid fa-cake-candles ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
+                  <span className={styles.notificationText}>
+                    もうすぐ記念日
+                  </span>
+                </div>
+                <div className={styles.notificationItems}>
+                  {upcomingAnniversaries.map(a => {
+                    const { diffDays, isToday } = getNextAnniversaryDiff(a.date);
+                    let countdownText = `あと${diffDays}日`;
+                    if (isToday) countdownText = "🎉 今日です！";
+                    else if (diffDays === 1) countdownText = "✨ 明日！";
+                    
+                    const displayDate = a.date.replace("-", "/"); // MM/DD
+
+                    return (
+                      <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
+                          <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
+                        </div>
+                        <span className={styles.notificationTitle}>{a.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className={styles.menuGrid}>
