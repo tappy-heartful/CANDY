@@ -19,6 +19,7 @@ import CalendarView from "@/src/features/calendar/components/CalendarView";
 import DailyStatusCard from "../components/DailyStatusCard";
 import DailyStatusModal from "../components/DailyStatusModal";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
+import GoalModal from "../components/GoalModal";
 
 const CLOCK_THEMES = [
   "themePinkyRibbon",
@@ -39,7 +40,7 @@ const CLOCK_THEMES = [
 ];
 
 export default function HomeClient() {
-  const { user, userData } = useAuth();
+  const { user, userData, refreshUserData } = useAuth();
   const searchParams = useSearchParams();
   const { setBreadcrumbs } = useBreadcrumb();
 
@@ -55,6 +56,8 @@ export default function HomeClient() {
   const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
   const [partnerDailyStatus, setPartnerDailyStatus] = useState<DailyStatus | null>(null);
   const [isDailyStatusModalOpen, setIsDailyStatusModalOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isGoalSubmitting, setIsGoalSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -213,6 +216,20 @@ export default function HomeClient() {
       console.error(e);
     } finally {
       setIsStatusSubmitting(false);
+    }
+  };
+
+  const handleSaveGoal = async (goal: string) => {
+    if (!user) return;
+    setIsGoalSubmitting(true);
+    try {
+      await updateProfile(user.uid, { goal });
+      await refreshUserData();
+      setIsGoalModalOpen(false);
+    } catch (e) {
+      console.error("Failed to save goal:", e);
+    } finally {
+      setIsGoalSubmitting(false);
     }
   };
 
@@ -400,6 +417,48 @@ export default function HomeClient() {
           <div className={styles.greeting}>
             Hi, <span className={styles.nickname}>{userData?.nickname || userData?.displayName}</span> &{" "}
             <span className={styles.partnerNickname}>{partnerData?.nickname || "パートナー"}</span>! 🍭
+          </div>
+
+          <div className={styles.goalSection}>
+            <div className={styles.goalCard} onClick={() => setIsGoalModalOpen(true)} style={{ cursor: "pointer" }}>
+              <div className={styles.goalTitle}>
+                <i className="fa-solid fa-bullseye" style={{ color: "#F7A8C4" }}></i>
+                <span>{userData?.nickname || userData?.displayName || "自分"}の目標</span>
+                <button 
+                  className={styles.editGoalBtn} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsGoalModalOpen(true);
+                  }}
+                  title="目標を編集"
+                >
+                  <i className="fa-solid fa-pen-to-square"></i>
+                </button>
+              </div>
+              <div className={styles.goalText}>
+                {userData?.goal ? (
+                  userData.goal
+                ) : (
+                  <span className={styles.noGoal}>タップして目標を設定しましょう！</span>
+                )}
+              </div>
+            </div>
+
+            {partnerData && (
+              <div className={styles.goalCard}>
+                <div className={styles.goalTitle}>
+                  <i className="fa-solid fa-bullseye" style={{ color: "#A0E7D2" }}></i>
+                  <span>{partnerData.nickname || partnerData.displayName || "パートナー"}の目標</span>
+                </div>
+                <div className={styles.goalText}>
+                  {partnerData.goal ? (
+                    partnerData.goal
+                  ) : (
+                    <span className={styles.noGoal}>未設定</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -667,6 +726,15 @@ export default function HomeClient() {
           onClose={() => setIsDailyStatusModalOpen(false)}
           onSave={handleSaveDailyStatus}
           isSubmitting={isStatusSubmitting}
+        />
+
+        <GoalModal
+          isOpen={isGoalModalOpen}
+          nickname={userData?.nickname || userData?.displayName || "自分"}
+          currentGoal={userData?.goal || ""}
+          onClose={() => setIsGoalModalOpen(false)}
+          onSave={handleSaveGoal}
+          isSubmitting={isGoalSubmitting}
         />
       </div>
     </AuthGuard>

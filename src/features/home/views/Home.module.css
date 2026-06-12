@@ -835,3 +835,84 @@
 .cardAnniversary i {
   color: #fff;
 }
+
+/* Goal Section */
+.goalSection {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.goalCard {
+  background: white;
+  border-radius: 20px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 15px rgba(155, 124, 195, 0.05);
+  border: 2px solid #fdf2f8;
+  min-width: 250px;
+  max-width: 320px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.goalCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(155, 124, 195, 0.1);
+}
+
+.goalTitle {
+  font-size: 13px;
+  font-weight: bold;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 100%;
+  justify-content: center;
+  position: relative;
+}
+
+.goalText {
+  font-size: 15px;
+  color: #444;
+  font-weight: 800;
+  word-break: break-all;
+  white-space: pre-wrap;
+  width: 100%;
+  text-align: center;
+}
+
+.noGoal {
+  color: #bbb;
+  font-size: 13px;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.editGoalBtn {
+  background: none;
+  border: none;
+  color: #9B7CC3;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 13px;
+  transition: transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+
+.editGoalBtn:hover {
+  transform: scale(1.15);
+  color: #F7A8C4;
+}
+
