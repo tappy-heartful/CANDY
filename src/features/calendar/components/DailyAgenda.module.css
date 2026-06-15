@@ -209,3 +209,10 @@
   transform: scale(0.9);
 }
 
+.groupDivider {
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  margin: 18px 0;
+  width: 100%;
+}
+
+

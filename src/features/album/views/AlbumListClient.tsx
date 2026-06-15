@@ -5,7 +5,17 @@ import Link from "next/link";
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
-import { getAlbums, createAlbum, getPhotos, Album, Photo } from "../api/album-client-service";
+import {
+  getAlbums,
+  createAlbum,
+  getPhotos,
+  getPrefectures,
+  getMunicipalities,
+  Album,
+  Photo,
+  Prefecture,
+  Municipality
+} from "../api/album-client-service";
 import styles from "./Album.module.css";
 
 // アルバム個別カードコンポーネント（件数とカバー画像を非同期で取得）
@@ -27,6 +37,16 @@ function AlbumCard({ album }: { album: Album }) {
 
   const coverUrl = photos.length > 0 ? photos[0].url : null;
 
+  const formatDateDisplay = (album: Album) => {
+    if (!album.startDate) return null;
+    const start = album.startDate.replace(/-/g, "/");
+    if (album.dateMode === "range" && album.endDate) {
+      const end = album.endDate.replace(/-/g, "/");
+      return `${start} 〜 ${end}`;
+    }
+    return start;
+  };
+
   return (
     <Link href={`/albums/${album.id}`} className={styles.albumCard}>
       <div className={styles.coverContainer}>
@@ -46,10 +66,29 @@ function AlbumCard({ album }: { album: Album }) {
       </div>
       <div className={styles.albumInfo}>
         <h3 className={styles.albumName}>{album.name}</h3>
+        {formatDateDisplay(album) && (
+          <div className={styles.albumDate}>
+            <i className="fa-regular fa-calendar" style={{ marginRight: "4px", color: "#9B7CC3" }}></i>
+            <span>{formatDateDisplay(album)}</span>
+          </div>
+        )}
+        {(album.prefectureName || album.municipalityName) && (
+          <div className={styles.albumLocation}>
+            <i className="fa-solid fa-location-dot" style={{ marginRight: "4px", color: "#F7A8C4" }}></i>
+            <span>
+              {album.prefectureName || ""} {album.municipalityName || ""}
+            </span>
+          </div>
+        )}
       </div>
     </Link>
   );
 }
+
+const getTodayString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export default function AlbumListClient() {
   const { user } = useAuth();
@@ -61,6 +100,37 @@ export default function AlbumListClient() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [selectedPrefCode, setSelectedPrefCode] = useState("");
+  const [selectedMuniCode, setSelectedMuniCode] = useState("");
+
+  // 日付設定用の状態
+  const [dateMode, setDateMode] = useState<"single" | "range">("single");
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
+
+  useEffect(() => {
+    if (isModalOpen && prefectures.length === 0) {
+      getPrefectures()
+        .then((data) => setPrefectures(data))
+        .catch((e) => console.error("Failed to fetch prefectures:", e));
+    }
+  }, [isModalOpen, prefectures]);
+
+  const handlePrefChange = async (prefCode: string) => {
+    setSelectedPrefCode(prefCode);
+    setSelectedMuniCode("");
+    setMunicipalities([]);
+    if (!prefCode) return;
+
+    try {
+      const data = await getMunicipalities(prefCode);
+      setMunicipalities(data);
+    } catch (e) {
+      console.error("Failed to fetch municipalities:", e);
+    }
+  };
 
   useEffect(() => {
     setBreadcrumbs([{ title: "アルバム" }]);
@@ -87,8 +157,27 @@ export default function AlbumListClient() {
 
     setIsSubmitting(true);
     try {
-      await createAlbum(trimmedName, user.uid);
+      const pref = prefectures.find((p) => String(p.code).padStart(2, "0") === selectedPrefCode);
+      const muni = municipalities.find((m) => m.code === selectedMuniCode);
+
+      await createAlbum(
+        trimmedName,
+        user.uid,
+        selectedPrefCode || undefined,
+        pref?.name || undefined,
+        selectedMuniCode || undefined,
+        muni?.name || undefined,
+        dateMode,
+        startDate,
+        dateMode === "range" ? endDate : undefined
+      );
       setNewAlbumName("");
+      setSelectedPrefCode("");
+      setSelectedMuniCode("");
+      setMunicipalities([]);
+      setDateMode("single");
+      setStartDate(getTodayString());
+      setEndDate(getTodayString());
       setIsModalOpen(false);
       // 再取得
       await fetchAlbums();
@@ -135,26 +224,139 @@ export default function AlbumListClient() {
 
         {/* アルバム作成モーダル */}
         {isModalOpen && (
-          <div className={styles.dialogOverlay} onClick={() => setIsModalOpen(false)}>
+          <div
+            className={styles.dialogOverlay}
+            onClick={() => {
+              setNewAlbumName("");
+              setSelectedPrefCode("");
+              setSelectedMuniCode("");
+              setMunicipalities([]);
+              setDateMode("single");
+              setStartDate(getTodayString());
+              setEndDate(getTodayString());
+              setIsModalOpen(false);
+            }}
+          >
             <div className={styles.dialogBox} onClick={(e) => e.stopPropagation()}>
               <div className={styles.dialogTitle}>
                 <i className="fa-solid fa-folder-plus" style={{ color: "#F7A8C4" }}></i>
                 新規アルバム作成
               </div>
-              <input
-                type="text"
-                className={styles.dialogInput}
-                placeholder="アルバム名を入力してください"
-                value={newAlbumName}
-                onChange={(e) => setNewAlbumName(e.target.value.slice(0, 20))}
-                maxLength={20}
-                autoFocus
-              />
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>アルバム名</label>
+                <input
+                  type="text"
+                  className={styles.dialogInput}
+                  placeholder="アルバム名を入力してください"
+                  value={newAlbumName}
+                  onChange={(e) => setNewAlbumName(e.target.value.slice(0, 20))}
+                  maxLength={20}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>日付設定</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="dateMode"
+                      value="single"
+                      checked={dateMode === "single"}
+                      onChange={() => setDateMode("single")}
+                    />
+                    <span>1日のみ</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="dateMode"
+                      value="range"
+                      checked={dateMode === "range"}
+                      onChange={() => setDateMode("range")}
+                    />
+                    <span>期間</span>
+                  </label>
+                </div>
+              </div>
+
+              {dateMode === "single" ? (
+                <div className={styles.dialogFormGroup}>
+                  <label className={styles.dialogLabel}>日付</label>
+                  <input
+                    type="date"
+                    className={styles.dialogInput}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className={styles.dialogFormGroup}>
+                  <label className={styles.dialogLabel}>期間設定</label>
+                  <div className={styles.dateRangeInputs}>
+                    <input
+                      type="date"
+                      className={styles.dialogInput}
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <span className={styles.dateRangeSeparator}>〜</span>
+                    <input
+                      type="date"
+                      className={styles.dialogInput}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>都道府県（任意）</label>
+                <select
+                  className={styles.dialogSelect}
+                  value={selectedPrefCode}
+                  onChange={(e) => handlePrefChange(e.target.value)}
+                >
+                  <option value="">選択してください</option>
+                  {prefectures.map((pref) => (
+                    <option key={pref.code} value={String(pref.code).padStart(2, "0")}>
+                      {pref.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>市区町村（任意）</label>
+                <select
+                  className={styles.dialogSelect}
+                  value={selectedMuniCode}
+                  onChange={(e) => setSelectedMuniCode(e.target.value)}
+                  disabled={!selectedPrefCode}
+                >
+                  <option value="">選択してください</option>
+                  {municipalities.map((muni) => (
+                    <option key={muni.code} value={muni.code}>
+                      {muni.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className={styles.dialogButtons}>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnCancel}`}
                   onClick={() => {
                     setNewAlbumName("");
+                    setSelectedPrefCode("");
+                    setSelectedMuniCode("");
+                    setMunicipalities([]);
+                    setDateMode("single");
+                    setStartDate(getTodayString());
+                    setEndDate(getTodayString());
                     setIsModalOpen(false);
                   }}
                   disabled={isSubmitting}

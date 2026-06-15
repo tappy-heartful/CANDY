@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CalendarEvent, Anniversary } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
@@ -18,6 +18,8 @@ interface CalendarViewProps {
   openDate?: string | null;
   onOpenDateClear?: () => void;
 }
+
+const padZero = (n: number) => n.toString().padStart(2, "0");
 
 export default function CalendarView({
   currentUserId,
@@ -197,6 +199,151 @@ export default function CalendarView({
     return cells;
   }, [currentYear, currentMonth]);
 
+  const processedWeeks = useMemo(() => {
+    // 1. 各曜日のアイテムをまず解決する
+    const allCellsData = gridCells.map((cell) => {
+      const dateStr = `${cell.year}-${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
+      const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
+      const dayTodos = visibleTodos.filter((t) => t.date === dateStr);
+      const mdStr = `${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
+      const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
+
+      const combinedItems = [
+        ...dayEvents.map(e => ({ ...e, isTodo: false })),
+        ...dayTodos.map(t => ({ ...t, isTodo: true }))
+      ];
+
+      combinedItems.sort((a, b) => {
+        const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+        const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+        if (orderA !== orderB) return orderA - orderB;
+
+        const aMulti = a.startDate !== a.endDate ? 1 : 0;
+        const bMulti = b.startDate !== b.endDate ? 1 : 0;
+        if (aMulti !== bMulti) return bMulti - aMulti;
+        
+        const aStart = a.startDate || a.date;
+        const bStart = b.startDate || b.date;
+        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        
+        const aEnd = a.endDate || a.date;
+        const bEnd = b.endDate || b.date;
+        if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
+
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
+
+        if (a.startTime && b.startTime && a.startTime !== b.startTime) {
+          return a.startTime.localeCompare(b.startTime);
+        }
+        return a.title.localeCompare(b.title);
+      });
+
+      const coupleItems = combinedItems.filter(item => item.type === "couple");
+      const meItems = combinedItems.filter(item => item.uid === currentUserId && item.type !== "couple");
+      const partnerItems = combinedItems.filter(item => item.uid !== currentUserId && item.type !== "couple");
+
+      return {
+        cell,
+        dateStr,
+        dayAnniversaries,
+        coupleItems,
+        meItems,
+        partnerItems,
+      };
+    });
+
+    // 2. カレンダー全体の各グループの最大件数を算出する
+    let globalMaxCouple = 0;
+    let globalMaxMe = 0;
+    let globalMaxPartner = 0;
+
+    allCellsData.forEach((d) => {
+      globalMaxCouple = Math.max(globalMaxCouple, d.coupleItems.length);
+      globalMaxMe = Math.max(globalMaxMe, d.meItems.length);
+      globalMaxPartner = Math.max(globalMaxPartner, d.partnerItems.length);
+    });
+
+    // 3. 週ごとに分割して返す
+    const weeks = [];
+    for (let w = 0; w < 6; w++) {
+      const weekCells = [];
+      for (let d = 0; d < 7; d++) {
+        const cellData = allCellsData[w * 7 + d];
+        if (cellData) {
+          weekCells.push(cellData);
+        }
+      }
+      weeks.push({
+        cells: weekCells,
+        maxCouple: globalMaxCouple,
+        maxMe: globalMaxMe,
+        maxPartner: globalMaxPartner,
+      });
+    }
+    return weeks;
+  }, [gridCells, visibleEvents, visibleTodos, anniversaries, currentUserId]);
+
+  const renderPill = (item: any, dateStr: string, cellDayOfWeek: number) => {
+    const isMe = item.uid === currentUserId;
+    const isSolid = item.isAllDay || item.startDate !== item.endDate;
+
+    let pillClass = "";
+    if (item.isTodo) {
+      if (item.type === "couple") {
+        pillClass = styles.todoCouple;
+      } else if (isMe) {
+        pillClass = styles.todoMe;
+      } else {
+        pillClass = styles.todoPartner;
+      }
+    } else {
+      if (item.type === "couple") {
+        pillClass = isSolid ? styles.eventCouple : styles.eventCoupleLight;
+      } else if (isMe) {
+        pillClass = isSolid ? styles.eventMe : styles.eventMeLight;
+      } else {
+        pillClass = isSolid ? styles.eventPartner : styles.eventPartnerLight;
+      }
+    }
+
+    if (item.isTodo) {
+      const isCompleted = item.isCompleted;
+      return (
+        <span key={`todo-${item.id}`} className={`${styles.todoPill} ${pillClass} ${isCompleted ? styles.todoCompleted : ""}`}>
+          <i className="fa-regular fa-square-check" style={{marginRight: '2px'}}></i>{item.title}
+        </span>
+      );
+    }
+
+    let spanClass = styles.eventPill;
+    let titleStr = item.title;
+
+    if (item.startDate !== item.endDate) {
+      const connectsRight = dateStr < item.endDate && cellDayOfWeek !== 6;
+      const connectsLeft = dateStr > item.startDate && cellDayOfWeek !== 0;
+
+      if (connectsRight && connectsLeft) {
+        spanClass = `${styles.eventPill} ${styles.eventMiddle}`;
+        titleStr = "";
+      } else if (connectsRight && !connectsLeft) {
+        spanClass = `${styles.eventPill} ${styles.eventStart}`;
+      } else if (!connectsRight && connectsLeft) {
+        spanClass = `${styles.eventPill} ${styles.eventEnd}`;
+        titleStr = "";
+      }
+    }
+
+    return (
+      <span
+        key={`event-${item.id}`}
+        className={`${spanClass} ${pillClass}`}
+      >
+        {titleStr || "\u00A0"}
+      </span>
+    );
+  };
+
   const handleCellClick = (dateStr: string) => {
     setActiveDateStr(dateStr);
     setIsDailyAgendaOpen(true);
@@ -264,7 +411,7 @@ export default function CalendarView({
     }
   };
 
-  const padZero = (n: number) => n.toString().padStart(2, "0");
+
 
   const minSwipeDistance = 50;
 
@@ -375,146 +522,76 @@ export default function CalendarView({
       </div>
 
       <div className={styles.daysGrid}>
-        {gridCells.map((cell, idx) => {
-          const dateStr = `${cell.year}-${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
-          const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
-          const isHoliday = !!holidays[dateStr];
+        {processedWeeks.map((week, weekIdx) => {
+          return week.cells.map((dayData, dayIdx) => {
+            const { cell, dateStr, dayAnniversaries, coupleItems, meItems, partnerItems } = dayData;
+            const idx = weekIdx * 7 + dayIdx;
+            const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
+            const isHoliday = !!holidays[dateStr];
 
-          // Find events and todos active on this date string
-          const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
-          const dayTodos = visibleTodos.filter((t) => t.date === dateStr);
-          
-          // 記念日のチェック ("MM-DD" で判定)
-          const mdStr = `${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
-          const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
+            const isToday =
+              today.getDate() === cell.dayNum &&
+              today.getMonth() === cell.month &&
+              today.getFullYear() === cell.year;
 
-          const combinedItems = [
-            ...dayEvents.map(e => ({ ...e, isTodo: false })),
-            ...dayTodos.map(t => ({ ...t, isTodo: true }))
-          ];
+            const showDivider1 = week.maxCouple > 0 && week.maxMe > 0;
+            const showDivider2 = (week.maxCouple > 0 || week.maxMe > 0) && week.maxPartner > 0;
 
-          combinedItems.sort((a, b) => {
-            // 1. 複数日イベントを優先
-            const aMulti = a.startDate !== a.endDate ? 1 : 0;
-            const bMulti = b.startDate !== b.endDate ? 1 : 0;
-            if (aMulti !== bMulti) return bMulti - aMulti;
-            
-            // 2. 開始日が早い順
-            const aStart = a.startDate || a.date;
-            const bStart = b.startDate || b.date;
-            if (aStart !== bStart) return aStart.localeCompare(bStart);
-            
-            // 3. 終了日が遅い順
-            const aEnd = a.endDate || a.date;
-            const bEnd = b.endDate || b.date;
-            if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
+            return (
+              <div
+                key={`${cell.year}-${cell.month}-${cell.dayNum}-${idx}`}
+                className={`${styles.dayCell} ${!cell.isCurrentMonth ? styles.otherMonthDay : ""}`}
+                onClick={() => handleCellClick(dateStr)}
+              >
+                <div className={styles.dayHeader}>
+                  <span
+                    className={`${styles.dayNumber} ${
+                      isToday
+                        ? styles.todayCircle
+                        : (cellDayOfWeek === 0 || isHoliday)
+                          ? styles.sundayNumber
+                          : cellDayOfWeek === 6
+                            ? styles.saturdayNumber
+                            : ""
+                    }`}
+                  >
+                    {cell.dayNum}
+                  </span>
+                </div>
+                <div className={styles.eventsContainer}>
+                  {dayAnniversaries.map((a) => (
+                    <div key={a.id} className={styles.eventPill} style={{ background: '#f3e5f5', color: '#9B7CC3', border: '1px solid #9B7CC3', fontWeight: 'bold' }}>
+                      🎂 {a.title}
+                    </div>
+                  ))}
 
-            // 4. 終日の予定を優先
-            if (a.isAllDay && !b.isAllDay) return -1;
-            if (!a.isAllDay && b.isAllDay) return 1;
+                  {/* 1. 2人の予定グループ */}
+                  {coupleItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                  {Array.from({ length: week.maxCouple - coupleItems.length }).map((_, i) => (
+                    <div key={`place-couple-${i}`} style={{ height: '14px' }} />
+                  ))}
 
-            // 5. 開始時間（startTime）が早い順
-            if (a.startTime && b.startTime && a.startTime !== b.startTime) {
-              return a.startTime.localeCompare(b.startTime);
-            }
-            
-            // 6. それ以外はタイトル順
-            return a.title.localeCompare(b.title);
+                  {/* 境界線1 */}
+                  {showDivider1 && <div className={styles.groupDivider} />}
+
+                  {/* 2. 自分の予定グループ */}
+                  {meItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                  {Array.from({ length: week.maxMe - meItems.length }).map((_, i) => (
+                    <div key={`place-me-${i}`} style={{ height: '14px' }} />
+                  ))}
+
+                  {/* 境界線2 */}
+                  {showDivider2 && <div className={styles.groupDivider} />}
+
+                  {/* 3. パートナーの予定グループ */}
+                  {partnerItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                  {Array.from({ length: week.maxPartner - partnerItems.length }).map((_, i) => (
+                    <div key={`place-partner-${i}`} style={{ height: '14px' }} />
+                  ))}
+                </div>
+              </div>
+            );
           });
-
-          const isToday =
-            today.getDate() === cell.dayNum &&
-            today.getMonth() === cell.month &&
-            today.getFullYear() === cell.year;
-
-          return (
-            <div
-              key={`${cell.year}-${cell.month}-${cell.dayNum}-${idx}`}
-              className={`${styles.dayCell} ${!cell.isCurrentMonth ? styles.otherMonthDay : ""}`}
-              onClick={() => handleCellClick(dateStr)}
-            >
-              <div className={styles.dayHeader}>
-                <span
-                  className={`${styles.dayNumber} ${
-                    isToday
-                      ? styles.todayCircle
-                      : (cellDayOfWeek === 0 || isHoliday)
-                        ? styles.sundayNumber
-                        : cellDayOfWeek === 6
-                          ? styles.saturdayNumber
-                          : ""
-                  }`}
-                >
-                  {cell.dayNum}
-                </span>
-              </div>
-              <div className={styles.eventsContainer}>
-                {dayAnniversaries.map((a) => (
-                  <div key={a.id} className={styles.eventPill} style={{ background: '#f3e5f5', color: '#9B7CC3', border: '1px solid #9B7CC3', fontWeight: 'bold' }}>
-                    🎂 {a.title}
-                  </div>
-                ))}
-                {combinedItems.map((item) => {
-                  const isMe = item.uid === currentUserId;
-                  const isSolid = item.isAllDay || item.startDate !== item.endDate;
-
-                  let pillClass = "";
-                  if (item.isTodo) {
-                    if (item.type === "couple") {
-                      pillClass = styles.todoCouple;
-                    } else if (isMe) {
-                      pillClass = styles.todoMe;
-                    } else {
-                      pillClass = styles.todoPartner;
-                    }
-                  } else {
-                    if (item.type === "couple") {
-                      pillClass = isSolid ? styles.eventCouple : styles.eventCoupleLight;
-                    } else if (isMe) {
-                      pillClass = isSolid ? styles.eventMe : styles.eventMeLight;
-                    } else {
-                      pillClass = isSolid ? styles.eventPartner : styles.eventPartnerLight;
-                    }
-                  }
-
-                  if (item.isTodo) {
-                    return (
-                      <span key={`todo-${item.id}`} className={`${styles.todoPill} ${pillClass}`}>
-                        <i className="fa-regular fa-square-check" style={{marginRight: '2px'}}></i>{item.title}
-                      </span>
-                    );
-                  }
-
-                  let spanClass = styles.eventPill;
-                  let titleStr = item.title;
-
-                  if (item.startDate !== item.endDate) {
-                    const connectsRight = dateStr < item.endDate && cellDayOfWeek !== 6;
-                    const connectsLeft = dateStr > item.startDate && cellDayOfWeek !== 0;
-
-                    if (connectsRight && connectsLeft) {
-                      spanClass = `${styles.eventPill} ${styles.eventMiddle}`;
-                      titleStr = "";
-                    } else if (connectsRight && !connectsLeft) {
-                      spanClass = `${styles.eventPill} ${styles.eventStart}`;
-                    } else if (!connectsRight && connectsLeft) {
-                      spanClass = `${styles.eventPill} ${styles.eventEnd}`;
-                      titleStr = "";
-                    }
-                  }
-
-                  return (
-                    <span
-                      key={`event-${item.id}`}
-                      className={`${spanClass} ${pillClass}`}
-                    >
-                      {titleStr || "\u00A0"}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          );
         })}
       </div>
 

@@ -83,6 +83,14 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    match /prefectures/{id} {
+      allow read: if isSignedIn();
+    }
+
+    match /municipalities/{id} {
+      allow read: if isSignedIn();
+    }
+
     // ============================
 
     // ログ・認証系（システム用）
