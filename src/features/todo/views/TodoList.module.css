@@ -204,6 +204,17 @@
   background: #fafafa;
 }
 
+.titleCompleted {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.stepTitleCompleted {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+
 .todoTop {
   display: flex;
   align-items: flex-start;

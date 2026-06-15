@@ -290,7 +290,9 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
               >
                 {todo.type === "couple" ? "2人" : todo.uid === user?.uid ? myLabel : partnerLabel}
               </span>
-              {todo.title}
+              <span className={todo.isCompleted ? styles.titleCompleted : ""}>
+                {todo.title}
+              </span>
             </div>
             <div className={styles.todoMeta}>
               {todo.date && (
@@ -336,7 +338,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                     onChange={() => handleToggleStep(todo.id, step)}
                     disabled={todo.uid !== user?.uid}
                   />
-                  <span className={styles.stepTitle}>{step.title}</span>
+                  <span className={`${styles.stepTitle} ${step.isCompleted ? styles.stepTitleCompleted : ""}`}>{step.title}</span>
                   {todo.uid === user?.uid && (
                     <button
                       className={styles.deleteStepBtn}

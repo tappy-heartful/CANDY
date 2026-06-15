@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarEvent, Todo, Anniversary } from "@/src/lib/firestore/types";
 import styles from "./DailyAgenda.module.css";
@@ -49,6 +49,11 @@ export default function DailyAgendaModal({
   // 3. All-day events at the end
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
+      // 1. 所有者順 (couple -> me -> partner)
+      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+      if (orderA !== orderB) return orderA - orderB;
+
       const aIsContinued = activeDateStr > a.startDate;
       const bIsContinued = activeDateStr > b.startDate;
       
@@ -66,7 +71,21 @@ export default function DailyAgendaModal({
       }
       return 0;
     });
-  }, [events, activeDateStr]);
+  }, [events, activeDateStr, currentUserId]);
+
+  const sortedTodos = useMemo(() => {
+    return [...todos].sort((a, b) => {
+      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+      if (orderA !== orderB) return orderA - orderB;
+
+      const aComp = a.isCompleted ? 1 : 0;
+      const bComp = b.isCompleted ? 1 : 0;
+      if (aComp !== bComp) return aComp - bComp;
+
+      return a.createdAt - b.createdAt;
+    });
+  }, [todos, currentUserId]);
 
   const getEventColor = (e: CalendarEvent) => {
     if (e.type === "couple") return "#9B7CC3";
@@ -125,71 +144,88 @@ export default function DailyAgendaModal({
                   </div>
                 </div>
               ))}
-              {sortedEvents.map((e) => {
-              const color = getEventColor(e);
-              return (
-                <div key={e.id} className={styles.eventRow} onClick={() => onEditEvent(e)} style={{ alignItems: 'stretch' }}>
-                  <div className={styles.timeCol} style={{ alignItems: 'center' }}>
-                    {(() => {
-                      if (e.startDate !== e.endDate) {
-                        const isStart = activeDateStr === e.startDate;
-                        const isEnd = activeDateStr === e.endDate;
-                        const isMiddle = activeDateStr > e.startDate && activeDateStr < e.endDate;
+              {sortedEvents.map((e, idx) => {
+                const getGroup = (itm: any) => {
+                  if (itm.type === "couple") return 0;
+                  if (itm.uid === currentUserId) return 1;
+                  return 2;
+                };
+                const currentGroup = getGroup(e);
+                const prevItem = idx > 0 ? sortedEvents[idx - 1] : null;
+                const prevGroup = prevItem ? getGroup(prevItem) : null;
+                const showDivider = prevGroup !== null && prevGroup !== currentGroup;
 
-                        const wavyLineStyle: React.CSSProperties = {
-                          width: '6px',
-                          flex: 1,
-                          backgroundColor: color,
-                          WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                          WebkitMaskRepeat: "repeat-y",
-                          WebkitMaskSize: "6px 12px",
-                          maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                          maskRepeat: "repeat-y",
-                          maskSize: "6px 12px",
-                        };
+                const color = getEventColor(e);
+                const eventElement = (
+                  <div className={styles.eventRow} onClick={() => onEditEvent(e)} style={{ alignItems: 'stretch' }}>
+                    <div className={styles.timeCol} style={{ alignItems: 'center' }}>
+                      {(() => {
+                        if (e.startDate !== e.endDate) {
+                          const isStart = activeDateStr === e.startDate;
+                          const isEnd = activeDateStr === e.endDate;
+                          const isMiddle = activeDateStr > e.startDate && activeDateStr < e.endDate;
 
-                        if (isStart) {
-                          return (
-                            <>
-                              <span className={styles.timeText} style={{ marginTop: '8px' }}>{e.isAllDay ? "終日" : e.startTime}</span>
-                              <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
-                            </>
-                          );
+                          const wavyLineStyle: React.CSSProperties = {
+                            width: '6px',
+                            flex: 1,
+                            backgroundColor: color,
+                            WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                            WebkitMaskRepeat: "repeat-y",
+                            WebkitMaskSize: "6px 12px",
+                            maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                            maskRepeat: "repeat-y",
+                            maskSize: "6px 12px",
+                          };
+
+                          if (isStart) {
+                            return (
+                              <>
+                                <span className={styles.timeText} style={{ marginTop: '8px' }}>{e.isAllDay ? "終日" : e.startTime}</span>
+                                <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
+                              </>
+                            );
+                          }
+                          if (isMiddle) {
+                            return (
+                              <div style={{ ...wavyLineStyle }}></div>
+                            );
+                          }
+                          if (isEnd) {
+                            return (
+                              <>
+                                <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
+                                <span className={styles.timeText} style={{ marginBottom: '8px' }}>{e.isAllDay ? "終日" : e.endTime}</span>
+                              </>
+                            );
+                          }
                         }
-                        if (isMiddle) {
-                          return (
-                            <div style={{ ...wavyLineStyle }}></div>
-                          );
-                        }
-                        if (isEnd) {
-                          return (
-                            <>
-                              <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
-                              <span className={styles.timeText} style={{ marginBottom: '8px' }}>{e.isAllDay ? "終日" : e.endTime}</span>
-                            </>
-                          );
-                        }
-                      }
-                      
-                      // 単日イベントの場合
-                      return e.isAllDay ? (
-                        <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
-                          <span className={styles.timeText}>{e.startTime}</span>
-                          <span className={styles.timeTextSub}>{e.endTime}</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div className={styles.mainCol} style={{ borderLeftColor: color }}>
-                    <div className={styles.eventTitle}>
-                      {e.title} {e.note && <i className="fa-regular fa-clock"></i>}
+                        
+                        // 単日イベントの場合
+                        return e.isAllDay ? (
+                          <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
+                            <span className={styles.timeText}>{e.startTime}</span>
+                            <span className={styles.timeTextSub}>{e.endTime}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <div className={styles.iconCol}>{getEventIcon(e)}</div>
+                    <div className={styles.mainCol} style={{ borderLeftColor: color }}>
+                      <div className={styles.eventTitle}>
+                        {e.title} {e.note && <i className="fa-regular fa-clock"></i>}
+                      </div>
+                      <div className={styles.iconCol}>{getEventIcon(e)}</div>
+                    </div>
                   </div>
-                </div>
-              );
+                );
+
+                return (
+                  <React.Fragment key={e.id}>
+                    {showDivider && <div className={styles.groupDivider} />}
+                    {eventElement}
+                  </React.Fragment>
+                );
               })}
             </>
           )}
@@ -201,7 +237,17 @@ export default function DailyAgendaModal({
                 <i className="fa-solid fa-list-check" style={{ color: '#9B7CC3', marginRight: '6px' }}></i>
                 TODO
               </div>
-              {todos.map((t) => {
+              {sortedTodos.map((t, idx) => {
+                const getGroup = (itm: any) => {
+                  if (itm.type === "couple") return 0;
+                  if (itm.uid === currentUserId) return 1;
+                  return 2;
+                };
+                const currentGroup = getGroup(t);
+                const prevItem = idx > 0 ? sortedTodos[idx - 1] : null;
+                const prevGroup = prevItem ? getGroup(prevItem) : null;
+                const showDivider = prevGroup !== null && prevGroup !== currentGroup;
+
                 const color = t.type === "couple" ? "#9B7CC3" : (t.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
                 
                 const icon = t.type === "couple" ? (
@@ -215,8 +261,8 @@ export default function DailyAgendaModal({
                   <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} />
                 ));
 
-                return (
-                  <div key={t.id} className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${t.id}`)}>
+                const todoElement = (
+                  <div className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${t.id}`)}>
                     <div className={styles.timeCol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span className={styles.timeText} style={{ fontSize: '20px' }}>
                         {t.isCompleted ? (
@@ -226,13 +272,20 @@ export default function DailyAgendaModal({
                         )}
                       </span>
                     </div>
-                    <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: t.isCompleted ? 0.6 : 1 }}>
+                    <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: t.isCompleted ? 0.4 : 1 }}>
                       <div className={styles.eventTitle} style={{ textDecoration: t.isCompleted ? 'line-through' : 'none' }}>
                         {t.title}
                       </div>
                       <div className={styles.iconCol}>{icon}</div>
                     </div>
                   </div>
+                );
+
+                return (
+                  <React.Fragment key={t.id}>
+                    {showDivider && <div className={styles.groupDivider} />}
+                    {todoElement}
+                  </React.Fragment>
                 );
               })}
             </>
