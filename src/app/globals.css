@@ -111,3 +111,62 @@ a, button {
 h1, h2, h3 {
   color: var(--purple);
 }
+
+/* --- Floating Effects (CANDY Design System) --- */
+
+/* 全体のトランジションをより滑らかに設定 */
+a, button {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
+/* ボタンやリンクのホバー時にふわりと浮き上がるエフェクト */
+a:hover, button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(155, 124, 195, 0.15);
+}
+
+/* カードを標準で少し浮いた柔らかい影にし、ホバーでさらに浮き上がるようにする */
+.content-card {
+  box-shadow: 0 10px 30px rgba(155, 124, 195, 0.08);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.content-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 40px rgba(155, 124, 195, 0.14);
+}
+
+.section-card {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+
+.section-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(155, 124, 195, 0.08);
+}
+
+/* ゆったりとふよふよ浮遊するアニメーションクラス */
+@keyframes candyFloat {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-6px);
+  }
+}
+
+.candy-float-animation {
+  animation: candyFloat 3s ease-in-out infinite alternate;
+}
+
+.candy-float-delay-1 {
+  animation: candyFloat 3.8s ease-in-out infinite alternate;
+  animation-delay: -1.2s;
+}
+
+.candy-float-delay-2 {
+  animation: candyFloat 4.5s ease-in-out infinite alternate;
+  animation-delay: -2.3s;
+}
+

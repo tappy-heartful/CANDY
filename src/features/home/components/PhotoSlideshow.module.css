@@ -1,0 +1,225 @@
+.slideshowContainer {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(155, 124, 195, 0.05);
+  border: 2px solid #fdf2f8;
+  margin-top: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slideshowHeader {
+  font-size: 15px;
+  font-weight: 800;
+  color: #9B7CC3;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sliderWrapper {
+  display: block;
+  text-decoration: none;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.slideContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.8 / 1;
+  background-color: #faf5ff;
+}
+
+@media (max-width: 576px) {
+  .slideContainer {
+    aspect-ratio: 1.5 / 1; /* スマホでは少し高さを出して写真を見やすくする */
+  }
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  pointer-events: none;
+}
+
+.slideActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slideOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%);
+  display: flex;
+  align-items: flex-end;
+}
+
+.photoInfo {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.albumBadge {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  color: #9B7CC3;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.uploaderName {
+  background: rgba(247, 168, 196, 0.85);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Navigation Buttons */
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  color: #9B7CC3;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navBtn:hover {
+  background-color: white;
+  color: #F7A8C4;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.prevBtn {
+  left: 12px;
+}
+
+.nextBtn {
+  right: 12px;
+}
+
+/* Dots Indicator */
+.dotsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  background-color: #e2d9f3;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.25s ease;
+}
+
+.dotActive {
+  background-color: #F7A8C4;
+  transform: scale(1.3);
+  width: 14px;
+  border-radius: 4px;
+}
+
+/* Empty State Styles */
+.emptySlideshow {
+  aspect-ratio: 2.2 / 1;
+  background-color: #faf5ff;
+  border-radius: 16px;
+  border: 2px dashed #e2d9f3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  gap: 12px;
+}
+
+@media (max-width: 576px) {
+  .emptySlideshow {
+    aspect-ratio: 1.6 / 1;
+    padding: 16px;
+  }
+}
+
+.emptyIcon {
+  font-size: 32px;
+  animation: bounce 2s infinite;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.6;
+}
+
+.emptyLink {
+  background-color: #9B7CC3;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 4px 10px rgba(155, 124, 195, 0.2);
+  transition: all 0.2s ease;
+}
+
+.emptyLink:hover {
+  background-color: #8a67b5;
+  transform: translateY(-1px);
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}

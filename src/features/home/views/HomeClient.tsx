@@ -11,7 +11,8 @@ import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily
 import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
-import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo } from "@/src/lib/firestore/types";
+import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo } from "@/src/lib/firestore/types";
 import { getNextAnniversaryDiff } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
@@ -20,6 +21,7 @@ import DailyStatusCard from "../components/DailyStatusCard";
 import DailyStatusModal from "../components/DailyStatusModal";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import GoalModal from "../components/GoalModal";
+import PhotoSlideshow from "../components/PhotoSlideshow";
 
 const CLOCK_THEMES = [
   "themePinkyRibbon",
@@ -72,6 +74,8 @@ export default function HomeClient() {
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
   const [clockType, setClockType] = useState<"digital" | "analog">("digital");
+  const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
+  const [albumsMap, setAlbumsMap] = useState<Record<string, string>>({});
 
   const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
 
@@ -121,8 +125,10 @@ export default function HomeClient() {
         getEvents(),
         getGroups("wishlist"),
         getAnniversaries(user.uid, userData?.partnerUid || null),
-        getTodosForCalendar()
-      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries, allTodos]) => {
+        getTodosForCalendar(),
+        getRecentPhotos(50),
+        getAlbums()
+      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums]) => {
         // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
         const myWishes = wishData
           .filter(w => w.uid === user.uid)
@@ -168,6 +174,16 @@ export default function HomeClient() {
         // 予定：最大3件
         setUpcomingEvents(validEvents.slice(0, 3));
         setWishlistGroups(groups);
+        
+        // 最近の写真とアルバム名のマッピングを設定
+        // 最新の50枚の中からランダムに最大8枚を抽出
+        const shuffledPics = [...recentPics].sort(() => 0.5 - Math.random()).slice(0, 8);
+        setRecentPhotos(shuffledPics);
+        const mapping: Record<string, string> = {};
+        albums.forEach((alb) => {
+          mapping[alb.id] = alb.name;
+        });
+        setAlbumsMap(mapping);
         
         // 記念日のソート（直近のもの3件）
         const sortedAnniversaries = [...anniversaries].sort((a, b) => {
@@ -339,7 +355,7 @@ export default function HomeClient() {
           </div>
         )}
 
-        <div className={`${styles.cuteClockContainer} ${styles[currentTheme]}`}>
+        <div className={`${styles.cuteClockContainer} ${styles[currentTheme]} candy-float-animation`}>
           <div className={styles.clockControls}>
             <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
               <i className="fa-solid fa-palette"></i>
@@ -420,7 +436,7 @@ export default function HomeClient() {
           </div>
 
           <div className={styles.goalSection}>
-            <div className={styles.goalCard} onClick={() => setIsGoalModalOpen(true)} style={{ cursor: "pointer" }}>
+            <div className={`${styles.goalCard} candy-float-delay-1`} onClick={() => setIsGoalModalOpen(true)} style={{ cursor: "pointer" }}>
               <div className={styles.goalTitle}>
                 <i className="fa-solid fa-bullseye" style={{ color: "#F7A8C4" }}></i>
                 <span>{userData?.nickname || userData?.displayName || "自分"}の目標</span>
@@ -445,7 +461,7 @@ export default function HomeClient() {
             </div>
 
             {partnerData && (
-              <div className={styles.goalCard}>
+              <div className={`${styles.goalCard} candy-float-delay-2`}>
                 <div className={styles.goalTitle}>
                   <i className="fa-solid fa-bullseye" style={{ color: "#A0E7D2" }}></i>
                   <span>{partnerData.nickname || partnerData.displayName || "パートナー"}の目標</span>
@@ -590,6 +606,15 @@ export default function HomeClient() {
             onOpenDateClear={() => setOpenCalendarDate(null)}
           />
         )}
+
+        <PhotoSlideshow
+          photos={recentPhotos}
+          albumsMap={albumsMap}
+          myNickname={userData?.nickname || userData?.displayName || "自分"}
+          partnerNickname={partnerData?.nickname || "パートナー"}
+          partnerId={userData?.partnerUid || null}
+          currentUserId={user?.uid || ""}
+        />
 
         {!loading && (recentWishlist.length > 0 || upcomingAnniversaries.length > 0) && (
           <div className={styles.notificationList} style={{ marginTop: '24px', marginBottom: '24px' }}>

@@ -9,7 +9,8 @@ import {
   query,
   where,
   orderBy,
-  writeBatch
+  writeBatch,
+  limit
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { toPlainObject } from "@/src/lib/firestore/utils";
@@ -164,4 +165,12 @@ export async function deleteAlbum(albumId: string) {
   }
   const albumRef = doc(db, "albums", albumId);
   await deleteDoc(albumRef);
+}
+
+// 最近追加された写真を取得する
+export async function getRecentPhotos(limitCount: number = 10): Promise<Photo[]> {
+  const ref = collection(db, "photos");
+  const q = query(ref, orderBy("createdAt", "desc"), limit(limitCount));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toPlainObject(d) as Photo);
 }
