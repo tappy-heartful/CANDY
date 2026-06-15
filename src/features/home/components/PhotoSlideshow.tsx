@@ -78,7 +78,7 @@ export default function PhotoSlideshow({
 
   if (photos.length === 0) {
     return (
-      <div className={styles.slideshowContainer}>
+      <div className={`${styles.slideshowContainer} candy-float-delay-1`}>
         <div className={styles.emptySlideshow}>
           <div className={styles.emptyIcon}>🍭</div>
           <div className={styles.emptyText}>
@@ -98,7 +98,7 @@ export default function PhotoSlideshow({
   const uploader = getUploaderName(activePhoto);
 
   return (
-    <div className={styles.slideshowContainer}>
+    <div className={`${styles.slideshowContainer} candy-float-delay-1`}>
       <h2 className={styles.slideshowHeader}>
         <i className="fa-solid fa-camera-retro" style={{ color: "#F7A8C4", marginRight: "8px" }}></i>
         最近の思い出

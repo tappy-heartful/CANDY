@@ -355,7 +355,7 @@ export default function HomeClient() {
           </div>
         )}
 
-        <div className={`${styles.cuteClockContainer} ${styles[currentTheme]}`}>
+        <div className={`${styles.cuteClockContainer} ${styles[currentTheme]} candy-float-animation`}>
           <div className={styles.clockControls}>
             <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
               <i className="fa-solid fa-palette"></i>
@@ -436,7 +436,7 @@ export default function HomeClient() {
           </div>
 
           <div className={styles.goalSection}>
-            <div className={styles.goalCard} onClick={() => setIsGoalModalOpen(true)} style={{ cursor: "pointer" }}>
+            <div className={`${styles.goalCard} candy-float-delay-1`} onClick={() => setIsGoalModalOpen(true)} style={{ cursor: "pointer" }}>
               <div className={styles.goalTitle}>
                 <i className="fa-solid fa-bullseye" style={{ color: "#F7A8C4" }}></i>
                 <span>{userData?.nickname || userData?.displayName || "自分"}の目標</span>
@@ -461,7 +461,7 @@ export default function HomeClient() {
             </div>
 
             {partnerData && (
-              <div className={styles.goalCard}>
+              <div className={`${styles.goalCard} candy-float-delay-2`}>
                 <div className={styles.goalTitle}>
                   <i className="fa-solid fa-bullseye" style={{ color: "#A0E7D2" }}></i>
                   <span>{partnerData.nickname || partnerData.displayName || "パートナー"}の目標</span>
