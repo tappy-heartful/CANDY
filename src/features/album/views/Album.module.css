@@ -399,6 +399,55 @@
   animation: fadeIn 0.3s ease;
 }
 
+.lightboxHeader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 80px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  z-index: 3100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.lightboxHeaderInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  text-align: center;
+}
+
+.lightboxAlbumName {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.lightboxUploader {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.lightboxUploadDate {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
 .lightboxClose {
   position: absolute;
   top: 20px;
@@ -465,6 +514,23 @@
     height: 40px;
     font-size: 18px;
   }
+  .lightboxHeader {
+    padding: 16px 60px;
+  }
+  .lightboxAlbumName {
+    font-size: 15px;
+  }
+  .lightboxUploader {
+    font-size: 12px;
+  }
+  .lightboxUploadDate {
+    font-size: 11px;
+  }
+  .lightboxClose {
+    top: 12px;
+    right: 12px;
+    font-size: 28px;
+  }
 }
 
 .lightboxContent {
@@ -483,29 +549,6 @@
   object-fit: contain;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
-}
-
-.lightboxMeta {
-  position: absolute;
-  bottom: -48px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: #ccc;
-  font-size: 13px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.uploaderName {
-  font-weight: bold;
-  color: white;
-}
-
-.uploadDate {
-  font-size: 11px;
-  color: #888;
 }
 
 /* 下部アクションバー (ダウンロード・削除) */
