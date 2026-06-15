@@ -112,3 +112,37 @@ export interface DailyStatus {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface Album {
+  id: string;
+  name: string;
+  uid: string;
+  createdAt: number;
+  updatedAt: number;
+  prefectureCode?: string;
+  prefectureName?: string;
+  municipalityCode?: string;
+  municipalityName?: string;
+  dateMode?: "single" | "range";
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface Photo {
+  id: string;
+  albumId: string;
+  url: string;
+  uid: string;
+  createdAt: number;
+}
+
+export interface Prefecture {
+  code: number;
+  name: string;
+}
+
+export interface Municipality {
+  code: string;
+  name: string;
+  prefCode: string;
+}

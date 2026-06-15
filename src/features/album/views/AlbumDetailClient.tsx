@@ -11,9 +11,13 @@ import {
   uploadPhoto,
   deletePhotos,
   deleteAlbum,
-  updateAlbumName,
+  updateAlbum,
+  getPrefectures,
+  getMunicipalities,
   Album,
   Photo,
+  Prefecture,
+  Municipality,
 } from "../api/album-client-service";
 import { db } from "@/src/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -23,6 +27,11 @@ import styles from "./Album.module.css";
 interface AlbumDetailClientProps {
   albumId: string;
 }
+
+const getTodayString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const { user, userData } = useAuth();
@@ -39,6 +48,17 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
+  
+  // 都道府県・市区町村用の状態
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [selectedPrefCode, setSelectedPrefCode] = useState("");
+  const [selectedMuniCode, setSelectedMuniCode] = useState("");
+
+  // 日付設定用の状態
+  const [dateMode, setDateMode] = useState<"single" | "range">("single");
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
   
   // 選択モード関連
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -127,14 +147,73 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // アルバム名の変更
-  const handleRenameAlbum = async () => {
+  // モーダルが開いた際に都道府県をロード
+  useEffect(() => {
+    if (isRenameModalOpen && prefectures.length === 0) {
+      getPrefectures()
+        .then((data) => setPrefectures(data))
+        .catch((e) => console.error("Failed to fetch prefectures:", e));
+    }
+  }, [isRenameModalOpen, prefectures]);
+
+  // モーダルが開いた際に登録済みの都道府県・市区町村・日付を初期値として反映
+  useEffect(() => {
+    if (isRenameModalOpen && album) {
+      const prefCode = album.prefectureCode || "";
+      const muniCode = album.municipalityCode || "";
+      setSelectedPrefCode(prefCode);
+      setSelectedMuniCode(muniCode);
+
+      setDateMode(album.dateMode || "single");
+      setStartDate(album.startDate || getTodayString());
+      setEndDate(album.endDate || album.startDate || getTodayString());
+
+      if (prefCode) {
+        getMunicipalities(prefCode)
+          .then((data) => setMunicipalities(data))
+          .catch((e) => console.error("Failed to fetch municipalities on init:", e));
+      } else {
+        setMunicipalities([]);
+      }
+    }
+  }, [isRenameModalOpen, album]);
+
+  // 都道府県が変更された際のハンドラ
+  const handlePrefChange = async (prefCode: string) => {
+    setSelectedPrefCode(prefCode);
+    setSelectedMuniCode("");
+    setMunicipalities([]);
+    if (!prefCode) return;
+
+    try {
+      const data = await getMunicipalities(prefCode);
+      setMunicipalities(data);
+    } catch (e) {
+      console.error("Failed to fetch municipalities on change:", e);
+    }
+  };
+
+  // アルバム情報の変更
+  const handleUpdateAlbum = async () => {
     const trimmed = renameValue.trim();
     if (!trimmed || !album) return;
 
     setIsRenaming(true);
     try {
-      await updateAlbumName(album.id, trimmed);
+      const pref = prefectures.find((p) => String(p.code).padStart(2, "0") === selectedPrefCode);
+      const muni = municipalities.find((m) => m.code === selectedMuniCode);
+
+      await updateAlbum(
+        album.id,
+        trimmed,
+        selectedPrefCode || undefined,
+        pref?.name || undefined,
+        selectedMuniCode || undefined,
+        muni?.name || undefined,
+        dateMode,
+        startDate,
+        dateMode === "range" ? endDate : undefined
+      );
       setIsRenameModalOpen(false);
       await fetchData();
     } catch (e) {
@@ -345,6 +424,16 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     }
   };
 
+  const formatDateDisplay = (album: Album) => {
+    if (!album.startDate) return null;
+    const start = album.startDate.replace(/-/g, "/");
+    if (album.dateMode === "range" && album.endDate) {
+      const end = album.endDate.replace(/-/g, "/");
+      return `${start} 〜 ${end}`;
+    }
+    return start;
+  };
+
   if (loading || !album) {
     return (
       <AuthGuard>
@@ -367,7 +456,21 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               <i className="fa-solid fa-image" style={{ color: "#F7A8C4", marginRight: "10px" }}></i>
               {album.name}
             </h1>
-            <span className={styles.photoCountText}>写真 {photos.length}件</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", marginTop: "4px" }}>
+              <span className={styles.photoCountText}>写真 {photos.length}件</span>
+              {formatDateDisplay(album) && (
+                <span className={styles.detailDate} style={{ fontSize: "12px", color: "#888", display: "inline-flex", alignItems: "center" }}>
+                  <i className="fa-regular fa-calendar" style={{ marginRight: "4px", color: "#9B7CC3" }}></i>
+                  {formatDateDisplay(album)}
+                </span>
+              )}
+              {(album.prefectureName || album.municipalityName) && (
+                <span className={styles.detailLocation}>
+                  <i className="fa-solid fa-location-dot" style={{ marginRight: "4px", color: "#F7A8C4" }}></i>
+                  {album.prefectureName || ""} {album.municipalityName || ""}
+                </span>
+              )}
+            </div>
           </div>
 
           {!isSelectMode && (
@@ -396,7 +499,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                     }}
                   >
                     <i className="fa-solid fa-pen-to-square"></i>
-                    アルバム名を変更
+                    アルバム情報を編集
                   </button>
                   <button
                     className={`${styles.menuItem} ${styles.menuItemDanger}`}
@@ -566,27 +669,138 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
           </div>
         )}
 
-        {/* アルバム名変更ダイアログ */}
+        {/* アルバム情報編集ダイアログ */}
         {isRenameModalOpen && (
-          <div className={styles.dialogOverlay} onClick={() => setIsRenameModalOpen(false)}>
+          <div
+            className={styles.dialogOverlay}
+            onClick={() => {
+              setRenameValue(album.name);
+              setSelectedPrefCode(album.prefectureCode || "");
+              setSelectedMuniCode(album.municipalityCode || "");
+              setDateMode(album.dateMode || "single");
+              setStartDate(album.startDate || getTodayString());
+              setEndDate(album.endDate || album.startDate || getTodayString());
+              setIsRenameModalOpen(false);
+            }}
+          >
             <div className={styles.dialogBox} onClick={(e) => e.stopPropagation()}>
               <div className={styles.dialogTitle}>
                 <i className="fa-solid fa-pen-to-square" style={{ color: "#F7A8C4" }}></i>
-                アルバム名変更
+                アルバム情報編集
               </div>
-              <input
-                type="text"
-                className={styles.dialogInput}
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value.slice(0, 20))}
-                maxLength={20}
-                autoFocus
-              />
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>アルバム名</label>
+                <input
+                  type="text"
+                  className={styles.dialogInput}
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value.slice(0, 20))}
+                  maxLength={20}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>日付設定</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="editDateMode"
+                      value="single"
+                      checked={dateMode === "single"}
+                      onChange={() => setDateMode("single")}
+                    />
+                    <span>1日のみ</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="editDateMode"
+                      value="range"
+                      checked={dateMode === "range"}
+                      onChange={() => setDateMode("range")}
+                    />
+                    <span>期間</span>
+                  </label>
+                </div>
+              </div>
+
+              {dateMode === "single" ? (
+                <div className={styles.dialogFormGroup}>
+                  <label className={styles.dialogLabel}>日付</label>
+                  <input
+                    type="date"
+                    className={styles.dialogInput}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className={styles.dialogFormGroup}>
+                  <label className={styles.dialogLabel}>期間設定</label>
+                  <div className={styles.dateRangeInputs}>
+                    <input
+                      type="date"
+                      className={styles.dialogInput}
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <span className={styles.dateRangeSeparator}>〜</span>
+                    <input
+                      type="date"
+                      className={styles.dialogInput}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>都道府県（任意）</label>
+                <select
+                  className={styles.dialogSelect}
+                  value={selectedPrefCode}
+                  onChange={(e) => handlePrefChange(e.target.value)}
+                >
+                  <option value="">選択してください</option>
+                  {prefectures.map((pref) => (
+                    <option key={pref.code} value={String(pref.code).padStart(2, "0")}>
+                      {pref.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>市区町村（任意）</label>
+                <select
+                  className={styles.dialogSelect}
+                  value={selectedMuniCode}
+                  onChange={(e) => setSelectedMuniCode(e.target.value)}
+                  disabled={!selectedPrefCode}
+                >
+                  <option value="">選択してください</option>
+                  {municipalities.map((muni) => (
+                    <option key={muni.code} value={muni.code}>
+                      {muni.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className={styles.dialogButtons}>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnCancel}`}
                   onClick={() => {
                     setRenameValue(album.name);
+                    setSelectedPrefCode(album.prefectureCode || "");
+                    setSelectedMuniCode(album.municipalityCode || "");
+                    setDateMode(album.dateMode || "single");
+                    setStartDate(album.startDate || getTodayString());
+                    setEndDate(album.endDate || album.startDate || getTodayString());
                     setIsRenameModalOpen(false);
                   }}
                   disabled={isRenaming}
@@ -595,8 +809,17 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                 </button>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnOk}`}
-                  onClick={handleRenameAlbum}
-                  disabled={!renameValue.trim() || renameValue.trim() === album.name || isRenaming}
+                  onClick={handleUpdateAlbum}
+                  disabled={
+                    !renameValue.trim() ||
+                    isRenaming ||
+                    (renameValue.trim() === album.name &&
+                      selectedPrefCode === (album.prefectureCode || "") &&
+                      selectedMuniCode === (album.municipalityCode || "") &&
+                      dateMode === (album.dateMode || "single") &&
+                      startDate === (album.startDate || "") &&
+                      (dateMode === "single" || endDate === (album.endDate || album.startDate || "")))
+                  }
                 >
                   {isRenaming ? "変更中..." : "変更する"}
                 </button>

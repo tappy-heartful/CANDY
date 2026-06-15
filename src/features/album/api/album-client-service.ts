@@ -15,22 +15,8 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 import { toPlainObject } from "@/src/lib/firestore/utils";
 import { compressImage } from "@/src/lib/image-compression";
 
-// TODO
-export interface Album {
-  id: string;
-  name: string;
-  uid: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface Photo {
-  id: string;
-  albumId: string;
-  url: string;
-  uid: string;
-  createdAt: number;
-}
+import type { Album, Photo, Prefecture, Municipality } from "@/src/lib/firestore/types";
+export type { Album, Photo, Prefecture, Municipality };
 
 // すべてのアルバムを取得
 export async function getAlbums(): Promise<Album[]> {
@@ -40,23 +26,73 @@ export async function getAlbums(): Promise<Album[]> {
   return snap.docs.map((d) => toPlainObject(d) as Album);
 }
 
+// 都道府県一覧を取得
+export async function getPrefectures(): Promise<Prefecture[]> {
+  const ref = collection(db, "prefectures");
+  const q = query(ref, orderBy("code", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toPlainObject(d) as Prefecture);
+}
+
+// 都道府県コードに一致する市区町村一覧を取得
+export async function getMunicipalities(prefCode: string): Promise<Municipality[]> {
+  const ref = collection(db, "municipalities");
+  const q = query(ref, where("prefCode", "==", prefCode), orderBy("code", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toPlainObject(d) as Municipality);
+}
+
 // アルバムを作成
-export async function createAlbum(name: string, uid: string): Promise<string> {
+export async function createAlbum(
+  name: string,
+  uid: string,
+  prefectureCode?: string,
+  prefectureName?: string,
+  municipalityCode?: string,
+  municipalityName?: string,
+  dateMode?: "single" | "range",
+  startDate?: string,
+  endDate?: string
+): Promise<string> {
   const ref = collection(db, "albums");
   const docRef = await addDoc(ref, {
     name,
     uid,
+    prefectureCode: prefectureCode || null,
+    prefectureName: prefectureName || null,
+    municipalityCode: municipalityCode || null,
+    municipalityName: municipalityName || null,
+    dateMode: dateMode || "single",
+    startDate: startDate || null,
+    endDate: endDate || null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   });
   return docRef.id;
 }
 
-// アルバム名を更新
-export async function updateAlbumName(albumId: string, name: string) {
+// アルバム情報を更新
+export async function updateAlbum(
+  albumId: string,
+  name: string,
+  prefectureCode?: string,
+  prefectureName?: string,
+  municipalityCode?: string,
+  municipalityName?: string,
+  dateMode?: "single" | "range",
+  startDate?: string,
+  endDate?: string
+) {
   const ref = doc(db, "albums", albumId);
   return await updateDoc(ref, {
     name,
+    prefectureCode: prefectureCode || null,
+    prefectureName: prefectureName || null,
+    municipalityCode: municipalityCode || null,
+    municipalityName: municipalityName || null,
+    dateMode: dateMode || "single",
+    startDate: startDate || null,
+    endDate: endDate || null,
     updatedAt: Date.now(),
   });
 }

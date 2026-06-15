@@ -600,7 +600,7 @@
   box-sizing: border-box;
   outline: none;
   transition: all 0.2s ease;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   background-color: #faf8fc;
 }
 
@@ -610,9 +610,72 @@
   box-shadow: 0 0 0 3px rgba(247, 168, 196, 0.15);
 }
 
+/* Location information in Card */
+.albumLocation {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+/* Location information in Detail Header */
+.detailLocation {
+  font-size: 12px;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+/* Form Group inside Dialog */
+.dialogFormGroup {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+}
+
+.dialogLabel {
+  font-size: 11px;
+  font-weight: bold;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.dialogSelect {
+  width: 100%;
+  border: 2px solid #f3e5f5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s ease;
+  background-color: #faf8fc;
+  color: #444;
+  cursor: pointer;
+}
+
+.dialogSelect:focus {
+  border-color: #F7A8C4;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(247, 168, 196, 0.15);
+}
+
+.dialogSelect:disabled {
+  background-color: #f1f3f5;
+  color: #adb5bd;
+  cursor: not-allowed;
+}
+
 .dialogButtons {
   display: flex;
   gap: 12px;
+  margin-top: 8px;
 }
 
 .dialogBtn {
@@ -664,4 +727,57 @@
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Radio buttons for date configuration */
+.radioGroup {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.radioLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radioLabel input[type="radio"] {
+  margin: 0;
+  accent-color: #F7A8C4;
+  cursor: pointer;
+}
+
+/* Date range inputs wrapper */
+.dateRangeInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.dateRangeInputs input[type="date"] {
+  flex: 1;
+}
+
+.dateRangeSeparator {
+  color: #888;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Date label in Album Card */
+.albumDate {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  gap: 4px;
 }
