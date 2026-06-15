@@ -7,6 +7,20 @@
   margin-bottom: 24px;
 }
 
+.stickyHeader {
+  position: sticky;
+  top: 111px;
+  z-index: 100;
+  background: white;
+  margin-left: -16px;
+  margin-right: -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 4px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
+}
+
 .calendarHeader {
   display: flex;
   justify-content: space-between;
@@ -103,9 +117,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   text-align: center;
-  border-bottom: 1px solid #eee;
   padding-bottom: 8px;
-  margin-bottom: 8px;
 }
 
 .weekday {

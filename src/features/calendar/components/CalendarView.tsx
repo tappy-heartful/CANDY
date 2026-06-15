@@ -47,6 +47,8 @@ export default function CalendarView({
     todosCouple: true,
     todosMe: true,
     todosPartner: true,
+    todosShowUncompleted: true,
+    todosShowCompleted: true,
   });
   const [activeModalEvent, setActiveModalEvent] = useState<Partial<CalendarEvent> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,6 +99,9 @@ export default function CalendarView({
 
   const visibleTodos = useMemo(() => {
     return todos.filter((t) => {
+      if (t.isCompleted && !filterState.todosShowCompleted) return false;
+      if (!t.isCompleted && !filterState.todosShowUncompleted) return false;
+
       if (t.type === "couple") return filterState.todosCouple;
       const isMe = t.uid === currentUserId;
       if (isMe) return filterState.todosMe;
@@ -491,34 +496,52 @@ export default function CalendarView({
             </button>
           </div>
         </div>
-      </div>
-
-      <div className={styles.calendarHeader}>
-        <div className={styles.monthLabel}>
-          <i className="fa-solid fa-calendar-alt" style={{ color: "#9B7CC3" }}></i>
-          {currentYear}年{currentMonth + 1}月
-        </div>
-        <div className={styles.headerBtns}>
-          <button className={styles.todayBtn} onClick={handleGoToToday}>
-            今日
-          </button>
-          <button className={styles.navBtn} onClick={handlePrevMonth} aria-label="前月">
-            <i className="fa-solid fa-chevron-left"></i>
-          </button>
-          <button className={styles.navBtn} onClick={handleNextMonth} aria-label="次月">
-            <i className="fa-solid fa-chevron-right"></i>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingLeft: '48px', marginTop: '-4px' }}>
+          <div className={styles.filterTabs}>
+            <button
+              className={`${styles.tab} ${filterState.todosShowUncompleted ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, todosShowUncompleted: !prev.todosShowUncompleted }))}
+            >
+              未完了
+            </button>
+            <button
+              className={`${styles.tab} ${filterState.todosShowCompleted ? styles.active : ""}`}
+              onClick={() => setFilterState((prev) => ({ ...prev, todosShowCompleted: !prev.todosShowCompleted }))}
+            >
+              完了済み
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className={styles.weekdaysHeader}>
-        <div className={`${styles.weekday} ${styles.weekdaySunday}`}>日</div>
-        <div className={styles.weekday}>月</div>
-        <div className={styles.weekday}>火</div>
-        <div className={styles.weekday}>水</div>
-        <div className={styles.weekday}>木</div>
-        <div className={styles.weekday}>金</div>
-        <div className={`${styles.weekday} ${styles.weekdaySaturday}`}>土</div>
+      <div className={styles.stickyHeader}>
+        <div className={styles.calendarHeader}>
+          <div className={styles.monthLabel}>
+            <i className="fa-solid fa-calendar-alt" style={{ color: "#9B7CC3" }}></i>
+            {currentYear}年{currentMonth + 1}月
+          </div>
+          <div className={styles.headerBtns}>
+            <button className={styles.todayBtn} onClick={handleGoToToday}>
+              今日
+            </button>
+            <button className={styles.navBtn} onClick={handlePrevMonth} aria-label="前月">
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+            <button className={styles.navBtn} onClick={handleNextMonth} aria-label="次月">
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.weekdaysHeader}>
+          <div className={`${styles.weekday} ${styles.weekdaySunday}`}>日</div>
+          <div className={styles.weekday}>月</div>
+          <div className={styles.weekday}>火</div>
+          <div className={styles.weekday}>水</div>
+          <div className={styles.weekday}>木</div>
+          <div className={styles.weekday}>金</div>
+          <div className={`${styles.weekday} ${styles.weekdaySaturday}`}>土</div>
+        </div>
       </div>
 
       <div className={styles.daysGrid}>
