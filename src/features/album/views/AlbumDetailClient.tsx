@@ -37,7 +37,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
   const router = useRouter();
-  
+
   const [album, setAlbum] = useState<Album | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [partnerData, setPartnerData] = useState<any>(null);
@@ -48,7 +48,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
-  
+
   // 都道府県・市区町村用の状態
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
@@ -59,14 +59,14 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
-  
+
   // 選択モード関連
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
-  
+
   // ライトボックス関連
   const [activePhoto, setActivePhoto] = useState<Photo | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -88,7 +88,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         const albumData = { id: snap.id, ...snap.data() } as Album;
         setAlbum(albumData);
         setRenameValue(albumData.name);
-        
+
         // パンくずリストを設定
         setBreadcrumbs([
           { title: "アルバム", href: "/albums" },
@@ -227,7 +227,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const handleDeleteAlbum = async () => {
     if (!album) return;
     setIsMenuOpen(false);
-    
+
     const confirm = await showDialog(`アルバム「${album.name}」を削除しますか？\nアルバム内の写真もすべて削除されます。`, false);
     if (!confirm) return;
 
@@ -280,7 +280,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   // 選択写真の一括削除
   const handleDeleteSelected = async () => {
     if (selectedPhotos.length === 0) return;
-    
+
     const confirm = await showDialog(`${selectedPhotos.length}件の写真を削除しますか？`, false);
     if (!confirm) return;
 
@@ -300,7 +300,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   // 選択写真の一括ダウンロード
   const handleDownloadSelected = () => {
     if (selectedPhotos.length === 0) return;
-    
+
     selectedPhotos.forEach((photo) => {
       const filename = `album_${album?.name || "photo"}_${photo.id}.jpg`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(photo.url)}&name=${encodeURIComponent(filename)}`;
@@ -310,7 +310,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
       a.click();
       document.body.removeChild(a);
     });
-    
+
     setSelectedPhotos([]);
     setIsSelectMode(false);
   };
@@ -405,7 +405,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     showSpinner();
     try {
       await deletePhotos([photo]);
-      
+
       const activeIndex = photos.findIndex((p) => p.id === photo.id);
       const newPhotos = photos.filter((p) => p.id !== photo.id);
       setPhotos(newPhotos);
@@ -433,6 +433,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     }
     return start;
   };
+
+  const activeIndex = activePhoto ? photos.findIndex((p) => p.id === activePhoto.id) : -1;
 
   if (loading || !album) {
     return (
@@ -528,7 +530,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                   onClick={() => handlePhotoClick(photo)}
                 >
                   <img src={photo.url} alt="Photo" className={styles.photoImg} />
-                  
+
                   {isSelectMode && (
                     <div className={styles.selectOverlay}>
                       {isSelected && (
@@ -618,12 +620,23 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <button className={styles.lightboxClose} onClick={() => setActivePhoto(null)}>
-              <i className="fa-solid fa-xmark"></i>
-            </button>
+            {/* 上部ヘッダー */}
+            <div className={styles.lightboxHeader} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.lightboxHeaderInfo}>
+                <h2 className={styles.lightboxAlbumName}>
+                  {album.name} ({activeIndex !== -1 ? activeIndex + 1 : 0} / {photos.length})
+                </h2>
+                <div className={styles.lightboxUploader}>
+                  {getUploaderName(activePhoto)}
+                </div>
+              </div>
+              <button className={styles.lightboxClose} onClick={() => setActivePhoto(null)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
 
             {/* 左矢印ナビゲーション */}
-            {photos.findIndex((p) => p.id === activePhoto.id) > 0 && (
+            {activeIndex > 0 && (
               <button className={styles.lightboxPrev} onClick={handlePrevPhoto}>
                 <i className="fa-solid fa-chevron-left"></i>
               </button>
@@ -631,19 +644,10 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
             <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
               <img src={activePhoto.url} alt="Lightbox Photo" className={styles.lightboxImg} />
-              
-              <div className={styles.lightboxMeta}>
-                <span className={styles.uploaderName}>
-                  アップロード: {getUploaderName(activePhoto)}
-                </span>
-                <span className={styles.uploadDate}>
-                  {formatUploadDate(activePhoto.createdAt)}
-                </span>
-              </div>
             </div>
 
             {/* 右矢印ナビゲーション */}
-            {photos.findIndex((p) => p.id === activePhoto.id) < photos.length - 1 && (
+            {activeIndex < photos.length - 1 && (
               <button className={styles.lightboxNext} onClick={handleNextPhoto}>
                 <i className="fa-solid fa-chevron-right"></i>
               </button>
