@@ -610,6 +610,7 @@ export default function HomeClient() {
             partnerPictureUrl={partnerData?.pictureUrl}
             openDate={openCalendarDate}
             onOpenDateClear={() => setOpenCalendarDate(null)}
+            userData={userData as FirestoreUser}
           />
         )}
 

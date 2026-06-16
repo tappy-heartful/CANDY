@@ -36,15 +36,18 @@ export default function DailyAgendaModal({
 }: DailyAgendaModalProps) {
   const router = useRouter();
 
-  // Format the date like "5月30日 土曜日"
-  const formattedDate = useMemo(() => {
-    if (!activeDateStr) return "";
+  // Format the date parts to display date and weekday on different lines
+  const dateInfo = useMemo(() => {
+    if (!activeDateStr) return { dateText: "", dayText: "" };
     const dateObj = new Date(activeDateStr);
     const month = dateObj.getMonth() + 1;
     const date = dateObj.getDate();
     const days = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
     const dayStr = days[dateObj.getDay()];
-    return `${month}月${date}日 ${dayStr}`;
+    return {
+      dateText: `${month}月${date}日`,
+      dayText: dayStr,
+    };
   }, [activeDateStr]);
 
   // Sort events:
@@ -147,7 +150,10 @@ export default function DailyAgendaModal({
         </button>
 
         <div className={styles.headerRow} style={{ paddingRight: '24px' }}>
-          <h2 className={styles.dateTitle}>{formattedDate}</h2>
+          <h2 className={styles.dateTitle}>
+            <span className={styles.dateText}>{dateInfo.dateText}</span>
+            <span className={styles.dayText}>{dateInfo.dayText}</span>
+          </h2>
           <div className={styles.headerActions}>
             <img src={myPictureUrl} alt="User" className={styles.userIcon} />
             <button className={styles.addBtn} onClick={() => onAddEvent(activeDateStr)} title="予定を追加">
@@ -211,9 +217,9 @@ export default function DailyAgendaModal({
                       </div>
                       <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
                         <div className={styles.eventTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
-                          {item.title}
+                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{icon}</div>
+                          <span>{item.title}</span>
                         </div>
-                        <div className={styles.iconCol}>{icon}</div>
                       </div>
                     </div>
                   );
@@ -276,9 +282,11 @@ export default function DailyAgendaModal({
                       </div>
                       <div className={styles.mainCol} style={{ borderLeftColor: color }}>
                         <div className={styles.eventTitle}>
-                          {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
+                          <span>
+                            {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                          </span>
                         </div>
-                        <div className={styles.iconCol}>{getEventIcon(item)}</div>
                       </div>
                     </div>
                   );

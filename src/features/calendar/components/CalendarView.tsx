@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { CalendarEvent, Anniversary, Todo } from "@/src/lib/firestore/types";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { CalendarEvent, Anniversary, Todo, User } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
 import { addTodo, updateTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
+import { updateProfile } from "@/src/features/user/api/user-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
@@ -19,6 +20,7 @@ interface CalendarViewProps {
   partnerPictureUrl?: string;
   openDate?: string | null;
   onOpenDateClear?: () => void;
+  userData?: User | null;
 }
 
 const padZero = (n: number) => n.toString().padStart(2, "0");
@@ -31,6 +33,7 @@ export default function CalendarView({
   partnerPictureUrl,
   openDate,
   onOpenDateClear,
+  userData,
 }: CalendarViewProps) {
   const today = useMemo(() => new Date(), []);
   const thisYear = today.getFullYear();
@@ -60,6 +63,40 @@ export default function CalendarView({
   const [activeDateStr, setActiveDateStr] = useState<string>("");
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
+
+  // モード設定（デフォルトは grid）
+  const [calendarMode, setCalendarMode] = useState<"grid" | "timeline">("grid");
+
+  useEffect(() => {
+    if (userData?.calendarMode) {
+      setCalendarMode(userData.calendarMode);
+    }
+  }, [userData]);
+
+  const handleToggleMode = async (mode: "grid" | "timeline") => {
+    setCalendarMode(mode);
+    try {
+      await updateProfile(currentUserId, { calendarMode: mode });
+    } catch (e) {
+      console.error("Failed to save calendar mode:", e);
+    }
+  };
+
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
+  const todayCardRef = useRef<HTMLDivElement>(null);
+
+  // 今日を示すカードへ自動スクロール
+  useEffect(() => {
+    if (calendarMode === "timeline" && todayCardRef.current && timelineScrollRef.current) {
+      const container = timelineScrollRef.current;
+      const card = todayCardRef.current;
+      const timer = setTimeout(() => {
+        const scrollOffset = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+        container.scrollLeft = scrollOffset;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [calendarMode, currentMonth, currentYear]);
 
   const [holidays, setHolidays] = useState<Record<string, string>>({});
 
@@ -207,6 +244,62 @@ export default function CalendarView({
 
     return cells;
   }, [currentYear, currentMonth]);
+
+  const timelineCellsData = useMemo(() => {
+    const cells = [];
+    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = `${currentYear}-${padZero(currentMonth + 1)}-${padZero(i)}`;
+      const dayEvents = visibleEvents.filter((e) => dateStr >= e.startDate && dateStr <= e.endDate);
+      const dayTodos = visibleTodos.filter((t) => t.date === dateStr);
+      const mdStr = `${padZero(currentMonth + 1)}-${padZero(i)}`;
+      const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
+
+      const combinedItems = [
+        ...dayEvents.map(e => ({ ...e, isTodo: false })),
+        ...dayTodos.map(t => ({ ...t, isTodo: true }))
+      ];
+
+      combinedItems.sort((a, b) => {
+        const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+        const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+        if (orderA !== orderB) return orderA - orderB;
+
+        if (a.isTodo !== b.isTodo) {
+          return a.isTodo ? 1 : -1;
+        }
+
+        const aMulti = a.startDate !== a.endDate ? 1 : 0;
+        const bMulti = b.startDate !== b.endDate ? 1 : 0;
+        if (aMulti !== bMulti) return bMulti - aMulti;
+        
+        const aStart = a.startDate || a.date;
+        const bStart = b.startDate || b.date;
+        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        
+        const aEnd = a.endDate || a.date;
+        const bEnd = b.endDate || b.date;
+        if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
+
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
+
+        if (a.startTime && b.startTime && a.startTime !== b.startTime) {
+          return a.startTime.localeCompare(b.startTime);
+        }
+        return a.title.localeCompare(b.title);
+      });
+
+      cells.push({
+        dayNum: i,
+        dateStr,
+        dayAnniversaries,
+        combinedItems,
+      });
+    }
+    return cells;
+  }, [currentYear, currentMonth, visibleEvents, visibleTodos, anniversaries, currentUserId]);
 
   const processedWeeks = useMemo(() => {
     // 1. 各曜日のアイテムをまず解決する
@@ -472,15 +565,18 @@ export default function CalendarView({
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
+    if (calendarMode === "timeline") return;
     setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    if (calendarMode === "timeline") return;
     setTouchEndX(e.targetTouches[0].clientX);
   };
 
   const onTouchEnd = () => {
+    if (calendarMode === "timeline") return;
     if (!touchStartX || !touchEndX) return;
     const distance = touchStartX - touchEndX;
     const isLeftSwipe = distance > minSwipeDistance;
@@ -571,6 +667,22 @@ export default function CalendarView({
             <i className="fa-solid fa-calendar-alt" style={{ color: "#9B7CC3" }}></i>
             {currentYear}年{currentMonth + 1}月
           </div>
+          <div className={styles.modeToggle}>
+            <button
+              className={`${styles.toggleBtn} ${calendarMode === "grid" ? styles.activeToggle : ""}`}
+              onClick={() => handleToggleMode("grid")}
+              title="カレンダー表示"
+            >
+              <i className="fa-solid fa-calendar-days"></i>
+            </button>
+            <button
+              className={`${styles.toggleBtn} ${calendarMode === "timeline" ? styles.activeToggle : ""}`}
+              onClick={() => handleToggleMode("timeline")}
+              title="タイムライン表示"
+            >
+              <i className="fa-solid fa-bars-staggered"></i>
+            </button>
+          </div>
           <div className={styles.headerBtns}>
             <button className={styles.todayBtn} onClick={handleGoToToday}>
               今日
@@ -584,90 +696,234 @@ export default function CalendarView({
           </div>
         </div>
 
-        <div className={styles.weekdaysHeader}>
-          <div className={`${styles.weekday} ${styles.weekdaySunday}`}>日</div>
-          <div className={styles.weekday}>月</div>
-          <div className={styles.weekday}>火</div>
-          <div className={styles.weekday}>水</div>
-          <div className={styles.weekday}>木</div>
-          <div className={styles.weekday}>金</div>
-          <div className={`${styles.weekday} ${styles.weekdaySaturday}`}>土</div>
-        </div>
+        {calendarMode === "grid" && (
+          <div className={styles.weekdaysHeader}>
+            <div className={`${styles.weekday} ${styles.weekdaySunday}`}>日</div>
+            <div className={styles.weekday}>月</div>
+            <div className={styles.weekday}>火</div>
+            <div className={styles.weekday}>水</div>
+            <div className={styles.weekday}>木</div>
+            <div className={styles.weekday}>金</div>
+            <div className={`${styles.weekday} ${styles.weekdaySaturday}`}>土</div>
+          </div>
+        )}
       </div>
 
-      <div className={styles.daysGrid}>
-        {processedWeeks.map((week, weekIdx) => {
-          return week.cells.map((dayData, dayIdx) => {
-            const { cell, dateStr, dayAnniversaries, coupleItems, meItems, partnerItems } = dayData;
-            const idx = weekIdx * 7 + dayIdx;
-            const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
+      {calendarMode === "grid" ? (
+        <div className={styles.daysGrid}>
+          {processedWeeks.map((week, weekIdx) => {
+            return week.cells.map((dayData, dayIdx) => {
+              const { cell, dateStr, dayAnniversaries, coupleItems, meItems, partnerItems } = dayData;
+              const idx = weekIdx * 7 + dayIdx;
+              const cellDayOfWeek = idx % 7; // 0 = Sunday, 6 = Saturday
+              const isHoliday = !!holidays[dateStr];
+
+              const isToday =
+                today.getDate() === cell.dayNum &&
+                today.getMonth() === cell.month &&
+                today.getFullYear() === cell.year;
+
+              const showDivider1 = week.maxCouple > 0 && week.maxMe > 0;
+              const showDivider2 = (week.maxCouple > 0 || week.maxMe > 0) && week.maxPartner > 0;
+
+              return (
+                <div
+                  key={`${cell.year}-${cell.month}-${cell.dayNum}-${idx}`}
+                  className={`${styles.dayCell} ${!cell.isCurrentMonth ? styles.otherMonthDay : ""}`}
+                  onClick={() => handleCellClick(dateStr)}
+                >
+                  <div className={styles.dayHeader}>
+                    <span
+                      className={`${styles.dayNumber} ${
+                        isToday
+                          ? styles.todayCircle
+                          : (cellDayOfWeek === 0 || isHoliday)
+                            ? styles.sundayNumber
+                            : cellDayOfWeek === 6
+                              ? styles.saturdayNumber
+                              : ""
+                      }`}
+                    >
+                      {cell.dayNum}
+                    </span>
+                  </div>
+                  <div className={styles.eventsContainer}>
+                    {dayAnniversaries.map((a) => (
+                      <div key={a.id} className={styles.eventPill} style={{ background: '#f3e5f5', color: '#9B7CC3', border: '1px solid #9B7CC3', fontWeight: 'bold' }}>
+                        🎂 {a.title}
+                      </div>
+                    ))}
+
+                    {/* 1. 2人の予定グループ */}
+                    {coupleItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                    {Array.from({ length: week.maxCouple - coupleItems.length }).map((_, i) => (
+                      <div key={`place-couple-${i}`} style={{ height: '14px' }} />
+                    ))}
+
+                    {/* 境界線1 */}
+                    {showDivider1 && <div className={styles.groupDivider} />}
+
+                    {/* 2. 自分の予定グループ */}
+                    {meItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                    {Array.from({ length: week.maxMe - meItems.length }).map((_, i) => (
+                      <div key={`place-me-${i}`} style={{ height: '14px' }} />
+                    ))}
+
+                    {/* 境界線2 */}
+                    {showDivider2 && <div className={styles.groupDivider} />}
+
+                    {/* 3. パートナーの予定グループ */}
+                    {partnerItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
+                    {Array.from({ length: week.maxPartner - partnerItems.length }).map((_, i) => (
+                      <div key={`place-partner-${i}`} style={{ height: '14px' }} />
+                    ))}
+                  </div>
+                </div>
+              );
+            });
+          })}
+        </div>
+      ) : (
+        <div ref={timelineScrollRef} className={styles.timelineContainer}>
+          {timelineCellsData.map((dayData) => {
+            const { dayNum, dateStr, dayAnniversaries, combinedItems } = dayData;
+            const dateObj = new Date(currentYear, currentMonth, dayNum);
+            const dayOfWeek = dateObj.getDay();
             const isHoliday = !!holidays[dateStr];
-
             const isToday =
-              today.getDate() === cell.dayNum &&
-              today.getMonth() === cell.month &&
-              today.getFullYear() === cell.year;
+              today.getDate() === dayNum &&
+              today.getMonth() === currentMonth &&
+              today.getFullYear() === currentYear;
 
-            const showDivider1 = week.maxCouple > 0 && week.maxMe > 0;
-            const showDivider2 = (week.maxCouple > 0 || week.maxMe > 0) && week.maxPartner > 0;
+            const dayName = ["日", "月", "火", "水", "木", "金", "土"][dayOfWeek];
 
             return (
               <div
-                key={`${cell.year}-${cell.month}-${cell.dayNum}-${idx}`}
-                className={`${styles.dayCell} ${!cell.isCurrentMonth ? styles.otherMonthDay : ""}`}
+                key={`timeline-${dateStr}`}
+                ref={isToday ? todayCardRef : null}
+                className={`${styles.timelineCard} ${isToday ? styles.timelineTodayCard : ""}`}
                 onClick={() => handleCellClick(dateStr)}
               >
-                <div className={styles.dayHeader}>
-                  <span
-                    className={`${styles.dayNumber} ${
-                      isToday
-                        ? styles.todayCircle
-                        : (cellDayOfWeek === 0 || isHoliday)
-                          ? styles.sundayNumber
-                          : cellDayOfWeek === 6
-                            ? styles.saturdayNumber
-                            : ""
-                    }`}
-                  >
-                    {cell.dayNum}
+                <div className={styles.timelineCardHeader}>
+                  <span className={`${styles.timelineDateNum} ${isToday ? styles.todayCircle : ""}`}>
+                    {dayNum}
                   </span>
+                  <span className={`${styles.timelineDayName} ${
+                    dayOfWeek === 0 || isHoliday
+                      ? styles.sundayNumber
+                      : dayOfWeek === 6
+                        ? styles.saturdayNumber
+                        : ""
+                  }`}>
+                    ({dayName})
+                  </span>
+                  {isToday && <span className={styles.todayLabel}>今日</span>}
                 </div>
-                <div className={styles.eventsContainer}>
+
+                <div className={styles.timelineItemsContainer}>
                   {dayAnniversaries.map((a) => (
-                    <div key={a.id} className={styles.eventPill} style={{ background: '#f3e5f5', color: '#9B7CC3', border: '1px solid #9B7CC3', fontWeight: 'bold' }}>
+                    <div key={a.id} className={styles.timelineAnniversary}>
                       🎂 {a.title}
                     </div>
                   ))}
+                  {combinedItems.length === 0 ? (
+                    <div className={styles.timelineNoItems}>予定なし</div>
+                  ) : (
+                    combinedItems.map((item) => {
+                      const isMe = item.uid === currentUserId;
+                      let itemClass = "";
+                      let icon = null;
 
-                  {/* 1. 2人の予定グループ */}
-                  {coupleItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
-                  {Array.from({ length: week.maxCouple - coupleItems.length }).map((_, i) => (
-                    <div key={`place-couple-${i}`} style={{ height: '14px' }} />
-                  ))}
+                      if (item.isTodo) {
+                        icon = <i className="fa-regular fa-square-check" style={{ marginRight: '4px' }}></i>;
+                        if (item.type === "couple") {
+                          itemClass = styles.timelineTodoCouple;
+                        } else if (isMe) {
+                          itemClass = styles.timelineTodoMe;
+                        } else {
+                          itemClass = styles.timelineTodoPartner;
+                        }
+                      } else {
+                        if (item.type === "couple") {
+                          itemClass = styles.timelineEventCouple;
+                        } else if (isMe) {
+                          itemClass = styles.timelineEventMe;
+                        } else {
+                          itemClass = styles.timelineEventPartner;
+                        }
+                      }
 
-                  {/* 境界線1 */}
-                  {showDivider1 && <div className={styles.groupDivider} />}
+                      // 予定（Event）の前に表示するアバター画像 / イニシャル
+                      let avatarEl = null;
+                      if (!item.isTodo) {
+                        if (item.type === "couple") {
+                          avatarEl = (
+                            <div className={styles.coupleAvatars}>
+                              {myPictureUrl ? (
+                                <img src={myPictureUrl} className={styles.timelineMiniAvatar} alt="me" />
+                              ) : (
+                                <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+                              )}
+                              {partnerPictureUrl ? (
+                                <img src={partnerPictureUrl} className={styles.timelineMiniAvatar} alt="partner" />
+                              ) : (
+                                <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          const isEventMe = item.uid === currentUserId;
+                          if (isEventMe) {
+                            avatarEl = myPictureUrl ? (
+                              <img src={myPictureUrl} className={styles.timelineAvatar} alt="me" />
+                            ) : (
+                              <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+                            );
+                          } else {
+                            avatarEl = partnerPictureUrl ? (
+                              <img src={partnerPictureUrl} className={styles.timelineAvatar} alt="partner" />
+                            ) : (
+                              <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
+                            );
+                          }
+                        }
+                      }
 
-                  {/* 2. 自分の予定グループ */}
-                  {meItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
-                  {Array.from({ length: week.maxMe - meItems.length }).map((_, i) => (
-                    <div key={`place-me-${i}`} style={{ height: '14px' }} />
-                  ))}
+                      return (
+                        <div
+                          key={`${item.isTodo ? 'todo' : 'event'}-${item.id}`}
+                          className={`${styles.timelineItem} ${itemClass} ${item.isTodo && item.isCompleted ? styles.todoCompleted : ""}`}
+                        >
+                          <div className={styles.timelineItemTitle}>
+                            {avatarEl}
+                            {icon}
+                            <span className={styles.timelineItemText}>{item.title}</span>
+                          </div>
+                          {!item.isTodo && !item.isAllDay && item.startTime && (
+                            <span className={styles.timelineItemTime}>{item.startTime}</span>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
 
-                  {/* 境界線2 */}
-                  {showDivider2 && <div className={styles.groupDivider} />}
-
-                  {/* 3. パートナーの予定グループ */}
-                  {partnerItems.map((item) => renderPill(item, dateStr, cellDayOfWeek))}
-                  {Array.from({ length: week.maxPartner - partnerItems.length }).map((_, i) => (
-                    <div key={`place-partner-${i}`} style={{ height: '14px' }} />
-                  ))}
+                <div className={styles.timelineCardFooter}>
+                  <button
+                    className={styles.timelineAddBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCellClick(dateStr);
+                    }}
+                  >
+                    <i className="fa-solid fa-plus"></i> 追加
+                  </button>
                 </div>
               </div>
             );
-          });
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       {isDailyAgendaOpen && (
         <DailyAgendaModal

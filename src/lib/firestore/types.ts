@@ -26,6 +26,7 @@ export interface User {
   clockTheme?: string;
   clockType?: "digital" | "analog";
   goal?: string;
+  calendarMode?: "grid" | "timeline";
   [key: string]: any;
 }
 

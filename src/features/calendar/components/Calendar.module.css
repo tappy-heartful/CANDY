@@ -26,6 +26,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .controlsRow {
@@ -70,6 +72,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .headerBtns {
@@ -641,4 +644,353 @@
 
 .linkOpenButton:active {
   transform: scale(0.95);
+}
+
+/* Mode Toggle Styling */
+.modeToggle {
+  display: flex;
+  background: #fdf2f8;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #fbdce7;
+  gap: 4px;
+}
+
+.toggleBtn {
+  background: none;
+  border: none;
+  color: #F7A8C4;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.toggleBtn:hover {
+  background: rgba(247, 168, 196, 0.1);
+}
+
+.activeToggle {
+  background: #F7A8C4;
+  color: white;
+  box-shadow: 0 2px 6px rgba(247, 168, 196, 0.3);
+}
+
+/* Timeline Horizontal Scroll Scrollbar Styling */
+.timelineContainer {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 4px 16px 4px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.timelineContainer::-webkit-scrollbar {
+  height: 6px;
+}
+.timelineContainer::-webkit-scrollbar-track {
+  background: #fdf2f8;
+  border-radius: 3px;
+}
+.timelineContainer::-webkit-scrollbar-thumb {
+  background: #F7A8C4;
+  border-radius: 3px;
+}
+
+.timelineCard {
+  flex: 0 0 180px;
+  min-height: 250px;
+  background: #fdfdfd;
+  border-radius: 18px;
+  border: 2px solid #e2d9ec;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.timelineCard:hover {
+  border-color: #9B7CC3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.1);
+}
+
+.timelineTodayCard {
+  border-color: #9B7CC3;
+  background: #fbf9ff;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.15);
+}
+
+.timelineCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.timelineDateNum {
+  font-size: 14px;
+  font-weight: 900;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #444;
+  background: #f3eafb;
+}
+
+.timelineDayName {
+  font-size: 12px;
+  font-weight: bold;
+  color: #666;
+}
+
+.todayLabel {
+  background: #9B7CC3;
+  color: white;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-weight: 900;
+}
+
+.timelineItemsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 140px;
+  margin-bottom: 8px;
+  padding-right: 2px;
+}
+
+.timelineItemsContainer::-webkit-scrollbar {
+  width: 4px;
+}
+.timelineItemsContainer::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+.timelineItemsContainer::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.timelineAnniversary {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #f3e5f5;
+  color: #9B7CC3;
+  border: 1px solid #9B7CC3;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.timelineNoItems {
+  font-size: 11px;
+  color: #ccc;
+  text-align: center;
+  padding: 12px 0;
+  font-style: italic;
+}
+
+.timelineItem {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.timelineItemTitle {
+  font-size: 10px;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.timelineItemTime {
+  font-size: 8px;
+  opacity: 0.8;
+  align-self: flex-end;
+}
+
+/* Timeline Custom color left borders */
+.timelineEventMe {
+  background-color: #fdf2f8;
+  color: #d15c85;
+  border-left: 3px solid #F7A8C4;
+}
+
+.timelineEventPartner {
+  background-color: #ebfcf7;
+  color: #166534;
+  border-left: 3px solid #A0E7D2;
+}
+
+.timelineEventCouple {
+  background-color: #f5f0fa;
+  color: #7a5ba0;
+  border-left: 3px solid #9B7CC3;
+}
+
+.timelineTodoMe {
+  background-color: #fdf2f8;
+  color: #d15c85;
+  border-left: 3px dashed #F7A8C4;
+}
+
+.timelineTodoPartner {
+  background-color: #ebfcf7;
+  color: #166534;
+  border-left: 3px dashed #A0E7D2;
+}
+
+.timelineTodoCouple {
+  background-color: #f5f0fa;
+  color: #7a5ba0;
+  border-left: 3px dashed #9B7CC3;
+}
+
+.timelineCardFooter {
+  display: flex;
+  justify-content: center;
+}
+
+.timelineAddBtn {
+  width: 100%;
+  background: #fdf2f8;
+  border: 1px dashed #F7A8C4;
+  color: #F7A8C4;
+  padding: 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.timelineAddBtn:hover {
+  background: #fff0f6;
+  border-style: solid;
+}
+
+.timelineAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.coupleAvatars {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.timelineMiniAvatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-right: -5px;
+  z-index: 1;
+}
+
+.timelineMiniAvatar:last-child {
+  margin-right: 0;
+  z-index: 0;
+}
+
+.timelineTextAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: white;
+  flex-shrink: 0;
+}
+
+.bgMe {
+  background-color: #F7A8C4;
+}
+
+.bgPartner {
+  background-color: #A0E7D2;
+}
+
+.timelineItemText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .calendarHeader {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px 8px;
+  }
+  
+  .monthLabel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .modeToggle {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    width: auto;
+  }
+
+  .toggleBtn {
+    padding: 6px 10px;
+    text-align: center;
+  }
+
+  .headerBtns {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
 }
