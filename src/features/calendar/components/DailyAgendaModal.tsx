@@ -142,11 +142,11 @@ export default function DailyAgendaModal({
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.bottomSheet} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.dragHandleContainer}>
-          <div className={styles.dragHandle}></div>
-        </div>
+        <button className={styles.modalClose} onClick={onClose} aria-label="閉じる">
+          <i className="fa-solid fa-xmark"></i>
+        </button>
 
-        <div className={styles.headerRow}>
+        <div className={styles.headerRow} style={{ paddingRight: '24px' }}>
           <h2 className={styles.dateTitle}>{formattedDate}</h2>
           <div className={styles.headerActions}>
             <img src={myPictureUrl} alt="User" className={styles.userIcon} />
