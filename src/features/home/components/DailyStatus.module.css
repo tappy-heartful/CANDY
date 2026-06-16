@@ -497,13 +497,14 @@
   border: 1px solid #e2e8f0;
   border-radius: 20px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  padding: 4px 8px;
-  display: flex;
-  gap: 4px;
-  z-index: 100;
-  white-space: nowrap;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+  z-index: 500;
   animation: popoverFadeIn 0.15s ease-out;
   transform-origin: left top;
+  width: max-content;
 }
 
 /* ポップオーバーのアニメーション */
@@ -519,13 +520,18 @@
 }
 
 .pickerEmoji {
-  font-size: 16px;
-  padding: 4px;
+  font-size: 20px;
+  padding: 6px;
   cursor: pointer;
   border-radius: 50%;
   transition: background 0.15s ease, transform 0.15s ease;
   border: none;
   background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .pickerEmoji:hover {
