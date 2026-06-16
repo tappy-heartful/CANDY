@@ -491,7 +491,7 @@
 .pickerPopover {
   position: absolute;
   top: 100%;
-  left: 0;
+  right: 0; /* 右寄せにすることでカードの右端からはみ出さないようにする */
   margin-top: 4px;
   background: white;
   border: 1px solid #e2e8f0;
@@ -503,7 +503,7 @@
   gap: 6px;
   z-index: 500;
   animation: popoverFadeIn 0.15s ease-out;
-  transform-origin: left top;
+  transform-origin: right top; /* アニメーションの起点を右上に変更 */
   width: max-content;
 }
 
@@ -537,5 +537,19 @@
 .pickerEmoji:hover {
   background: #f1f5f9;
   transform: scale(1.25);
+}
+
+/* モバイル表示時の見切れ防止設定 */
+@media (max-width: 380px) {
+  .pickerPopover {
+    grid-template-columns: repeat(7, 1fr); /* 7列にして横幅を狭くする */
+    gap: 4px;
+    padding: 8px;
+  }
+  .pickerEmoji {
+    font-size: 18px;
+    width: 28px;
+    height: 28px;
+  }
 }
 

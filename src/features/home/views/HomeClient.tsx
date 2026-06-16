@@ -118,93 +118,99 @@ export default function HomeClient() {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      Promise.all([
-        getWishlist(),
-        getPartnerData(user.uid),
-        getDailyStatuses(todayStr),
-        getEvents(),
-        getGroups("wishlist"),
-        getAnniversaries(user.uid, userData?.partnerUid || null),
-        getTodosForCalendar(),
-        getRecentPhotos(50),
-        getAlbums()
-      ]).then(([wishData, partner, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums]) => {
-        // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
-        const myWishes = wishData
-          .filter(w => w.uid === user.uid)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-          .slice(0, 3);
-        const partnerWishes = wishData
-          .filter(w => w.uid !== user.uid)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-          .slice(0, 3);
-        setRecentWishlist([...myWishes, ...partnerWishes]);
+      getPartnerData(user.uid).then((partner) => {
+        const partnerUid = partner?.id || null;
         setPartnerData(partner);
 
-        const myStatus = statuses.find(s => s.uid === user.uid) || null;
-        const pStatus = statuses.find(s => s.uid !== user.uid) || null;
-        setMyDailyStatus(myStatus);
-        setPartnerDailyStatus(pStatus);
+        return Promise.all([
+          getWishlist(),
+          getDailyStatuses(todayStr),
+          getEvents(),
+          getGroups("wishlist"),
+          getAnniversaries(user.uid, partnerUid),
+          getTodosForCalendar(),
+          getRecentPhotos(50),
+          getAlbums()
+        ]).then(([wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums]) => {
+          // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
+          const myWishes = wishData
+            .filter(w => w.uid === user.uid)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 3);
+          const partnerWishes = wishData
+            .filter(w => w.uid !== user.uid)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 3);
+          setRecentWishlist([...myWishes, ...partnerWishes]);
 
-        const currentHourMin = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+          const myStatus = statuses.find(s => s.uid === user.uid) || null;
+          const pStatus = statuses.find(s => s.uid !== user.uid) || null;
+          setMyDailyStatus(myStatus);
+          setPartnerDailyStatus(pStatus);
 
-        const validEvents = allEvents.filter(e => {
-          if (e.endDate < todayStr) return false;
-          if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
-            if (e.endTime < currentHourMin) return false;
-          }
-          // 相手のみのイベントを除外（自分または2人のみ表示）
-          if (e.type !== "couple" && e.uid !== user.uid) return false;
+          const currentHourMin = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
 
-          return true;
+          const validEvents = allEvents.filter(e => {
+            if (e.endDate < todayStr) return false;
+            if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
+              if (e.endTime < currentHourMin) return false;
+            }
+            // 相手のみのイベントを除外（自分または2人のみ表示）
+            if (e.type !== "couple" && e.uid !== user.uid) return false;
+
+            return true;
+          });
+
+          validEvents.sort((a, b) => {
+            if (a.isAllDay && !b.isAllDay) return 1;
+            if (!a.isAllDay && b.isAllDay) return -1;
+
+            if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+
+            if (a.startTime && b.startTime) {
+              return a.startTime.localeCompare(b.startTime);
+            }
+            return 0;
+          });
+
+          // 予定：最大3件
+          setUpcomingEvents(validEvents.slice(0, 3));
+          setWishlistGroups(groups);
+          
+          // 最近の写真とアルバム名のマッピングを設定
+          // 最新の50枚の中からランダムに最大8枚を抽出
+          const shuffledPics = [...recentPics].sort(() => 0.5 - Math.random()).slice(0, 8);
+          setRecentPhotos(shuffledPics);
+          const mapping: Record<string, string> = {};
+          albums.forEach((alb) => {
+            mapping[alb.id] = alb.name;
+          });
+          setAlbumsMap(mapping);
+          
+          // 記念日のソート（直近のもの3件）
+          const sortedAnniversaries = [...anniversaries].sort((a, b) => {
+            return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
+          });
+          setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
+
+          // TODOのフィルタとソート（日付設定されている未完了TODO3件）
+          const validTodos = allTodos.filter(t => {
+            if (t.isCompleted) return false;
+            if (!t.date) return false;
+            if (t.type !== "couple" && t.uid !== user.uid) return false;
+            return true;
+          });
+
+          validTodos.sort((a, b) => {
+            return a.date!.localeCompare(b.date!);
+          });
+
+          setUpcomingTodos(validTodos.slice(0, 3));
+
+          setLoading(false);
         });
-
-        validEvents.sort((a, b) => {
-          if (a.isAllDay && !b.isAllDay) return 1;
-          if (!a.isAllDay && b.isAllDay) return -1;
-
-          if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-
-          if (a.startTime && b.startTime) {
-            return a.startTime.localeCompare(b.startTime);
-          }
-          return 0;
-        });
-
-        // 予定：最大3件
-        setUpcomingEvents(validEvents.slice(0, 3));
-        setWishlistGroups(groups);
-        
-        // 最近の写真とアルバム名のマッピングを設定
-        // 最新の50枚の中からランダムに最大8枚を抽出
-        const shuffledPics = [...recentPics].sort(() => 0.5 - Math.random()).slice(0, 8);
-        setRecentPhotos(shuffledPics);
-        const mapping: Record<string, string> = {};
-        albums.forEach((alb) => {
-          mapping[alb.id] = alb.name;
-        });
-        setAlbumsMap(mapping);
-        
-        // 記念日のソート（直近のもの3件）
-        const sortedAnniversaries = [...anniversaries].sort((a, b) => {
-          return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
-        });
-        setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
-
-        // TODOのフィルタとソート（日付設定されている未完了TODO3件）
-        const validTodos = allTodos.filter(t => {
-          if (t.isCompleted) return false;
-          if (!t.date) return false;
-          if (t.type !== "couple" && t.uid !== user.uid) return false;
-          return true;
-        });
-
-        validTodos.sort((a, b) => {
-          return a.date!.localeCompare(b.date!);
-        });
-
-        setUpcomingTodos(validTodos.slice(0, 3));
-
+      }).catch((e) => {
+        console.error("Error loading dashboard data:", e);
         setLoading(false);
       });
     }
@@ -612,7 +618,7 @@ export default function HomeClient() {
           albumsMap={albumsMap}
           myNickname={userData?.nickname || userData?.displayName || "自分"}
           partnerNickname={partnerData?.nickname || "パートナー"}
-          partnerId={userData?.partnerUid || null}
+          partnerId={partnerData?.id || null}
           currentUserId={user?.uid || ""}
         />
 
