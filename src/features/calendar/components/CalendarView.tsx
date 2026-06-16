@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarEvent, Anniversary } from "@/src/lib/firestore/types";
+import { CalendarEvent, Anniversary, Todo } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
+import { addTodo, updateTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
+import TodoModal from "./TodoModal";
 import styles from "./Calendar.module.css";
 
 interface CalendarViewProps {
@@ -52,6 +54,8 @@ export default function CalendarView({
   });
   const [activeModalEvent, setActiveModalEvent] = useState<Partial<CalendarEvent> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
+  const [activeTodoDate, setActiveTodoDate] = useState("");
   const [isDailyAgendaOpen, setIsDailyAgendaOpen] = useState(false);
   const [activeDateStr, setActiveDateStr] = useState<string>("");
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -222,6 +226,11 @@ export default function CalendarView({
         const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
         const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
         if (orderA !== orderB) return orderA - orderB;
+
+        // 予定が上、TODOが下になるようにソート
+        if (a.isTodo !== b.isTodo) {
+          return a.isTodo ? 1 : -1;
+        }
 
         const aMulti = a.startDate !== a.endDate ? 1 : 0;
         const bMulti = b.startDate !== b.endDate ? 1 : 0;
@@ -411,6 +420,48 @@ export default function CalendarView({
     } catch (e) {
       console.error("Delete error:", e);
       showDialog("予定の削除に失敗しました");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  const handleToggleTodo = async (id: string, currentStatus: boolean) => {
+    showSpinner();
+    try {
+      await updateTodo(id, { isCompleted: !currentStatus });
+      setTodos((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, isCompleted: !currentStatus } : t))
+      );
+    } catch (e) {
+      console.error("Failed to toggle todo:", e);
+      showDialog("TODOの更新に失敗しました");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  const handleAddNewTodo = (dateStr: string) => {
+    setActiveTodoDate(dateStr);
+    setIsTodoModalOpen(true);
+  };
+
+  const handleSaveTodo = async (todoData: Partial<Todo>) => {
+    showSpinner();
+    try {
+      const docRef = await addTodo(todoData);
+      const newTodoItem = {
+        id: docRef.id,
+        ...todoData,
+        isCompleted: false,
+        steps: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      } as Todo;
+      setTodos((prev) => [newTodoItem, ...prev]);
+      setIsTodoModalOpen(false);
+    } catch (e) {
+      console.error("Failed to save todo:", e);
+      showDialog("TODOの追加に失敗しました");
     } finally {
       hideSpinner();
     }
@@ -630,6 +681,8 @@ export default function CalendarView({
           onClose={() => setIsDailyAgendaOpen(false)}
           onAddEvent={handleAddNewEvent}
           onEditEvent={handleEditEvent}
+          onToggleTodo={handleToggleTodo}
+          onAddTodo={handleAddNewTodo}
         />
       )}
 
@@ -645,6 +698,15 @@ export default function CalendarView({
           }}
           onSave={handleSaveEvent}
           onDelete={handleDeleteEvent}
+        />
+      )}
+
+      {isTodoModalOpen && (
+        <TodoModal
+          date={activeTodoDate}
+          currentUserId={currentUserId}
+          onClose={() => setIsTodoModalOpen(false)}
+          onSave={handleSaveTodo}
         />
       )}
     </div>
