@@ -211,9 +211,9 @@ export default function DailyAgendaModal({
                       </div>
                       <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
                         <div className={styles.eventTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
-                          {item.title}
+                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{icon}</div>
+                          <span>{item.title}</span>
                         </div>
-                        <div className={styles.iconCol}>{icon}</div>
                       </div>
                     </div>
                   );
@@ -276,9 +276,11 @@ export default function DailyAgendaModal({
                       </div>
                       <div className={styles.mainCol} style={{ borderLeftColor: color }}>
                         <div className={styles.eventTitle}>
-                          {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
+                          <span>
+                            {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                          </span>
                         </div>
-                        <div className={styles.iconCol}>{getEventIcon(item)}</div>
                       </div>
                     </div>
                   );
