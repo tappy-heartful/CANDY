@@ -110,8 +110,11 @@ export default function PhotoSlideshow({
             <div
               key={photo.id}
               className={`${styles.slide} ${idx === currentIndex ? styles.slideActive : ""}`}
-              style={{ backgroundImage: `url(${photo.url})` }}
             >
+              <div
+                className={styles.slideImage}
+                style={{ backgroundImage: `url(${photo.url})` }}
+              />
               {idx === currentIndex && (
                 <div className={styles.slideOverlay}>
                   <div className={styles.photoInfo}>
