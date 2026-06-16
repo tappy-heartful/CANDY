@@ -27,7 +27,11 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
   const [currentStatus, setCurrentStatus] = useState<DailyStatus | null>(status);
   const [pickerTarget, setPickerTarget] = useState<"commentReactions" | "partnerCommentReactions" | null>(null);
 
-  const PRESET_EMOJIS = ["😊", "❤️", "🎉", "😭", "👏", "😮", "🫂", "‼️", "✨"];
+  const PRESET_EMOJIS = [
+    "😊", "😆", "🥰", "😍", "👍", "❤️", "🎉", "✨", "👏",
+    "😭", "🥺", "🙏", "🫂", "😮", "🤔", "🔥", "💪", "🤩",
+    "🤣", "😎", "🍺", "🍕", "🎂", "🐾", "💡", "‼️", "💤"
+  ];
 
   useEffect(() => {
     setCurrentStatus(status);

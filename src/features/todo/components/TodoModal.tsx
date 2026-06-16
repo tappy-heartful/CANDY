@@ -149,8 +149,8 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
                 value={dateMode}
                 onChange={(e) => setDateMode(e.target.value as "due" | "on")}
               >
-                <option value="on">に</option>
                 <option value="due">まで</option>
+                <option value="on">に</option>
               </select>
             </div>
           </div>

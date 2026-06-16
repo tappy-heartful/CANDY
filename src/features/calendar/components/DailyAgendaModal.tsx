@@ -16,6 +16,8 @@ interface DailyAgendaModalProps {
   onClose: () => void;
   onAddEvent: (dateStr: string) => void;
   onEditEvent: (eventItem: CalendarEvent) => void;
+  onToggleTodo?: (id: string, currentStatus: boolean) => void;
+  onAddTodo?: (dateStr: string) => void;
 }
 
 export default function DailyAgendaModal({
@@ -29,6 +31,8 @@ export default function DailyAgendaModal({
   onClose,
   onAddEvent,
   onEditEvent,
+  onToggleTodo,
+  onAddTodo,
 }: DailyAgendaModalProps) {
   const router = useRouter();
 
@@ -47,45 +51,72 @@ export default function DailyAgendaModal({
   // 1. Continued from previous days (activeDateStr > startDate)
   // 2. Starts today, sorted by start time
   // 3. All-day events at the end
-  const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => {
-      // 1. 所有者順 (couple -> me -> partner)
-      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
-      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
-      if (orderA !== orderB) return orderA - orderB;
+  // 予定(events)とTODO(todos)を混ぜて、時系列順にソートする
+  const combinedAgendaItems = useMemo(() => {
+    const items = [
+      ...events.map((e) => ({
+        ...e,
+        isTodo: false as const,
+        date: undefined,
+        isCompleted: undefined,
+      })),
+      ...todos.map((t) => ({
+        ...t,
+        isTodo: true as const,
+        isAllDay: undefined,
+        startDate: undefined,
+        endDate: undefined,
+        startTime: undefined,
+        endTime: undefined,
+      })),
+    ];
 
-      const aIsContinued = activeDateStr > a.startDate;
-      const bIsContinued = activeDateStr > b.startDate;
-      
-      // 前日から続きの予定を最優先
-      if (aIsContinued && !bIsContinued) return -1;
-      if (!aIsContinued && bIsContinued) return 1;
-
-      // 終日の予定は一番最後
-      if (a.isAllDay && !b.isAllDay) return 1;
-      if (!a.isAllDay && b.isAllDay) return -1;
-
-      // 時間が指定されている場合は開始時間昇順
-      if (!a.isAllDay && !b.isAllDay && a.startTime && b.startTime) {
-        return a.startTime.localeCompare(b.startTime);
+    return items.sort((a, b) => {
+      // 1. 予定(isTodo: false)を優先、TODO(isTodo: true)を後にする
+      if (a.isTodo !== b.isTodo) {
+        return a.isTodo ? 1 : -1;
       }
-      return 0;
-    });
-  }, [events, activeDateStr, currentUserId]);
 
-  const sortedTodos = useMemo(() => {
-    return [...todos].sort((a, b) => {
-      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
-      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
-      if (orderA !== orderB) return orderA - orderB;
+      // --- 予定同士のソート ---
+      if (!a.isTodo && !b.isTodo) {
+        // 終日イベント(isAllDay: true)を優先
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
 
+        // 両方時間指定がある場合は、開始時間順にソート
+        if (a.startTime && b.startTime) {
+          return a.startTime.localeCompare(b.startTime);
+        }
+        
+        // 片方だけ時間指定がある場合は、時間指定ありを後にする
+        if (a.startTime && !b.startTime) return 1;
+        if (!a.startTime && b.startTime) return -1;
+
+        // その他は所有者順 (couple -> me -> partner)
+        const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+        const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+        if (orderA !== orderB) return orderA - orderB;
+
+        return ((a as any).createdAt || 0) - ((b as any).createdAt || 0);
+      }
+
+      // --- TODO同士のソート ---
+      // 未完了を優先、完了済みを後にする
       const aComp = a.isCompleted ? 1 : 0;
       const bComp = b.isCompleted ? 1 : 0;
       if (aComp !== bComp) return aComp - bComp;
 
-      return a.createdAt - b.createdAt;
+      // 所有者順 (couple -> me -> partner)
+      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
+      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
+      if (orderA !== orderB) return orderA - orderB;
+
+      // 作成順
+      const aTimeVal = (a as any).createdAt || 0;
+      const bTimeVal = (b as any).createdAt || 0;
+      return aTimeVal - bTimeVal;
     });
-  }, [todos, currentUserId]);
+  }, [events, todos, currentUserId]);
 
   const getEventColor = (e: CalendarEvent) => {
     if (e.type === "couple") return "#9B7CC3";
@@ -122,14 +153,14 @@ export default function DailyAgendaModal({
             <button className={styles.addBtn} onClick={() => onAddEvent(activeDateStr)} title="予定を追加">
               <i className="fa-solid fa-calendar-plus"></i>
             </button>
-            <button className={styles.addTodoBtn} onClick={() => router.push(`/todo?action=new&date=${activeDateStr}`)} title="TODOを追加">
+            <button className={styles.addTodoBtn} onClick={() => onAddTodo && onAddTodo(activeDateStr)} title="TODOを追加">
               <i className="fa-solid fa-list-check"></i>
             </button>
           </div>
         </div>
 
         <div className={styles.eventList}>
-          {sortedEvents.length === 0 && todos.length === 0 && anniversaries.length === 0 ? (
+          {combinedAgendaItems.length === 0 && anniversaries.length === 0 ? (
             <div className={styles.emptyState}>予定・TODOはありません</div>
           ) : (
             <>
@@ -144,149 +175,114 @@ export default function DailyAgendaModal({
                   </div>
                 </div>
               ))}
-              {sortedEvents.map((e, idx) => {
-                const getGroup = (itm: any) => {
-                  if (itm.type === "couple") return 0;
-                  if (itm.uid === currentUserId) return 1;
-                  return 2;
-                };
-                const currentGroup = getGroup(e);
-                const prevItem = idx > 0 ? sortedEvents[idx - 1] : null;
-                const prevGroup = prevItem ? getGroup(prevItem) : null;
-                const showDivider = prevGroup !== null && prevGroup !== currentGroup;
 
-                const color = getEventColor(e);
-                const eventElement = (
-                  <div className={styles.eventRow} onClick={() => onEditEvent(e)} style={{ alignItems: 'stretch' }}>
-                    <div className={styles.timeCol} style={{ alignItems: 'center' }}>
-                      {(() => {
-                        if (e.startDate !== e.endDate) {
-                          const isStart = activeDateStr === e.startDate;
-                          const isEnd = activeDateStr === e.endDate;
-                          const isMiddle = activeDateStr > e.startDate && activeDateStr < e.endDate;
-
-                          const wavyLineStyle: React.CSSProperties = {
-                            width: '6px',
-                            flex: 1,
-                            backgroundColor: color,
-                            WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                            WebkitMaskRepeat: "repeat-y",
-                            WebkitMaskSize: "6px 12px",
-                            maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                            maskRepeat: "repeat-y",
-                            maskSize: "6px 12px",
-                          };
-
-                          if (isStart) {
-                            return (
-                              <>
-                                <span className={styles.timeText} style={{ marginTop: '8px' }}>{e.isAllDay ? "終日" : e.startTime}</span>
-                                <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
-                              </>
-                            );
-                          }
-                          if (isMiddle) {
-                            return (
-                              <div style={{ ...wavyLineStyle }}></div>
-                            );
-                          }
-                          if (isEnd) {
-                            return (
-                              <>
-                                <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
-                                <span className={styles.timeText} style={{ marginBottom: '8px' }}>{e.isAllDay ? "終日" : e.endTime}</span>
-                              </>
-                            );
-                          }
-                        }
-                        
-                        // 単日イベントの場合
-                        return e.isAllDay ? (
-                          <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
-                            <span className={styles.timeText}>{e.startTime}</span>
-                            <span className={styles.timeTextSub}>{e.endTime}</span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <div className={styles.mainCol} style={{ borderLeftColor: color }}>
-                      <div className={styles.eventTitle}>
-                        {e.title} {e.note && <i className="fa-regular fa-clock"></i>}
-                      </div>
-                      <div className={styles.iconCol}>{getEventIcon(e)}</div>
-                    </div>
-                  </div>
-                );
-
-                return (
-                  <React.Fragment key={e.id}>
-                    {showDivider && <div className={styles.groupDivider} />}
-                    {eventElement}
-                  </React.Fragment>
-                );
-              })}
-            </>
-          )}
-
-          {todos.length > 0 && (
-            <>
-              {sortedEvents.length > 0 && <hr style={{ borderTop: '1px dashed #eee', borderBottom: 'none', margin: '16px 0' }} />}
-              <div style={{ fontSize: '14px', fontWeight: 900, color: '#444', marginBottom: '8px' }}>
-                <i className="fa-solid fa-list-check" style={{ color: '#9B7CC3', marginRight: '6px' }}></i>
-                TODO
-              </div>
-              {sortedTodos.map((t, idx) => {
-                const getGroup = (itm: any) => {
-                  if (itm.type === "couple") return 0;
-                  if (itm.uid === currentUserId) return 1;
-                  return 2;
-                };
-                const currentGroup = getGroup(t);
-                const prevItem = idx > 0 ? sortedTodos[idx - 1] : null;
-                const prevGroup = prevItem ? getGroup(prevItem) : null;
-                const showDivider = prevGroup !== null && prevGroup !== currentGroup;
-
-                const color = t.type === "couple" ? "#9B7CC3" : (t.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
-                
-                const icon = t.type === "couple" ? (
+              {combinedAgendaItems.map((item) => {
+                const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+                const icon = item.type === "couple" ? (
                   <>
                     <img src={myPictureUrl} alt="Me" className={styles.eventUserIcon} />
                     <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} style={{ marginLeft: "-12px" }} />
                   </>
-                ) : (t.uid === currentUserId ? (
+                ) : (item.uid === currentUserId ? (
                   <img src={myPictureUrl} alt="Me" className={styles.eventUserIcon} />
                 ) : (
                   <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} />
                 ));
 
-                const todoElement = (
-                  <div className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${t.id}`)}>
-                    <div className={styles.timeCol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className={styles.timeText} style={{ fontSize: '20px' }}>
-                        {t.isCompleted ? (
-                          <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
-                        ) : (
-                          <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
-                        )}
-                      </span>
-                    </div>
-                    <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: t.isCompleted ? 0.4 : 1 }}>
-                      <div className={styles.eventTitle} style={{ textDecoration: t.isCompleted ? 'line-through' : 'none' }}>
-                        {t.title}
+                if (item.isTodo) {
+                  // TODO のレンダリング
+                  return (
+                    <div key={`todo-${item.id}`} className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${item.id}`)} style={{ cursor: 'pointer' }}>
+                      <div 
+                        className={styles.timeCol} 
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleTodo && onToggleTodo(item.id, !!item.isCompleted);
+                        }}
+                      >
+                        <span className={styles.timeText} style={{ fontSize: '20px' }}>
+                          {item.isCompleted ? (
+                            <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
+                          ) : (
+                            <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
+                          )}
+                        </span>
                       </div>
-                      <div className={styles.iconCol}>{icon}</div>
+                      <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
+                        <div className={styles.eventTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+                          {item.title}
+                        </div>
+                        <div className={styles.iconCol}>{icon}</div>
+                      </div>
                     </div>
-                  </div>
-                );
+                  );
+                } else {
+                  // 予定(イベント)のレンダリング
+                  return (
+                    <div key={`event-${item.id}`} className={styles.eventRow} onClick={() => onEditEvent(item)} style={{ alignItems: 'stretch', cursor: 'pointer' }}>
+                      <div className={styles.timeCol} style={{ alignItems: 'center' }}>
+                        {(() => {
+                          if (item.startDate !== item.endDate) {
+                            const isStart = activeDateStr === item.startDate;
+                            const isEnd = activeDateStr === item.endDate;
+                            const isMiddle = activeDateStr > item.startDate && activeDateStr < item.endDate;
 
-                return (
-                  <React.Fragment key={t.id}>
-                    {showDivider && <div className={styles.groupDivider} />}
-                    {todoElement}
-                  </React.Fragment>
-                );
+                            const wavyLineStyle: React.CSSProperties = {
+                              width: '6px',
+                              flex: 1,
+                              backgroundColor: color,
+                              WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                              WebkitMaskRepeat: "repeat-y",
+                              WebkitMaskSize: "6px 12px",
+                              maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                              maskRepeat: "repeat-y",
+                              maskSize: "6px 12px",
+                            };
+
+                            if (isStart) {
+                              return (
+                                <>
+                                  <span className={styles.timeText} style={{ marginTop: '8px' }}>{item.isAllDay ? "終日" : item.startTime}</span>
+                                  <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
+                                </>
+                              );
+                            }
+                            if (isMiddle) {
+                              return (
+                                <div style={{ ...wavyLineStyle }}></div>
+                              );
+                            }
+                            if (isEnd) {
+                              return (
+                                <>
+                                  <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
+                                  <span className={styles.timeText} style={{ marginBottom: '8px' }}>{item.isAllDay ? "終日" : item.endTime}</span>
+                                </>
+                              );
+                            }
+                          }
+                          
+                          // 単日イベントの場合
+                          return item.isAllDay ? (
+                            <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
+                              <span className={styles.timeText}>{item.startTime}</span>
+                              <span className={styles.timeTextSub}>{item.endTime}</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className={styles.mainCol} style={{ borderLeftColor: color }}>
+                        <div className={styles.eventTitle}>
+                          {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                        </div>
+                        <div className={styles.iconCol}>{getEventIcon(item)}</div>
+                      </div>
+                    </div>
+                  );
+                }
               })}
             </>
           )}
