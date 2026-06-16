@@ -8,6 +8,8 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { Anniversary } from "@/src/lib/firestore/types";
 import { showSpinner, hideSpinner } from "@/src/lib/functions";
 
+import { getPartnerData } from "@/src/features/user/api/user-client-service";
+
 export default function AnniversariesPage() {
   const { user, userData } = useAuth();
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
@@ -18,7 +20,8 @@ export default function AnniversariesPage() {
       if (user) {
         showSpinner();
         try {
-          const partnerUid = userData?.partnerUid || null;
+          const partner = await getPartnerData(user.uid);
+          const partnerUid = partner?.id || null;
           const annData = await fetchAnniversaries(user.uid, partnerUid);
           setAnniversaries(annData);
         } catch (e) {
