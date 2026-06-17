@@ -618,3 +618,45 @@
 .highlighted {
   animation: highlightFlash 2.5s ease-out;
 }
+
+.removeDateBtn {
+  background: none;
+  border: none;
+  color: #F7A8C4;
+  cursor: pointer;
+  padding: 0 8px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+}
+
+.removeDateBtn:active {
+  transform: scale(0.9);
+}
+
+.addDateBtn {
+  background: #fdf2f8;
+  border: 1px dashed #F7A8C4;
+  color: #F7A8C4;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.addDateBtn:hover {
+  background: #fff0f6;
+  border-style: solid;
+}
+
+.addDateBtn:active {
+  transform: scale(0.95);
+}

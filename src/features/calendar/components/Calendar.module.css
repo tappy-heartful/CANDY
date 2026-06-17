@@ -751,6 +751,11 @@
   background: #f3eafb;
 }
 
+.timelineTodayCircle {
+  background: #9B7CC3;
+  color: white !important;
+}
+
 .timelineDayName {
   font-size: 12px;
   font-weight: bold;
@@ -771,8 +776,7 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
-  overflow-y: auto;
-  max-height: 140px;
+  overflow: visible;
   margin-bottom: 8px;
   padding-right: 2px;
 }
@@ -806,6 +810,16 @@
   text-align: center;
   padding: 12px 0;
   font-style: italic;
+}
+
+.timelineGroupDivider {
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  margin: 6px 0;
+  width: 100%;
+}
+
+.timelinePlaceholder {
+  height: 26px;
 }
 
 .timelineItem {
@@ -993,4 +1007,39 @@
     justify-content: flex-end;
     width: 100%;
   }
+}
+
+/* Month Change Slide Animation */
+.slideInLeft {
+  animation: slideInLeftAnim 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slideInRight {
+  animation: slideInRightAnim 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInLeftAnim {
+  from {
+    transform: translateX(20px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRightAnim {
+  from {
+    transform: translateX(-20px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.swipingTransition {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out;
 }

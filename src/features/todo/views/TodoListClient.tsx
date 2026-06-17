@@ -79,7 +79,14 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     }
   };
 
-  const handleSaveTodo = async (data: { title: string; groupId: string; type: "personal" | "couple"; date: string; dateMode: "due" | "on" }) => {
+  const handleSaveTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+  }) => {
     if (!data.title || !user) return;
     setIsSubmitting(true);
     showSpinner();
@@ -88,43 +95,48 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
-          date: data.date,
-          dateMode: data.dateMode,
+          date: data.date || "",
+          dateMode: data.dateMode || "due",
         });
         setTodos((prev) =>
           prev.map((t) =>
             t.id === editingTodo.id
-              ? { ...t, title: data.title, groupId: data.groupId, date: data.date, dateMode: data.dateMode }
+              ? { ...t, title: data.title, groupId: data.groupId, date: data.date || "", dateMode: data.dateMode || "due" }
               : t
           )
         );
       } else {
-        const docRef = await addTodo({
-          title: data.title,
-          type: data.type,
-          uid: user.uid,
-          groupId: data.groupId,
-          dateMode: data.dateMode,
-          date: data.date,
-        });
-        const newTodoItem: Todo = {
-          id: docRef.id,
-          title: data.title,
-          type: data.type,
-          uid: user.uid,
-          groupId: data.groupId,
-          dateMode: data.dateMode,
-          date: data.date,
-          isCompleted: false,
-          steps: [],
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setTodos((prev) => [newTodoItem, ...prev]);
+        const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+        const addedTodos: Todo[] = [];
+        for (const d of dates) {
+          const docRef = await addTodo({
+            title: data.title,
+            type: data.type,
+            uid: user.uid,
+            groupId: data.groupId,
+            dateMode: d.dateMode,
+            date: d.date,
+          });
+          addedTodos.push({
+            id: docRef.id,
+            title: data.title,
+            type: data.type,
+            uid: user.uid,
+            groupId: data.groupId,
+            dateMode: d.dateMode,
+            date: d.date,
+            isCompleted: false,
+            steps: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          });
+        }
+        setTodos((prev) => [...addedTodos, ...prev]);
       }
       setIsModalOpen(false);
       setEditingTodo(null);
     } catch (e) {
+      console.error("Failed to save todo:", e);
       showDialog("保存に失敗しました");
     } finally {
       setIsSubmitting(false);
