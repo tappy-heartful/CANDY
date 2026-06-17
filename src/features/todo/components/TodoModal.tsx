@@ -12,19 +12,25 @@ interface TodoModalProps {
     title: string;
     groupId: string;
     type: "personal" | "couple";
-    date: string;
-    dateMode: "due" | "on";
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
   }) => Promise<void>;
   isSubmitting: boolean;
   onAddGroup?: () => void;
+}
+
+interface DateSetting {
+  id: string;
+  date: string;
+  dateMode: "due" | "on";
 }
 
 export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
-  const [date, setDate] = useState("");
-  const [dateMode, setDateMode] = useState<"due" | "on">("due");
+  const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -32,18 +38,37 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setTitle(todo.title);
         setGroupId(todo.groupId || "");
         setType(todo.type);
-        setDate(todo.date || "");
-        setDateMode(todo.dateMode || "due");
+        setDateSettings([
+          { id: Math.random().toString(), date: todo.date || "", dateMode: todo.dateMode || "due" }
+        ]);
       } else {
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
         setType("personal");
-        setDate(defaultDate || "");
-        setDateMode("due");
+        setDateSettings([
+          { id: Math.random().toString(), date: defaultDate || "", dateMode: "due" }
+        ]);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, todo, defaultDate]);
+
+  const handleAddDateSetting = () => {
+    setDateSettings((prev) => [
+      ...prev,
+      { id: Math.random().toString(), date: "", dateMode: "due" }
+    ]);
+  };
+
+  const handleRemoveDateSetting = (id: string) => {
+    setDateSettings((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateDateSetting = (id: string, field: "date" | "dateMode", value: any) => {
+    setDateSettings((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
 
   const prevGroupsLength = useRef(groups.length);
   useEffect(() => {
@@ -63,7 +88,20 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSave({ title, groupId, type, date, dateMode });
+    if (todo) {
+      const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
+      onSave({ title, groupId, type, date: firstSetting.date, dateMode: firstSetting.dateMode as "due" | "on" });
+    } else {
+      onSave({
+        title,
+        groupId,
+        type,
+        dates: dateSettings.map((s) => ({
+          date: s.date,
+          dateMode: s.dateMode as "due" | "on"
+        }))
+      });
+    }
   };
 
   return (
@@ -137,22 +175,45 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
 
           <div className={styles.formGroup}>
             <label className={styles.inputLabel}>日付 (オプション)</label>
-            <div className={styles.dateRowModal}>
-              <input
-                type="date"
-                className={styles.modalInputDate}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-              <select
-                className={styles.modalSelectMode}
-                value={dateMode}
-                onChange={(e) => setDateMode(e.target.value as "due" | "on")}
-              >
-                <option value="due">まで</option>
-                <option value="on">に</option>
-              </select>
-            </div>
+            {dateSettings.map((setting) => (
+              <div key={setting.id} className={styles.dateRowModal} style={{ marginBottom: '8px' }}>
+                <input
+                  type="date"
+                  className={styles.modalInputDate}
+                  value={setting.date}
+                  onChange={(e) => handleUpdateDateSetting(setting.id, "date", e.target.value)}
+                />
+                <select
+                  className={styles.modalSelectMode}
+                  value={setting.dateMode}
+                  onChange={(e) => handleUpdateDateSetting(setting.id, "dateMode", e.target.value as "due" | "on")}
+                >
+                  <option value="due">まで</option>
+                  <option value="on">に</option>
+                </select>
+                {todo === null && dateSettings.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.removeDateBtn}
+                    onClick={() => handleRemoveDateSetting(setting.id)}
+                    title="削除"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </button>
+                )}
+              </div>
+            ))}
+            {todo === null && (
+              <div style={{ display: 'flex' }}>
+                <button
+                  type="button"
+                  className={styles.addDateBtn}
+                  onClick={handleAddDateSetting}
+                >
+                  <i className="fa-solid fa-plus"></i> 日付を追加
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

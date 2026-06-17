@@ -12,7 +12,13 @@ interface TodoModalProps {
   myNickname?: string;
   partnerNickname?: string;
   onClose: () => void;
-  onSave: (todoData: Partial<Todo>) => Promise<void>;
+  onSave: (todosData: Partial<Todo>[]) => Promise<void>;
+}
+
+interface DateSetting {
+  id: string;
+  date: string;
+  dateMode: "due" | "on";
 }
 
 export default function TodoModal({
@@ -23,15 +29,33 @@ export default function TodoModal({
 }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"personal" | "couple">("couple");
-  const [dateMode, setDateMode] = useState<"due" | "on">("due");
   const [groupId, setGroupId] = useState("");
   const [groups, setGroups] = useState<Group[]>([]);
-  const [todoDate, setTodoDate] = useState(date);
+  const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setTodoDate(date);
+    setDateSettings([
+      { id: Math.random().toString(), date: date || "", dateMode: "due" }
+    ]);
   }, [date]);
+
+  const handleAddDateSetting = () => {
+    setDateSettings((prev) => [
+      ...prev,
+      { id: Math.random().toString(), date: "", dateMode: "due" }
+    ]);
+  };
+
+  const handleRemoveDateSetting = (id: string) => {
+    setDateSettings((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateDateSetting = (id: string, field: "date" | "dateMode", value: any) => {
+    setDateSettings((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
 
   useEffect(() => {
     getGroups("todo")
@@ -78,15 +102,15 @@ export default function TodoModal({
 
     setIsSubmitting(true);
     try {
-      const todoData: Partial<Todo> = {
+      const todosData: Partial<Todo>[] = dateSettings.map((setting) => ({
         title: title.trim(),
         type,
-        dateMode,
+        dateMode: setting.dateMode,
         groupId,
-        date: todoDate,
+        date: setting.date,
         uid: currentUserId,
-      };
-      await onSave(todoData);
+      }));
+      await onSave(todosData);
     } catch (e) {
       console.error("Failed to save todo:", e);
     } finally {
@@ -163,21 +187,42 @@ export default function TodoModal({
 
           <div className={styles.formGroup}>
             <label className={styles.inputLabel}>日付 (オプション)</label>
-            <div className={styles.dateRowModal}>
-              <input
-                type="date"
-                className={styles.modalInputDate}
-                value={todoDate}
-                onChange={(e) => setTodoDate(e.target.value)}
-              />
-              <select
-                className={styles.modalSelectMode}
-                value={dateMode}
-                onChange={(e) => setDateMode(e.target.value as "due" | "on")}
+            {dateSettings.map((setting) => (
+              <div key={setting.id} className={styles.dateRowModal} style={{ marginBottom: '8px' }}>
+                <input
+                  type="date"
+                  className={styles.modalInputDate}
+                  value={setting.date}
+                  onChange={(e) => handleUpdateDateSetting(setting.id, "date", e.target.value)}
+                />
+                <select
+                  className={styles.modalSelectMode}
+                  value={setting.dateMode}
+                  onChange={(e) => handleUpdateDateSetting(setting.id, "dateMode", e.target.value as "due" | "on")}
+                >
+                  <option value="due">まで</option>
+                  <option value="on">に</option>
+                </select>
+                {dateSettings.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.removeDateBtn}
+                    onClick={() => handleRemoveDateSetting(setting.id)}
+                    title="削除"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </button>
+                )}
+              </div>
+            ))}
+            <div style={{ display: 'flex' }}>
+              <button
+                type="button"
+                className={styles.addDateBtn}
+                onClick={handleAddDateSetting}
               >
-                <option value="due">まで</option>
-                <option value="on">に</option>
-              </select>
+                <i className="fa-solid fa-plus"></i> 日付を追加
+              </button>
             </div>
           </div>
 

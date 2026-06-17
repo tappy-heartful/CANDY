@@ -657,19 +657,22 @@ export default function CalendarView({
     setIsTodoModalOpen(true);
   };
 
-  const handleSaveTodo = async (todoData: Partial<Todo>) => {
+  const handleSaveTodo = async (todosData: Partial<Todo>[]) => {
     showSpinner();
     try {
-      const docRef = await addTodo(todoData);
-      const newTodoItem = {
-        id: docRef.id,
-        ...todoData,
-        isCompleted: false,
-        steps: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      } as Todo;
-      setTodos((prev) => [newTodoItem, ...prev]);
+      const addedTodos: Todo[] = [];
+      for (const todoData of todosData) {
+        const docRef = await addTodo(todoData);
+        addedTodos.push({
+          id: docRef.id,
+          ...todoData,
+          isCompleted: false,
+          steps: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } as Todo);
+      }
+      setTodos((prev) => [...addedTodos, ...prev]);
       setIsTodoModalOpen(false);
     } catch (e) {
       console.error("Failed to save todo:", e);
