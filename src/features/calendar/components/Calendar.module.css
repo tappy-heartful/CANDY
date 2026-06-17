@@ -751,6 +751,11 @@
   background: #f3eafb;
 }
 
+.timelineTodayCircle {
+  background: #9B7CC3;
+  color: white !important;
+}
+
 .timelineDayName {
   font-size: 12px;
   font-weight: bold;
@@ -771,8 +776,7 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
-  overflow-y: auto;
-  max-height: 140px;
+  overflow: visible;
   margin-bottom: 8px;
   padding-right: 2px;
 }
@@ -806,6 +810,16 @@
   text-align: center;
   padding: 12px 0;
   font-style: italic;
+}
+
+.timelineGroupDivider {
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  margin: 6px 0;
+  width: 100%;
+}
+
+.timelinePlaceholder {
+  height: 26px;
 }
 
 .timelineItem {

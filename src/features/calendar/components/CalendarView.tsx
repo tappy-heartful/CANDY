@@ -269,9 +269,93 @@ export default function CalendarView({
     return cells;
   }, [currentYear, currentMonth]);
 
+  const renderTimelineItem = (item: any) => {
+    const isMe = item.uid === currentUserId;
+    let itemClass = "";
+    let icon = null;
+
+    if (item.isTodo) {
+      icon = <i className="fa-regular fa-square-check" style={{ marginRight: '4px' }}></i>;
+      if (item.type === "couple") {
+        itemClass = styles.timelineTodoCouple;
+      } else if (isMe) {
+        itemClass = styles.timelineTodoMe;
+      } else {
+        itemClass = styles.timelineTodoPartner;
+      }
+    } else {
+      if (item.type === "couple") {
+        itemClass = styles.timelineEventCouple;
+      } else if (isMe) {
+        itemClass = styles.timelineEventMe;
+      } else {
+        itemClass = styles.timelineEventPartner;
+      }
+    }
+
+    // 予定（Event）の前に表示するアバター画像 / イニシャル
+    let avatarEl = null;
+    if (!item.isTodo) {
+      if (item.type === "couple") {
+        avatarEl = (
+          <div className={styles.coupleAvatars}>
+            {myPictureUrl ? (
+              <img src={myPictureUrl} className={styles.timelineMiniAvatar} alt="me" />
+            ) : (
+              <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+            )}
+            {partnerPictureUrl ? (
+              <img src={partnerPictureUrl} className={styles.timelineMiniAvatar} alt="partner" />
+            ) : (
+              <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
+            )}
+          </div>
+        );
+      } else {
+        const isEventMe = item.uid === currentUserId;
+        if (isEventMe) {
+          avatarEl = myPictureUrl ? (
+            <img src={myPictureUrl} className={styles.timelineAvatar} alt="me" />
+          ) : (
+            <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+          );
+        } else {
+          avatarEl = partnerPictureUrl ? (
+            <img src={partnerPictureUrl} className={styles.timelineAvatar} alt="partner" />
+          ) : (
+            <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
+          );
+        }
+      }
+    }
+
+    return (
+      <div
+        key={`${item.isTodo ? 'todo' : 'event'}-${item.id}`}
+        className={`${styles.timelineItem} ${itemClass} ${item.isTodo && item.isCompleted ? styles.todoCompleted : ""}`}
+      >
+        <div className={styles.timelineItemTitle}>
+          {avatarEl}
+          {icon}
+          <span className={styles.timelineItemText}>{item.title}</span>
+        </div>
+        {!item.isTodo && !item.isAllDay && item.startTime && (
+          <span className={styles.timelineItemTime}>
+            {item.startTime}
+            {item.endTime ? `〜${item.endTime}` : ""}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const timelineCellsData = useMemo(() => {
     const cells = [];
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+
+    let maxCouple = 0;
+    let maxMe = 0;
+    let maxPartner = 0;
 
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${currentYear}-${padZero(currentMonth + 1)}-${padZero(i)}`;
@@ -315,14 +399,25 @@ export default function CalendarView({
         return a.title.localeCompare(b.title);
       });
 
+      const coupleItems = combinedItems.filter(item => item.type === "couple");
+      const meItems = combinedItems.filter(item => item.uid === currentUserId && item.type !== "couple");
+      const partnerItems = combinedItems.filter(item => item.uid !== currentUserId && item.type !== "couple");
+
+      maxCouple = Math.max(maxCouple, coupleItems.length);
+      maxMe = Math.max(maxMe, meItems.length);
+      maxPartner = Math.max(maxPartner, partnerItems.length);
+
       cells.push({
         dayNum: i,
         dateStr,
         dayAnniversaries,
-        combinedItems,
+        coupleItems,
+        meItems,
+        partnerItems,
+        hasAnyItems: combinedItems.length > 0 || dayAnniversaries.length > 0
       });
     }
-    return cells;
+    return { cells, maxCouple, maxMe, maxPartner };
   }, [currentYear, currentMonth, visibleEvents, visibleTodos, anniversaries, currentUserId]);
 
   const processedWeeks = useMemo(() => {
@@ -865,8 +960,8 @@ export default function CalendarView({
                 : ""
           }`}
         >
-          {timelineCellsData.map((dayData) => {
-            const { dayNum, dateStr, dayAnniversaries, combinedItems } = dayData;
+          {timelineCellsData.cells.map((dayData) => {
+            const { dayNum, dateStr, dayAnniversaries, coupleItems, meItems, partnerItems, hasAnyItems } = dayData;
             const dateObj = new Date(currentYear, currentMonth, dayNum);
             const dayOfWeek = dateObj.getDay();
             const isHoliday = !!holidays[dateStr];
@@ -885,7 +980,7 @@ export default function CalendarView({
                 onClick={() => handleCellClick(dateStr)}
               >
                 <div className={styles.timelineCardHeader}>
-                  <span className={`${styles.timelineDateNum} ${isToday ? styles.todayCircle : ""}`}>
+                  <span className={`${styles.timelineDateNum} ${isToday ? styles.timelineTodayCircle : ""}`}>
                     {dayNum}
                   </span>
                   <span className={`${styles.timelineDayName} ${
@@ -906,85 +1001,34 @@ export default function CalendarView({
                       🎂 {a.title}
                     </div>
                   ))}
-                  {combinedItems.length === 0 ? (
+                  {!hasAnyItems ? (
                     <div className={styles.timelineNoItems}>予定なし</div>
                   ) : (
-                    combinedItems.map((item) => {
-                      const isMe = item.uid === currentUserId;
-                      let itemClass = "";
-                      let icon = null;
+                    <>
+                      {/* 1. 2人の予定グループ */}
+                      {coupleItems.map((item) => renderTimelineItem(item))}
+                      {Array.from({ length: timelineCellsData.maxCouple - coupleItems.length }).map((_, i) => (
+                        <div key={`timeline-place-couple-${i}`} className={styles.timelinePlaceholder} />
+                      ))}
 
-                      if (item.isTodo) {
-                        icon = <i className="fa-regular fa-square-check" style={{ marginRight: '4px' }}></i>;
-                        if (item.type === "couple") {
-                          itemClass = styles.timelineTodoCouple;
-                        } else if (isMe) {
-                          itemClass = styles.timelineTodoMe;
-                        } else {
-                          itemClass = styles.timelineTodoPartner;
-                        }
-                      } else {
-                        if (item.type === "couple") {
-                          itemClass = styles.timelineEventCouple;
-                        } else if (isMe) {
-                          itemClass = styles.timelineEventMe;
-                        } else {
-                          itemClass = styles.timelineEventPartner;
-                        }
-                      }
+                      {/* 境界線1 */}
+                      <div className={styles.timelineGroupDivider} />
 
-                      // 予定（Event）の前に表示するアバター画像 / イニシャル
-                      let avatarEl = null;
-                      if (!item.isTodo) {
-                        if (item.type === "couple") {
-                          avatarEl = (
-                            <div className={styles.coupleAvatars}>
-                              {myPictureUrl ? (
-                                <img src={myPictureUrl} className={styles.timelineMiniAvatar} alt="me" />
-                              ) : (
-                                <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
-                              )}
-                              {partnerPictureUrl ? (
-                                <img src={partnerPictureUrl} className={styles.timelineMiniAvatar} alt="partner" />
-                              ) : (
-                                <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
-                              )}
-                            </div>
-                          );
-                        } else {
-                          const isEventMe = item.uid === currentUserId;
-                          if (isEventMe) {
-                            avatarEl = myPictureUrl ? (
-                              <img src={myPictureUrl} className={styles.timelineAvatar} alt="me" />
-                            ) : (
-                              <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
-                            );
-                          } else {
-                            avatarEl = partnerPictureUrl ? (
-                              <img src={partnerPictureUrl} className={styles.timelineAvatar} alt="partner" />
-                            ) : (
-                              <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
-                            );
-                          }
-                        }
-                      }
+                      {/* 2. 自分の予定グループ */}
+                      {meItems.map((item) => renderTimelineItem(item))}
+                      {Array.from({ length: timelineCellsData.maxMe - meItems.length }).map((_, i) => (
+                        <div key={`timeline-place-me-${i}`} className={styles.timelinePlaceholder} />
+                      ))}
 
-                      return (
-                        <div
-                          key={`${item.isTodo ? 'todo' : 'event'}-${item.id}`}
-                          className={`${styles.timelineItem} ${itemClass} ${item.isTodo && item.isCompleted ? styles.todoCompleted : ""}`}
-                        >
-                          <div className={styles.timelineItemTitle}>
-                            {avatarEl}
-                            {icon}
-                            <span className={styles.timelineItemText}>{item.title}</span>
-                          </div>
-                          {!item.isTodo && !item.isAllDay && item.startTime && (
-                            <span className={styles.timelineItemTime}>{item.startTime}</span>
-                          )}
-                        </div>
-                      );
-                    })
+                      {/* 境界線2 */}
+                      <div className={styles.timelineGroupDivider} />
+
+                      {/* 3. パートナーの予定グループ */}
+                      {partnerItems.map((item) => renderTimelineItem(item))}
+                      {Array.from({ length: timelineCellsData.maxPartner - partnerItems.length }).map((_, i) => (
+                        <div key={`timeline-place-partner-${i}`} className={styles.timelinePlaceholder} />
+                      ))}
+                    </>
                   )}
                 </div>
 
