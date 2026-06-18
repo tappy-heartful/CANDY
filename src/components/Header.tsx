@@ -83,10 +83,7 @@ export default function Header() {
 
   const handleRefresh = () => {
     showSpinner();
-    router.refresh();
-    setTimeout(() => {
-      hideSpinner();
-    }, 800);
+    window.location.reload();
   };
 
   return (
