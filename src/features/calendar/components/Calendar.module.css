@@ -1029,8 +1029,8 @@
 
 @keyframes slideInLeftAnim {
   from {
-    transform: translateX(20px);
-    opacity: 0.6;
+    transform: translateX(100%);
+    opacity: 0;
   }
   to {
     transform: translateX(0);
@@ -1040,8 +1040,8 @@
 
 @keyframes slideInRightAnim {
   from {
-    transform: translateX(-20px);
-    opacity: 0.6;
+    transform: translateX(-100%);
+    opacity: 0;
   }
   to {
     transform: translateX(0);
@@ -1051,4 +1051,9 @@
 
 .swipingTransition {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out;
+}
+
+.gridWrapper {
+  overflow: hidden;
+  width: 100%;
 }

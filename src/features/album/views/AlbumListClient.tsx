@@ -18,15 +18,20 @@ import {
 } from "../api/album-client-service";
 import styles from "./Album.module.css";
 
-// アルバム個別カードコンポーネント（件数とカバー画像を非同期で取得）
+// アルバム個別カードコンポーネント（件数とカバー画像を非同期で取得・ズームスライドショー表示）
 function AlbumCard({ album }: { album: Album }) {
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [slideshowPhotos, setSlideshowPhotos] = useState<Photo[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   useEffect(() => {
     getPhotos(album.id)
       .then((data) => {
-        setPhotos(data);
+        setTotalCount(data.length);
+        // ランダムにシャッフルし、最大8枚を抽出
+        const shuffled = [...data].sort(() => 0.5 - Math.random()).slice(0, 8);
+        setSlideshowPhotos(shuffled);
         setLoading(false);
       })
       .catch((e) => {
@@ -35,7 +40,16 @@ function AlbumCard({ album }: { album: Album }) {
       });
   }, [album.id]);
 
-  const coverUrl = photos.length > 0 ? photos[0].url : null;
+  // 写真が複数枚ある場合、4秒ごとに切り替える
+  useEffect(() => {
+    if (slideshowPhotos.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setCurrentPhotoIndex((prev) => (prev + 1) % slideshowPhotos.length);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [slideshowPhotos]);
 
   const formatDateDisplay = (album: Album) => {
     if (!album.startDate) return null;
@@ -50,8 +64,18 @@ function AlbumCard({ album }: { album: Album }) {
   return (
     <Link href={`/albums/${album.id}`} className={styles.albumCard}>
       <div className={styles.coverContainer}>
-        {coverUrl ? (
-          <img src={coverUrl} alt={album.name} className={styles.albumCover} />
+        {slideshowPhotos.length > 0 ? (
+          slideshowPhotos.map((photo, idx) => (
+            <div
+              key={photo.id}
+              className={`${styles.slide} ${idx === currentPhotoIndex ? styles.slideActive : ""}`}
+            >
+              <div
+                className={styles.albumCover}
+                style={{ backgroundImage: `url(${photo.url})` }}
+              />
+            </div>
+          ))
         ) : (
           <div className={styles.noPhotosCover}>
             <i className={`fa-solid fa-folder-open ${styles.noPhotosIcon}`}></i>
@@ -60,7 +84,7 @@ function AlbumCard({ album }: { album: Album }) {
         )}
         {!loading && (
           <span className={styles.photoCountBadge}>
-            {photos.length}
+            {totalCount}
           </span>
         )}
       </div>
