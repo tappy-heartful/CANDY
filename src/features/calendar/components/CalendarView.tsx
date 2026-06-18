@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { CalendarEvent, Anniversary, Todo, User } from "@/src/lib/firestore/types";
+import { CalendarEvent, Anniversary, Todo, User, Group, TodoStep } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
-import { addTodo, updateTodo } from "@/src/features/todo/api/todo-client-service";
+import { addTodo, updateTodo, getGroups } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
-import TodoModal from "./TodoModal";
+import TodoModal from "@/src/features/todo/components/TodoModal";
 import styles from "./Calendar.module.css";
 
 interface CalendarViewProps {
@@ -61,6 +61,8 @@ export default function CalendarView({
   const [activeTodoDate, setActiveTodoDate] = useState("");
   const [isDailyAgendaOpen, setIsDailyAgendaOpen] = useState(false);
   const [activeDateStr, setActiveDateStr] = useState<string>("");
+  const [todoGroups, setTodoGroups] = useState<Group[]>([]);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
@@ -122,12 +124,14 @@ export default function CalendarView({
     Promise.all([
       getEvents(), 
       getTodosForCalendar(),
-      getAnniversaries(currentUserId, partnerNickname !== "パートナー" ? "dummy" : null) // 実際はpartnerUidがないので、AnniversaryClient側では不要だったが、ここでは一旦uidベースで取得（CalendarViewのPropsにはpartnerUidがないので工夫が必要。現状は currentUserId だけでOKとする。または、HomeClient同様にpartnerUidを渡す）
+      getAnniversaries(currentUserId, partnerNickname !== "パートナー" ? "dummy" : null),
+      getGroups("todo")
     ])
-      .then(([eventData, todoData, annivData]) => {
+      .then(([eventData, todoData, annivData, groupData]) => {
         setEvents(eventData);
         setTodos(todoData);
         setAnniversaries(annivData);
+        setTodoGroups(groupData);
       })
       .catch((e) => {
         console.error("Failed to load events/todos:", e);
@@ -657,26 +661,79 @@ export default function CalendarView({
     setIsTodoModalOpen(true);
   };
 
-  const handleSaveTodo = async (todosData: Partial<Todo>[]) => {
+  const handleEditTodo = (todoItem: Todo) => {
+    setEditingTodo(todoItem);
+    setIsDailyAgendaOpen(false);
+    setIsTodoModalOpen(true);
+  };
+
+  const handleSaveTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => {
     showSpinner();
     try {
-      const addedTodos: Todo[] = [];
-      for (const todoData of todosData) {
-        const docRef = await addTodo(todoData);
-        addedTodos.push({
-          id: docRef.id,
-          ...todoData,
-          isCompleted: false,
-          steps: [],
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        } as Todo);
+      if (editingTodo) {
+        await updateTodo(editingTodo.id, {
+          title: data.title,
+          groupId: data.groupId,
+          date: data.date || "",
+          dateMode: data.dateMode || "due",
+          steps: data.steps || [],
+        });
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === editingTodo.id
+              ? {
+                  ...t,
+                  title: data.title,
+                  groupId: data.groupId,
+                  date: data.date || "",
+                  dateMode: data.dateMode || "due",
+                  steps: data.steps || [],
+                }
+              : t
+          )
+        );
+      } else {
+        const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+        const addedTodos: Todo[] = [];
+        for (const d of dates) {
+          const docRef = await addTodo({
+            title: data.title,
+            type: data.type,
+            uid: currentUserId,
+            groupId: data.groupId,
+            dateMode: d.dateMode,
+            date: d.date,
+            steps: data.steps || [],
+          });
+          addedTodos.push({
+            id: docRef.id,
+            title: data.title,
+            type: data.type,
+            uid: currentUserId,
+            groupId: data.groupId,
+            dateMode: d.dateMode,
+            date: d.date,
+            isCompleted: false,
+            steps: data.steps || [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          } as Todo);
+        }
+        setTodos((prev) => [...addedTodos, ...prev]);
       }
-      setTodos((prev) => [...addedTodos, ...prev]);
       setIsTodoModalOpen(false);
+      setEditingTodo(null);
     } catch (e) {
       console.error("Failed to save todo:", e);
-      showDialog("TODOの追加に失敗しました");
+      showDialog("TODOの保存に失敗しました");
     } finally {
       hideSpinner();
     }
@@ -1066,6 +1123,7 @@ export default function CalendarView({
           onEditEvent={handleEditEvent}
           onToggleTodo={handleToggleTodo}
           onAddTodo={handleAddNewTodo}
+          onEditTodo={handleEditTodo}
         />
       )}
 
@@ -1086,10 +1144,16 @@ export default function CalendarView({
 
       {isTodoModalOpen && (
         <TodoModal
-          date={activeTodoDate}
-          currentUserId={currentUserId}
-          onClose={() => setIsTodoModalOpen(false)}
+          isOpen={isTodoModalOpen}
+          todo={editingTodo}
+          groups={todoGroups}
+          defaultDate={activeTodoDate}
+          onClose={() => {
+            setIsTodoModalOpen(false);
+            setEditingTodo(null);
+          }}
           onSave={handleSaveTodo}
+          isSubmitting={false}
         />
       )}
     </div>

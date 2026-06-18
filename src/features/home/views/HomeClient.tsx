@@ -9,10 +9,10 @@ import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
-import { getGroups } from "@/src/features/todo/api/todo-client-service";
+import { getGroups, updateTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
-import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo } from "@/src/lib/firestore/types";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep } from "@/src/lib/firestore/types";
 import { getNextAnniversaryDiff } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
@@ -22,6 +22,7 @@ import DailyStatusModal from "../components/DailyStatusModal";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import GoalModal from "../components/GoalModal";
 import PhotoSlideshow from "../components/PhotoSlideshow";
+import TodoModal from "@/src/features/todo/components/TodoModal";
 
 const CLOCK_THEMES = [
   "themePinkyRibbon",
@@ -78,6 +79,10 @@ export default function HomeClient() {
   const [albumsMap, setAlbumsMap] = useState<Record<string, string>>({});
 
   const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
+  const [todoGroups, setTodoGroups] = useState<Group[]>([]);
+  const [isTodoSubmitting, setIsTodoSubmitting] = useState(false);
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -130,8 +135,9 @@ export default function HomeClient() {
           getAnniversaries(user.uid, partnerUid),
           getTodosForCalendar(),
           getRecentPhotos(50),
-          getAlbums()
-        ]).then(([wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums]) => {
+          getAlbums(),
+          getGroups("todo")
+        ]).then(([wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums, tGroups]) => {
           // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
           const myWishes = wishData
             .filter(w => w.uid === user.uid)
@@ -176,6 +182,7 @@ export default function HomeClient() {
           // 予定：最大3件
           setUpcomingEvents(validEvents.slice(0, 3));
           setWishlistGroups(groups);
+          setTodoGroups(tGroups);
           
           // 最近の写真とアルバム名のマッピングを設定
           // 最新の50枚の中からランダムに最大8枚を抽出
@@ -215,6 +222,50 @@ export default function HomeClient() {
       });
     }
   }, [user, userData]);
+
+  const handleSaveTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => {
+    if (!data.title || !user) return;
+    setIsTodoSubmitting(true);
+    try {
+      if (editingTodo) {
+        await updateTodo(editingTodo.id, {
+          title: data.title,
+          groupId: data.groupId,
+          date: data.date || "",
+          dateMode: data.dateMode || "due",
+          steps: data.steps || [],
+        });
+        setUpcomingTodos((prev) =>
+          prev.map((t) =>
+            t.id === editingTodo.id
+              ? {
+                  ...t,
+                  title: data.title,
+                  groupId: data.groupId,
+                  date: data.date || "",
+                  dateMode: data.dateMode || "due",
+                  steps: data.steps || [],
+                }
+              : t
+          )
+        );
+      }
+      setIsTodoModalOpen(false);
+      setEditingTodo(null);
+    } catch (e) {
+      console.error("Failed to save todo on home screen:", e);
+    } finally {
+      setIsTodoSubmitting(false);
+    }
+  };
 
   const handleSaveDailyStatus = async (data: Partial<DailyStatus>) => {
     setIsStatusSubmitting(true);
@@ -585,14 +636,22 @@ export default function HomeClient() {
                     }
 
                     return (
-                      <Link href="/todo" key={t.id} className={styles.notificationSubItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setEditingTodo(t);
+                          setIsTodoModalOpen(true);
+                        }}
+                        className={styles.notificationSubItem}
+                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                      >
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
                         </div>
                         <span className={styles.notificationTitle}>{t.title}</span>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -767,6 +826,20 @@ export default function HomeClient() {
           onSave={handleSaveGoal}
           isSubmitting={isGoalSubmitting}
         />
+
+        {isTodoModalOpen && (
+          <TodoModal
+            isOpen={isTodoModalOpen}
+            todo={editingTodo}
+            groups={todoGroups}
+            onClose={() => {
+              setIsTodoModalOpen(false);
+              setEditingTodo(null);
+            }}
+            onSave={handleSaveTodo}
+            isSubmitting={isTodoSubmitting}
+          />
+        )}
       </div>
     </AuthGuard>
   );

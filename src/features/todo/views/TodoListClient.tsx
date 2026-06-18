@@ -86,6 +86,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
   }) => {
     if (!data.title || !user) return;
     setIsSubmitting(true);
@@ -97,11 +98,19 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           groupId: data.groupId,
           date: data.date || "",
           dateMode: data.dateMode || "due",
+          steps: data.steps || [],
         });
         setTodos((prev) =>
           prev.map((t) =>
             t.id === editingTodo.id
-              ? { ...t, title: data.title, groupId: data.groupId, date: data.date || "", dateMode: data.dateMode || "due" }
+              ? {
+                  ...t,
+                  title: data.title,
+                  groupId: data.groupId,
+                  date: data.date || "",
+                  dateMode: data.dateMode || "due",
+                  steps: data.steps || [],
+                }
               : t
           )
         );
@@ -116,6 +125,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
             groupId: data.groupId,
             dateMode: d.dateMode,
             date: d.date,
+            steps: data.steps || [],
           });
           addedTodos.push({
             id: docRef.id,
@@ -126,7 +136,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
             dateMode: d.dateMode,
             date: d.date,
             isCompleted: false,
-            steps: [],
+            steps: data.steps || [],
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
