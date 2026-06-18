@@ -65,6 +65,9 @@ export default function CalendarView({
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchEndY = useRef<number | null>(null);
+  const isSwipeCancelled = useRef<boolean>(false);
 
   // 月切り替え時のスライドアニメーション用ステート
   const [slideDirection, setSlideDirection] = useState<"left" | "right" | "">("");
@@ -765,28 +768,55 @@ export default function CalendarView({
     if (calendarMode === "timeline") return;
     touchStartX.current = e.targetTouches[0].clientX;
     touchEndX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    touchEndY.current = e.targetTouches[0].clientY;
+    isSwipeCancelled.current = false;
     setIsDragging(true);
     setSwipeX(0);
     setSlideDirection("");
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (calendarMode === "timeline" || touchStartX.current === null) return;
+    if (calendarMode === "timeline" || touchStartX.current === null || isSwipeCancelled.current) return;
     touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
+
     const diffX = touchStartX.current - touchEndX.current;
-    setSwipeX(-diffX);
+    const diffY = (touchStartY.current ?? e.targetTouches[0].clientY) - touchEndY.current;
+
+    // 縦スクロールの動きが横スワイプの動きより大きい、または縦スクロールが一定以上ならスワイプをキャンセル
+    if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 10) {
+      isSwipeCancelled.current = true;
+      setIsDragging(false);
+      setSwipeX(0);
+      return;
+    }
+
+    // デッドゾーン：横方向の移動が15px未満の場合は、カレンダーを動かさない（ガタつき防止）
+    if (Math.abs(diffX) < 15) {
+      setSwipeX(0);
+    } else {
+      // 15pxを超えたら、その分を差し引いて滑らかに追従させる
+      const direction = diffX > 0 ? 1 : -1;
+      setSwipeX(-(diffX - direction * 15));
+    }
   };
 
   const onTouchEnd = () => {
     setIsDragging(false);
 
-    if (touchStartX.current === null || touchEndX.current === null) {
+    if (touchStartX.current === null || touchEndX.current === null || isSwipeCancelled.current) {
       setSwipeX(0);
+      touchStartX.current = null;
+      touchEndX.current = null;
+      touchStartY.current = null;
+      touchEndY.current = null;
+      isSwipeCancelled.current = false;
       return;
     }
 
     const diffX = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 70; // 閾値
+    const minSwipeDistance = 120; // 閾値を70から120に引き上げ
 
     if (diffX > minSwipeDistance) {
       // 左スワイプ（次の月へ）
@@ -823,6 +853,9 @@ export default function CalendarView({
     setSwipeX(0);
     touchStartX.current = null;
     touchEndX.current = null;
+    touchStartY.current = null;
+    touchEndY.current = null;
+    isSwipeCancelled.current = false;
   };
 
   return (
