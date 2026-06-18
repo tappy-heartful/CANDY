@@ -939,10 +939,11 @@ export default function CalendarView({
       </div>
 
       {calendarMode === "grid" ? (
-        <div
-          ref={gridContainerRef}
-          key={`grid-${animationKey}`}
-          className={`${styles.daysGrid} ${
+        <div className={styles.gridWrapper}>
+          <div
+            ref={gridContainerRef}
+            key={`grid-${animationKey}`}
+            className={`${styles.daysGrid} ${
             !isAnimating && slideDirection === "left"
               ? styles.slideInLeft
               : !isAnimating && slideDirection === "right"
@@ -1028,7 +1029,8 @@ export default function CalendarView({
             });
           })}
         </div>
-      ) : (
+      </div>
+    ) : (
         <div
           ref={timelineScrollRef}
           key={`timeline-${animationKey}`}
