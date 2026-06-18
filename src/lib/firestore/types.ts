@@ -135,6 +135,7 @@ export interface Photo {
   url: string;
   uid: string;
   createdAt: number;
+  takenAt?: number;
 }
 
 export interface Prefecture {
