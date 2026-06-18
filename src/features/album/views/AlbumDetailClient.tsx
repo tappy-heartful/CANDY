@@ -66,11 +66,15 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
   // ライトボックス関連
   const [activePhoto, setActivePhoto] = useState<Photo | null>(null);
+  const [swipeY, setSwipeY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchEndY = useRef<number | null>(null);
 
   // パートナー情報の取得
   useEffect(() => {
@@ -355,33 +359,75 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchEndX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchEndY.current = e.touches[0].clientY;
+    setIsDragging(true);
+    setSwipeY(0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.touches[0].clientX;
+    touchEndY.current = e.touches[0].clientY;
+
+    if (touchStartY.current === null || touchStartX.current === null) return;
+
+    const diffX = touchStartX.current - touchEndX.current;
+    const diffY = touchStartY.current - touchEndY.current; // 負の値が下方向のスワイプ
+
+    // 縦方向のスワイプが支配的かつ下方向の場合のみ swipeY を更新
+    if (Math.abs(diffY) > Math.abs(diffX) && diffY < 0) {
+      setSwipeY(-diffY);
+    } else {
+      setSwipeY(0);
+    }
   };
 
   const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current || !activePhoto) return;
-    const diffX = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50;
-    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
-    if (activeIndex === -1) return;
+    setIsDragging(false);
 
-    if (diffX > minSwipeDistance) {
-      // 左スワイプ（次の画像）
-      if (activeIndex < photos.length - 1) {
-        setActivePhoto(photos[activeIndex + 1]);
-      }
-    } else if (diffX < -minSwipeDistance) {
-      // 右スワイプ（前の画像）
-      if (activeIndex > 0) {
-        setActivePhoto(photos[activeIndex - 1]);
+    if (
+      touchStartX.current === null ||
+      touchEndX.current === null ||
+      touchStartY.current === null ||
+      touchEndY.current === null ||
+      !activePhoto
+    ) {
+      setSwipeY(0);
+      return;
+    }
+
+    const diffX = touchStartX.current - touchEndX.current;
+    const diffY = touchStartY.current - touchEndY.current; // 負の値が下方向のスワイプ
+    const minSwipeDistance = 70; // 閾値を70pxに設定
+
+    // Y軸（縦方向）のスワイプが支配的かつ下方向へのスワイプであるか判定
+    if (Math.abs(diffY) > Math.abs(diffX) && diffY < -minSwipeDistance) {
+      // 下スワイプで詳細表示を閉じる
+      setActivePhoto(null);
+    } else {
+      // 横方向の画像切り替えスワイプ
+      const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+      if (activeIndex !== -1) {
+        const horizontalSwipeDistance = 50;
+        if (diffX > horizontalSwipeDistance) {
+          // 左スワイプ（次の画像）
+          if (activeIndex < photos.length - 1) {
+            setActivePhoto(photos[activeIndex + 1]);
+          }
+        } else if (diffX < -horizontalSwipeDistance) {
+          // 右スワイプ（前の画像）
+          if (activeIndex > 0) {
+            setActivePhoto(photos[activeIndex - 1]);
+          }
+        }
       }
     }
 
+    setSwipeY(0);
     touchStartX.current = null;
     touchEndX.current = null;
+    touchStartY.current = null;
+    touchEndY.current = null;
   };
 
   // 単一写真のダウンロード
@@ -615,13 +661,23 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         {activePhoto && (
           <div
             className={styles.lightboxOverlay}
+            style={{
+              backgroundColor: `rgba(0, 0, 0, ${0.95 - Math.min(0.45, swipeY / 600)})`
+            }}
             onClick={() => setActivePhoto(null)}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             {/* 上部ヘッダー */}
-            <div className={styles.lightboxHeader} onClick={(e) => e.stopPropagation()}>
+            <div
+              className={styles.lightboxHeader}
+              style={{
+                opacity: 1 - Math.min(0.8, swipeY / 300),
+                transition: isDragging ? "none" : "opacity 0.2s ease"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className={styles.lightboxHeaderInfo}>
                 <h2 className={styles.lightboxAlbumName}>
                   {album.name} ({activeIndex !== -1 ? activeIndex + 1 : 0} / {photos.length})
@@ -637,24 +693,53 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
             {/* 左矢印ナビゲーション */}
             {activeIndex > 0 && (
-              <button className={styles.lightboxPrev} onClick={handlePrevPhoto}>
+              <button
+                className={styles.lightboxPrev}
+                style={{
+                  opacity: 1 - Math.min(0.8, swipeY / 300),
+                  transition: isDragging ? "none" : "opacity 0.2s ease"
+                }}
+                onClick={handlePrevPhoto}
+              >
                 <i className="fa-solid fa-chevron-left"></i>
               </button>
             )}
 
-            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+            <div
+              className={styles.lightboxContent}
+              style={{
+                transform: `translateY(${swipeY}px)`,
+                opacity: 1 - Math.min(0.6, swipeY / 500),
+                transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <img src={activePhoto.url} alt="Lightbox Photo" className={styles.lightboxImg} />
             </div>
 
             {/* 右矢印ナビゲーション */}
             {activeIndex < photos.length - 1 && (
-              <button className={styles.lightboxNext} onClick={handleNextPhoto}>
+              <button
+                className={styles.lightboxNext}
+                style={{
+                  opacity: 1 - Math.min(0.8, swipeY / 300),
+                  transition: isDragging ? "none" : "opacity 0.2s ease"
+                }}
+                onClick={handleNextPhoto}
+              >
                 <i className="fa-solid fa-chevron-right"></i>
               </button>
             )}
 
             {/* 下部アクションバー (ダウンロード・削除) */}
-            <div className={styles.lightboxActionBar} onClick={(e) => e.stopPropagation()}>
+            <div
+              className={styles.lightboxActionBar}
+              style={{
+                opacity: 1 - Math.min(0.8, swipeY / 300),
+                transition: isDragging ? "none" : "opacity 0.2s ease"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 className={styles.lightboxActionBtn}
                 onClick={(e) => handleDownloadSingle(activePhoto, e)}
