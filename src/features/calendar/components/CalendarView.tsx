@@ -107,7 +107,7 @@ export default function CalendarView({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [calendarMode, currentMonth, currentYear]);
+  }, [calendarMode, currentMonth, currentYear, animationKey]);
 
   const [holidays, setHolidays] = useState<Record<string, string>>({});
 
