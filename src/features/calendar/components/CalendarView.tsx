@@ -275,82 +275,102 @@ export default function CalendarView({
 
   const renderTimelineItem = (item: any) => {
     const isMe = item.uid === currentUserId;
-    let itemClass = "";
-    let icon = null;
+    const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
 
-    if (item.isTodo) {
-      icon = <i className="fa-regular fa-square-check" style={{ marginRight: '4px' }}></i>;
-      if (item.type === "couple") {
-        itemClass = styles.timelineTodoCouple;
-      } else if (isMe) {
-        itemClass = styles.timelineTodoMe;
-      } else {
-        itemClass = styles.timelineTodoPartner;
-      }
-    } else {
-      if (item.type === "couple") {
-        itemClass = styles.timelineEventCouple;
-      } else if (isMe) {
-        itemClass = styles.timelineEventMe;
-      } else {
-        itemClass = styles.timelineEventPartner;
-      }
-    }
-
-    // 予定（Event）の前に表示するアバター画像 / イニシャル
-    let avatarEl = null;
-    if (!item.isTodo) {
-      if (item.type === "couple") {
-        avatarEl = (
-          <div className={styles.coupleAvatars}>
-            {myPictureUrl ? (
-              <img src={myPictureUrl} className={styles.timelineMiniAvatar} alt="me" />
-            ) : (
-              <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
-            )}
-            {partnerPictureUrl ? (
-              <img src={partnerPictureUrl} className={styles.timelineMiniAvatar} alt="partner" />
-            ) : (
-              <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
-            )}
-          </div>
-        );
-      } else {
-        const isEventMe = item.uid === currentUserId;
-        if (isEventMe) {
-          avatarEl = myPictureUrl ? (
-            <img src={myPictureUrl} className={styles.timelineAvatar} alt="me" />
-          ) : (
-            <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
-          );
-        } else {
-          avatarEl = partnerPictureUrl ? (
-            <img src={partnerPictureUrl} className={styles.timelineAvatar} alt="partner" />
-          ) : (
-            <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
-          );
-        }
-      }
-    }
-
-    return (
-      <div
-        key={`${item.isTodo ? 'todo' : 'event'}-${item.id}`}
-        className={`${styles.timelineItem} ${itemClass} ${item.isTodo && item.isCompleted ? styles.todoCompleted : ""}`}
-      >
-        <div className={styles.timelineItemTitle}>
-          {avatarEl}
-          {icon}
-          <span className={styles.timelineItemText}>{item.title}</span>
-        </div>
-        {!item.isTodo && !item.isAllDay && item.startTime && (
-          <span className={styles.timelineItemTime}>
-            {item.startTime}
-            {item.endTime ? `〜${item.endTime}` : ""}
-          </span>
+    // Avatar structure matching DailyAgendaModal behavior but with timeline sizes
+    const icon = item.type === "couple" ? (
+      <div className={styles.timelineIconCol}>
+        {myPictureUrl ? (
+          <img src={myPictureUrl} alt="Me" className={styles.timelineMiniAvatar} />
+        ) : (
+          <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+        )}
+        {partnerPictureUrl ? (
+          <img src={partnerPictureUrl} alt="Partner" className={styles.timelineMiniAvatar} />
+        ) : (
+          <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
         )}
       </div>
-    );
+    ) : (item.uid === currentUserId ? (
+      myPictureUrl ? (
+        <img src={myPictureUrl} alt="Me" className={styles.timelineAvatar} />
+      ) : (
+        <span className={`${styles.timelineTextAvatar} ${styles.bgMe}`}>{myNickname[0]}</span>
+      )
+    ) : (
+      partnerPictureUrl ? (
+        <img src={partnerPictureUrl} alt="Partner" className={styles.timelineAvatar} />
+      ) : (
+        <span className={`${styles.timelineTextAvatar} ${styles.bgPartner}`}>{partnerNickname[0]}</span>
+      )
+    ));
+
+    if (item.isTodo) {
+      const isEditable = item.type === "couple" || item.uid === currentUserId;
+      return (
+        <div
+          key={`todo-${item.id}`}
+          className={styles.timelineRow}
+          onClick={() => {
+            if (isEditable) {
+              handleEditTodo(item as unknown as Todo);
+            }
+          }}
+          style={{ cursor: isEditable ? 'pointer' : 'default' }}
+        >
+          <div 
+            className={styles.timelineTimeCol} 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleTodo(item.id, !!item.isCompleted);
+            }}
+          >
+            <span className={styles.timelineTimeText} style={{ fontSize: '14px' }}>
+              {item.isCompleted ? (
+                <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
+              ) : (
+                <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
+              )}
+            </span>
+          </div>
+          <div className={styles.timelineMainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
+            <div className={styles.timelineItemTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+              <div className={styles.timelineIconCol} style={{ marginRight: '4px' }}>{icon}</div>
+              <span className={styles.timelineItemText}>{item.title}</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div 
+          key={`event-${item.id}`} 
+          className={styles.timelineRow} 
+          onClick={() => handleEditEvent(item)} 
+          style={{ alignItems: 'stretch', cursor: 'pointer' }}
+        >
+          <div className={styles.timelineTimeCol} style={{ justifyContent: 'center' }}>
+            {item.isAllDay ? (
+              <span className={styles.timelineTimeText}>終日</span>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%' }}>
+                <span className={styles.timelineTimeText}>{item.startTime}</span>
+                {item.endTime && <span className={styles.timelineTimeTextSub}>{item.endTime}</span>}
+              </div>
+            )}
+          </div>
+          <div className={styles.timelineMainCol} style={{ borderLeftColor: color }}>
+            <div className={styles.timelineItemTitle}>
+              <div className={styles.timelineIconCol} style={{ marginRight: '4px' }}>{icon}</div>
+              <span className={styles.timelineItemText}>
+                {item.title} {item.note && <i className="fa-regular fa-file-lines"></i>}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
   };
 
   const timelineCellsData = useMemo(() => {
@@ -1037,7 +1057,6 @@ export default function CalendarView({
                 key={`timeline-${dateStr}`}
                 ref={isToday ? todayCardRef : null}
                 className={`${styles.timelineCard} ${isToday ? styles.timelineTodayCard : ""}`}
-                onClick={() => handleCellClick(dateStr)}
               >
                 <div className={styles.timelineCardHeader}>
                   <span className={`${styles.timelineDateNum} ${isToday ? styles.timelineTodayCircle : ""}`}>
@@ -1092,15 +1111,28 @@ export default function CalendarView({
                   )}
                 </div>
 
-                <div className={styles.timelineCardFooter}>
+                <div className={styles.timelineCardFooter} style={{ display: 'flex', gap: '6px', width: '100%' }}>
                   <button
                     className={styles.timelineAddBtn}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCellClick(dateStr);
+                      handleAddNewEvent(dateStr);
                     }}
+                    title="予定を追加"
+                    style={{ flex: 1, padding: '6px 2px', fontSize: '10px' }}
                   >
-                    <i className="fa-solid fa-plus"></i> 追加
+                    <i className="fa-solid fa-calendar-plus"></i> 予定
+                  </button>
+                  <button
+                    className={styles.timelineAddBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddNewTodo(dateStr);
+                    }}
+                    title="TODOを追加"
+                    style={{ flex: 1, padding: '6px 2px', fontSize: '10px', background: '#e8f5e9', borderColor: '#4caf50', color: '#4caf50' }}
+                  >
+                    <i className="fa-solid fa-list-check"></i> TODO
                   </button>
                 </div>
               </div>
