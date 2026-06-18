@@ -67,7 +67,9 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   // ライトボックス関連
   const [activePhoto, setActivePhoto] = useState<Photo | null>(null);
   const [swipeY, setSwipeY] = useState(0);
+  const [swipeX, setSwipeX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -125,10 +127,12 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
       if (e.key === "ArrowLeft") {
         if (activeIndex > 0) {
+          setSlideDirection("left");
           setActivePhoto(photos[activeIndex - 1]);
         }
       } else if (e.key === "ArrowRight") {
         if (activeIndex < photos.length - 1) {
+          setSlideDirection("right");
           setActivePhoto(photos[activeIndex + 1]);
         }
       } else if (e.key === "Escape") {
@@ -277,6 +281,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         setSelectedPhotos([...selectedPhotos, photo]);
       }
     } else {
+      setSlideDirection(null);
       setActivePhoto(photo);
     }
   };
@@ -342,6 +347,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     if (!activePhoto) return;
     const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
     if (activeIndex > 0) {
+      setSlideDirection("left");
       setActivePhoto(photos[activeIndex - 1]);
     }
   };
@@ -351,6 +357,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     if (!activePhoto) return;
     const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
     if (activeIndex < photos.length - 1) {
+      setSlideDirection("right");
       setActivePhoto(photos[activeIndex + 1]);
     }
   };
@@ -363,6 +370,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     touchEndY.current = e.touches[0].clientY;
     setIsDragging(true);
     setSwipeY(0);
+    setSwipeX(0);
+    setSlideDirection(null);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -372,12 +381,20 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     if (touchStartY.current === null || touchStartX.current === null) return;
 
     const diffX = touchStartX.current - touchEndX.current;
-    const diffY = touchStartY.current - touchEndY.current; // 負の値が下方向のスワイプ
+    const diffY = touchStartY.current - touchEndY.current;
 
-    // 縦方向のスワイプが支配的かつ下方向の場合のみ swipeY を更新
-    if (Math.abs(diffY) > Math.abs(diffX) && diffY < 0) {
-      setSwipeY(-diffY);
+    // 縦横どちらのスワイプが支配的か判定
+    if (Math.abs(diffY) > Math.abs(diffX)) {
+      // 縦スワイプが支配的
+      if (diffY < 0) {
+        setSwipeY(-diffY);
+      } else {
+        setSwipeY(0);
+      }
+      setSwipeX(0);
     } else {
+      // 横スワイプが支配的
+      setSwipeX(-diffX); // 指の動きに合わせて移動
       setSwipeY(0);
     }
   };
@@ -393,37 +410,37 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
       !activePhoto
     ) {
       setSwipeY(0);
+      setSwipeX(0);
       return;
     }
 
     const diffX = touchStartX.current - touchEndX.current;
-    const diffY = touchStartY.current - touchEndY.current; // 負の値が下方向のスワイプ
+    const diffY = touchStartY.current - touchEndY.current;
     const minSwipeDistance = 70; // 閾値を70pxに設定
 
-    // Y軸（縦方向）のスワイプが支配的かつ下方向へのスワイプであるか判定
-    if (Math.abs(diffY) > Math.abs(diffX) && diffY < -minSwipeDistance) {
-      // 下スワイプで詳細表示を閉じる
-      setActivePhoto(null);
+    if (Math.abs(diffY) > Math.abs(diffX)) {
+      // 縦スワイプの処理
+      if (diffY < -minSwipeDistance) {
+        setActivePhoto(null);
+      }
     } else {
-      // 横方向の画像切り替えスワイプ
+      // 横スワイプの処理
       const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
       if (activeIndex !== -1) {
-        const horizontalSwipeDistance = 50;
-        if (diffX > horizontalSwipeDistance) {
-          // 左スワイプ（次の画像）
-          if (activeIndex < photos.length - 1) {
-            setActivePhoto(photos[activeIndex + 1]);
-          }
-        } else if (diffX < -horizontalSwipeDistance) {
-          // 右スワイプ（前の画像）
-          if (activeIndex > 0) {
-            setActivePhoto(photos[activeIndex - 1]);
-          }
+        if (diffX > minSwipeDistance && activeIndex < photos.length - 1) {
+          // 左スワイプ（次の画像へ）
+          setSlideDirection("right");
+          setActivePhoto(photos[activeIndex + 1]);
+        } else if (diffX < -minSwipeDistance && activeIndex > 0) {
+          // 右スワイプ（前の画像へ）
+          setSlideDirection("left");
+          setActivePhoto(photos[activeIndex - 1]);
         }
       }
     }
 
     setSwipeY(0);
+    setSwipeX(0);
     touchStartX.current = null;
     touchEndX.current = null;
     touchStartY.current = null;
@@ -662,7 +679,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
           <div
             className={styles.lightboxOverlay}
             style={{
-              backgroundColor: `rgba(0, 0, 0, ${0.95 - Math.min(0.45, swipeY / 600)})`
+              backgroundColor: `rgba(0, 0, 0, ${0.95 - Math.min(0.45, Math.max(Math.abs(swipeX) / 600, swipeY / 600))})`
             }}
             onClick={() => setActivePhoto(null)}
             onTouchStart={handleTouchStart}
@@ -673,7 +690,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             <div
               className={styles.lightboxHeader}
               style={{
-                opacity: 1 - Math.min(0.8, swipeY / 300),
+                opacity: 1 - Math.min(0.8, Math.max(Math.abs(swipeX) / 300, swipeY / 300)),
                 transition: isDragging ? "none" : "opacity 0.2s ease"
               }}
               onClick={(e) => e.stopPropagation()}
@@ -696,7 +713,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               <button
                 className={styles.lightboxPrev}
                 style={{
-                  opacity: 1 - Math.min(0.8, swipeY / 300),
+                  opacity: 1 - Math.min(0.8, Math.max(Math.abs(swipeX) / 300, swipeY / 300)),
                   transition: isDragging ? "none" : "opacity 0.2s ease"
                 }}
                 onClick={handlePrevPhoto}
@@ -706,10 +723,17 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             )}
 
             <div
-              className={styles.lightboxContent}
+              key={activePhoto.id}
+              className={`${styles.lightboxContent} ${
+                slideDirection === "right"
+                  ? styles.slideInFromRight
+                  : slideDirection === "left"
+                  ? styles.slideInFromLeft
+                  : ""
+              }`}
               style={{
-                transform: `translateY(${swipeY}px)`,
-                opacity: 1 - Math.min(0.6, swipeY / 500),
+                transform: `translate3d(${swipeX}px, ${swipeY}px, 0)`,
+                opacity: 1 - Math.min(0.6, Math.max(Math.abs(swipeX) / 500, swipeY / 500)),
                 transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
               }}
               onClick={(e) => e.stopPropagation()}
@@ -722,7 +746,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               <button
                 className={styles.lightboxNext}
                 style={{
-                  opacity: 1 - Math.min(0.8, swipeY / 300),
+                  opacity: 1 - Math.min(0.8, Math.max(Math.abs(swipeX) / 300, swipeY / 300)),
                   transition: isDragging ? "none" : "opacity 0.2s ease"
                 }}
                 onClick={handleNextPhoto}
@@ -735,7 +759,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             <div
               className={styles.lightboxActionBar}
               style={{
-                opacity: 1 - Math.min(0.8, swipeY / 300),
+                opacity: 1 - Math.min(0.8, Math.max(Math.abs(swipeX) / 300, swipeY / 300)),
                 transition: isDragging ? "none" : "opacity 0.2s ease"
               }}
               onClick={(e) => e.stopPropagation()}
