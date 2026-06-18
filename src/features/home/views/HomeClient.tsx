@@ -570,11 +570,11 @@ export default function HomeClient() {
         {!loading && (upcomingEvents.length > 0 || upcomingTodos.length > 0 || overdueTodos.length > 0 || noDeadlineTodos.length > 0) && (
           <div className={styles.notificationList} style={{ marginBottom: '24px' }}>
             {upcomingEvents.length > 0 && (
-              <div className={styles.notificationGroup}>
+              <div className={`${styles.notificationGroup} ${styles.groupEvent}`}>
                 <div className={styles.notificationHeader}>
                   <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
                   <span className={styles.notificationText}>
-                    直近のイベント
+                    {userData?.nickname || "自分"}の直近のイベント
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
@@ -590,13 +590,45 @@ export default function HomeClient() {
                     if (diffDays === 0) countdownText = "🎉 本日！";
                     else if (diffDays === 1) countdownText = "✨ 明日！";
 
+                    // バッジ判定
+                    let badgeClass = styles.badgeCouple;
+                    let typeLabel = "2人";
+                    if (e.type !== 'couple') {
+                      if (e.uid === user?.uid) {
+                        badgeClass = styles.badgeMe;
+                        typeLabel = userData?.nickname || "自分";
+                      } else {
+                        badgeClass = styles.badgePartner;
+                        typeLabel = partnerData?.nickname || "パートナー";
+                      }
+                    }
+
                     return (
                       <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge}>{countdownText}</span>
                         </div>
-                        <span className={styles.notificationTitle}>{e.title}</span>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', marginTop: '6px' }}>
+                          {/* 左側：時間表示エリア（縦並び） */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: '65px', paddingRight: '12px', borderRight: '1px solid #eee' }}>
+                            {e.isAllDay ? (
+                              <span style={{ fontSize: '12px', color: '#7a5ba0', fontWeight: 'bold' }}>終日</span>
+                            ) : (
+                              <>
+                                <span style={{ fontSize: '12px', color: '#7a5ba0', fontWeight: 'bold', lineHeight: 1.1 }}>{e.startTime || "時間未定"}</span>
+                                {e.endTime && (
+                                  <span style={{ fontSize: '10px', color: '#999', lineHeight: 1.1, marginTop: '2px' }}>{e.endTime}</span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          
+                          {/* 右側：イベントタイトル */}
+                          <span className={styles.notificationTitle} style={{ flex: 1 }}>{e.title}</span>
+                        </div>
                       </div>
                     );
                   })}
@@ -605,11 +637,11 @@ export default function HomeClient() {
             )}
 
             {overdueTodos.length > 0 && (
-              <div className={styles.notificationGroup}>
+              <div className={`${styles.notificationGroup} ${styles.groupOverdue}`}>
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-triangle-exclamation ${styles.notificationIcon}`} style={{ color: '#c62828' }}></i>
                   <span className={styles.notificationText} style={{ color: '#c62828' }}>
-                    期限切れのTODO
+                    {userData?.nickname || "自分"}の期限切れのTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
@@ -646,7 +678,7 @@ export default function HomeClient() {
                         className={styles.notificationSubItem}
                         style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
@@ -660,11 +692,11 @@ export default function HomeClient() {
             )}
 
             {upcomingTodos.length > 0 && (
-              <div className={styles.notificationGroup}>
+              <div className={`${styles.notificationGroup} ${styles.groupTodo}`}>
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-list-check ${styles.notificationIcon}`} style={{ color: '#A0E7D2' }}></i>
                   <span className={styles.notificationText}>
-                    直近のTODO
+                    {userData?.nickname || "自分"}の直近のTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
@@ -706,7 +738,7 @@ export default function HomeClient() {
                         className={styles.notificationSubItem}
                         style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
@@ -720,11 +752,11 @@ export default function HomeClient() {
             )}
 
             {noDeadlineTodos.length > 0 && (
-              <div className={styles.notificationGroup}>
+              <div className={`${styles.notificationGroup} ${styles.groupNoDeadline}`}>
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-calendar-minus ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
                   <span className={styles.notificationText}>
-                    期限なしのTODO
+                    {userData?.nickname || "自分"}の期限なしのTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
@@ -751,7 +783,7 @@ export default function HomeClient() {
                         className={styles.notificationSubItem}
                         style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span className={styles.countdownBadge} style={{ background: '#f5f0fa', color: '#7a5ba0', borderColor: '#7a5ba0' }}>🏷️ 期限なし</span>
                         </div>
