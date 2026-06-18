@@ -740,39 +740,44 @@
 .notificationGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   background: white;
-  padding: 16px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.08);
-  border-left: 4px solid #A0E7D2;
+  padding: 18px;
+  border-radius: 20px;
+  box-shadow: 0 6px 16px rgba(155, 124, 195, 0.06);
+  border-left: 5px solid #9B7CC3;
 }
+
+.groupEvent { border-left-color: #F7A8C4 !important; }
+.groupOverdue { border-left-color: #c62828 !important; }
+.groupTodo { border-left-color: #A0E7D2 !important; }
+.groupNoDeadline { border-left-color: #9B7CC3 !important; }
 
 .notificationHeader {
   display: flex;
   align-items: center;
   gap: 10px;
   border-bottom: 1px dashed #eee;
-  padding-bottom: 8px;
-  margin-bottom: 4px;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .notificationIcon {
   font-size: 18px;
-  color: #A0E7D2;
+  color: #9B7CC3;
 }
 
 .notificationText {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;
-  color: #444;
+  color: #333;
 }
 
 .notificationItems {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-left: 28px;
+  gap: 8px;
+  padding-left: 0;
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
@@ -781,19 +786,23 @@
 .notificationSubItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  margin-left: -8px; /* Offset the padding */
+  padding: 10px 14px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  background: #fdfdfd;
+  border: 1px solid #f3f3f3;
 }
 
 .notificationSubItem:hover {
-  background-color: rgba(160, 231, 210, 0.15);
+  background-color: #fff;
+  border-color: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.05);
 }
 
 .notificationTime {
