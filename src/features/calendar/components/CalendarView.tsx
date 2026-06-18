@@ -63,16 +63,16 @@ export default function CalendarView({
   const [activeDateStr, setActiveDateStr] = useState<string>("");
   const [todoGroups, setTodoGroups] = useState<Group[]>([]);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   // 月切り替え時のスライドアニメーション用ステート
   const [slideDirection, setSlideDirection] = useState<"left" | "right" | "">("");
   const [animationKey, setAnimationKey] = useState(0);
 
   // 指追従スワイプ用ステート
-  const [currentTranslateX, setCurrentTranslateX] = useState<number>(0);
-  const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const [swipeX, setSwipeX] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // モード設定（デフォルトは grid）
   const [calendarMode, setCalendarMode] = useState<"grid" | "timeline">("grid");
@@ -761,61 +761,68 @@ export default function CalendarView({
 
 
 
-  const minSwipeDistance = 50;
-
   const onTouchStart = (e: React.TouchEvent) => {
-    if (calendarMode === "timeline" || isAnimating) return;
-    setTouchStartX(e.targetTouches[0].clientX);
-    setCurrentTranslateX(0);
+    if (calendarMode === "timeline") return;
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = e.targetTouches[0].clientX;
+    setIsDragging(true);
+    setSwipeX(0);
+    setSlideDirection("");
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (calendarMode === "timeline" || isAnimating || touchStartX === null) return;
-    const clientX = e.targetTouches[0].clientX;
-    const deltaX = clientX - touchStartX;
-    setCurrentTranslateX(deltaX);
-  };
-
-  const triggerMonthTransition = (type: "next" | "prev" | "reset") => {
-    setIsAnimating(true);
-    const containerWidth = gridContainerRef.current?.clientWidth || 350;
-    let targetX = 0;
-
-    if (type === "next") {
-      targetX = -containerWidth;
-    } else if (type === "prev") {
-      targetX = containerWidth;
-    } else {
-      targetX = 0;
-    }
-
-    setCurrentTranslateX(targetX);
-
-    setTimeout(() => {
-      // 状態リセット
-      setCurrentTranslateX(0);
-      setIsAnimating(false);
-
-      if (type === "next") {
-        handleNextMonth();
-      } else if (type === "prev") {
-        handlePrevMonth();
-      }
-    }, 300);
+    if (calendarMode === "timeline" || touchStartX.current === null) return;
+    touchEndX.current = e.targetTouches[0].clientX;
+    const diffX = touchStartX.current - touchEndX.current;
+    setSwipeX(-diffX);
   };
 
   const onTouchEnd = () => {
-    if (calendarMode === "timeline" || isAnimating || touchStartX === null) return;
-    const threshold = 80; // しきい値
-    
-    if (currentTranslateX < -threshold) {
-      triggerMonthTransition("next");
-    } else if (currentTranslateX > threshold) {
-      triggerMonthTransition("prev");
-    } else {
-      triggerMonthTransition("reset");
+    setIsDragging(false);
+
+    if (touchStartX.current === null || touchEndX.current === null) {
+      setSwipeX(0);
+      return;
     }
-    setTouchStartX(null);
+
+    const diffX = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 70; // 閾値
+
+    if (diffX > minSwipeDistance) {
+      // 左スワイプ（次の月へ）
+      if (currentMonth === 11 && currentYear + 1 > maxYear) {
+        setSwipeX(0);
+      } else {
+        setSlideDirection("left");
+        setAnimationKey((prev) => prev + 1);
+        if (currentMonth === 11) {
+          setCurrentMonth(0);
+          setCurrentYear((prev) => prev + 1);
+        } else {
+          setCurrentMonth((prev) => prev + 1);
+        }
+      }
+    } else if (diffX < -minSwipeDistance) {
+      // 右スワイプ（前の月へ）
+      if (currentMonth === 0 && currentYear - 1 < minYear) {
+        setSwipeX(0);
+      } else {
+        setSlideDirection("right");
+        setAnimationKey((prev) => prev + 1);
+        if (currentMonth === 0) {
+          setCurrentMonth(11);
+          setCurrentYear((prev) => prev - 1);
+        } else {
+          setCurrentMonth((prev) => prev - 1);
+        }
+      }
+    } else {
+      setSwipeX(0);
+    }
+
+    setSwipeX(0);
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
 
   return (
@@ -944,18 +951,19 @@ export default function CalendarView({
             ref={gridContainerRef}
             key={`grid-${animationKey}`}
             className={`${styles.daysGrid} ${
-            !isAnimating && slideDirection === "left"
-              ? styles.slideInLeft
-              : !isAnimating && slideDirection === "right"
-                ? styles.slideInRight
-                : ""
-          } ${isAnimating ? styles.swipingTransition : ""}`}
-          style={{
-            transform: currentTranslateX !== 0 || isAnimating ? `translateX(${currentTranslateX}px)` : undefined,
-            opacity: isAnimating && currentTranslateX !== 0 
-              ? Math.max(0.4, 1 - Math.abs(currentTranslateX) / (gridContainerRef.current?.clientWidth || 350))
-              : undefined
-          }}
+              slideDirection === "left"
+                ? styles.slideInLeft
+                : slideDirection === "right"
+                  ? styles.slideInRight
+                  : ""
+            }`}
+            style={{
+              transform: swipeX !== 0 ? `translateX(${swipeX}px)` : undefined,
+              opacity: swipeX !== 0 
+                ? Math.max(0.5, 1 - Math.abs(swipeX) / (gridContainerRef.current?.clientWidth || 350))
+                : undefined,
+              transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1)"
+            }}
         >
           {processedWeeks.map((week, weekIdx) => {
             return week.cells.map((dayData, dayIdx) => {
