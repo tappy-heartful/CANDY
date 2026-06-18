@@ -713,21 +713,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
 .timelineCard:hover {
   border-color: #9B7CC3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.1);
-}
-
-.timelineTodayCard {
-  border-color: #9B7CC3;
-  background: #fbf9ff;
-  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.15);
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.05);
 }
 
 .timelineCardHeader {
@@ -774,7 +767,7 @@
 .timelineItemsContainer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
   flex: 1;
   overflow: visible;
   margin-bottom: 8px;
@@ -819,73 +812,89 @@
 }
 
 .timelinePlaceholder {
-  height: 26px;
+  height: 32px;
 }
 
-.timelineItem {
-  font-size: 10px;
-  font-weight: bold;
-  padding: 6px;
-  border-radius: 8px;
+.timelineTodayCard {
+  border: 3px solid #9B7CC3;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px rgba(155, 124, 195, 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
+.timelineTodayCard:hover {
+  box-shadow: 0 12px 30px rgba(155, 124, 195, 0.28);
+}
+
+.timelineRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.timelineRow:active {
+  opacity: 0.6;
+}
+
+.timelineTimeCol {
+  width: 38px;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
+  flex-shrink: 0;
+}
+
+.timelineTimeText {
+  font-size: 9px;
+  font-weight: 900;
+  color: #111;
+  white-space: nowrap;
+}
+
+.timelineTimeTextSub {
+  font-size: 9px;
+  font-weight: 900;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.timelineMainCol {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 3px solid #9B7CC3;
+  padding-left: 8px;
+  min-height: 32px;
 }
 
 .timelineItemTitle {
-  font-size: 10px;
-  word-break: break-all;
+  font-size: 11px;
+  font-weight: 900;
+  color: #111;
   display: flex;
   align-items: center;
-  line-height: 1.2;
   gap: 4px;
-  overflow: hidden;
+  word-break: break-all;
 }
 
-.timelineItemTime {
-  font-size: 8px;
-  opacity: 0.8;
-  align-self: flex-end;
+.timelineItemTitle i {
+  color: #ccc;
+  font-size: 10px;
 }
 
-/* Timeline Custom color left borders */
-.timelineEventMe {
-  background-color: #fdf2f8;
-  color: #d15c85;
-  border-left: 3px solid #F7A8C4;
+.timelineIconCol {
+  display: flex;
+  align-items: center;
+  gap: -6px;
+  flex-shrink: 0;
 }
 
-.timelineEventPartner {
-  background-color: #ebfcf7;
-  color: #166534;
-  border-left: 3px solid #A0E7D2;
-}
-
-.timelineEventCouple {
-  background-color: #f5f0fa;
-  color: #7a5ba0;
-  border-left: 3px solid #9B7CC3;
-}
-
-.timelineTodoMe {
-  background-color: #fdf2f8;
-  color: #d15c85;
-  border-left: 3px dashed #F7A8C4;
-}
-
-.timelineTodoPartner {
-  background-color: #ebfcf7;
-  color: #166534;
-  border-left: 3px dashed #A0E7D2;
-}
-
-.timelineTodoCouple {
-  background-color: #f5f0fa;
-  color: #7a5ba0;
-  border-left: 3px dashed #9B7CC3;
-}
 
 .timelineCardFooter {
   display: flex;

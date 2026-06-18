@@ -81,16 +81,27 @@ function execDailyMorningNotification() {
         .sort((a, b) => a.startDate.localeCompare(b.startDate) || (a.startTime || "24:00").localeCompare(b.startTime || "24:00"))
         .slice(0, 3);
 
-      // 未完了のTODO（カップル用 or 自身）で日付が設定されているもの
-      const userTodos = todos
-        .filter(t => (t.type === 'couple' || t.uid === user.id) && !t.isCompleted && t.date)
-        .sort((a, b) => a.date.localeCompare(b.date)); // 日付順ソート
+      // 未完了のTODO（カップル用 or 自身）
+      const allUserTodos = todos.filter(t => (t.type === 'couple' || t.uid === user.id) && !t.isCompleted);
 
-      // 今日のTODO（今日以前が期限になっている未完了TODO）
-      const todaysTodos = userTodos.filter(t => t.date <= todayStr);
+      // 1. 期限切れのTODO (日付があり、今日より前)
+      const overdueTodos = allUserTodos
+        .filter(t => t.date && t.date < todayStr)
+        .sort((a, b) => a.date.localeCompare(b.date));
 
-      // 直近の未来TODO（明日以降が期限）
-      const nextTodos = userTodos.filter(t => t.date > todayStr).slice(0, 3);
+      // 2. 本日のTODO (日付があり、今日)
+      const todaysTodos = allUserTodos.filter(t => t.date === todayStr);
+
+      // 3. 直近の未来TODO (日付があり、明日以降、最大3件)
+      const nextTodos = allUserTodos
+        .filter(t => t.date && t.date > todayStr)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 3);
+
+      // 4. 期限なしのTODO (日付なし、または空文字列)
+      const noDeadlineTodos = allUserTodos
+        .filter(t => !t.date || t.date === "")
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
       // 直近の記念日（今年または来年で最も近いもの3件）
       const userAnniversaries = anniversaries
@@ -132,19 +143,50 @@ function execDailyMorningNotification() {
       // 📋TODO セクション
       message += `📋TODO\n`;
       let hasTodos = false;
+
+      // ① 期限切れ
+      if (overdueTodos.length > 0) {
+        message += `【期限切れ】\n`;
+        overdueTodos.forEach(t => {
+          const diffDays = calculateDiffDays(t.date, todayStr);
+          message += `・${t.title} (${diffDays}日前)\n`;
+        });
+        hasTodos = true;
+      }
+
+      // ② 今日・これからの予定
+      const activeLines = [];
       if (todaysTodos.length > 0) {
         todaysTodos.forEach(t => {
-          message += `・本日 ${t.title}\n`;
-          hasTodos = true;
+          activeLines.push(`・本日 ${t.title}`);
         });
       }
       if (nextTodos.length > 0) {
         nextTodos.forEach(t => {
           const diffDays = calculateDiffDays(todayStr, t.date);
-          message += `・${t.title} (あと${diffDays}日)\n`;
-          hasTodos = true;
+          activeLines.push(`・${t.title} (あと${diffDays}日)`);
         });
       }
+
+      if (activeLines.length > 0) {
+        if (overdueTodos.length > 0) {
+          message += `【今日・これからの予定】\n`;
+        }
+        activeLines.forEach(line => {
+          message += `${line}\n`;
+        });
+        hasTodos = true;
+      }
+
+      // ③ 期限なし
+      if (noDeadlineTodos.length > 0) {
+        message += `【期限なし】\n`;
+        noDeadlineTodos.forEach(t => {
+          message += `・${t.title}\n`;
+        });
+        hasTodos = true;
+      }
+
       if (!hasTodos) {
         message += `TODOはクリア済み！👏\n`;
       }

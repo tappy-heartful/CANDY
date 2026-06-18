@@ -18,6 +18,7 @@ interface DailyAgendaModalProps {
   onEditEvent: (eventItem: CalendarEvent) => void;
   onToggleTodo?: (id: string, currentStatus: boolean) => void;
   onAddTodo?: (dateStr: string) => void;
+  onEditTodo?: (todoItem: Todo) => void;
 }
 
 export default function DailyAgendaModal({
@@ -33,6 +34,7 @@ export default function DailyAgendaModal({
   onEditEvent,
   onToggleTodo,
   onAddTodo,
+  onEditTodo,
 }: DailyAgendaModalProps) {
   const router = useRouter();
 
@@ -197,8 +199,18 @@ export default function DailyAgendaModal({
 
                 if (item.isTodo) {
                   // TODO のレンダリング
+                  const isEditable = item.type === "couple" || item.uid === currentUserId;
                   return (
-                    <div key={`todo-${item.id}`} className={styles.eventRow} onClick={() => router.push(`/todo?scrollTo=${item.id}`)} style={{ cursor: 'pointer' }}>
+                    <div
+                      key={`todo-${item.id}`}
+                      className={styles.eventRow}
+                      onClick={() => {
+                        if (isEditable && onEditTodo) {
+                          onEditTodo(item as unknown as Todo);
+                        }
+                      }}
+                      style={{ cursor: isEditable ? 'pointer' : 'default' }}
+                    >
                       <div 
                         className={styles.timeCol} 
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}

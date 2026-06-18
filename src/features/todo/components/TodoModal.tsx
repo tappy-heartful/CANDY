@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Group, Todo } from "@/src/lib/firestore/types";
+import { Group, Todo, TodoStep } from "@/src/lib/firestore/types";
 import styles from "../views/TodoList.module.css";
 
 interface TodoModalProps {
@@ -15,6 +15,7 @@ interface TodoModalProps {
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
   }) => Promise<void>;
   isSubmitting: boolean;
   onAddGroup?: () => void;
@@ -31,6 +32,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
+  const [steps, setSteps] = useState<TodoStep[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +43,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setDateSettings([
           { id: Math.random().toString(), date: todo.date || "", dateMode: todo.dateMode || "due" }
         ]);
+        setSteps(todo.steps || []);
       } else {
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
@@ -48,6 +51,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setDateSettings([
           { id: Math.random().toString(), date: defaultDate || "", dateMode: "due" }
         ]);
+        setSteps([]);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,6 +74,31 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
     );
   };
 
+  const handleAddStep = () => {
+    const now = Date.now();
+    const id = `new_${now}_${Math.random().toString(36).slice(2, 6)}`;
+    setSteps((prev) => [
+      ...prev,
+      { id, title: "", isCompleted: false, createdAt: now, updatedAt: now }
+    ]);
+  };
+
+  const handleRemoveStep = (id: string) => {
+    setSteps((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleUpdateStepTitle = (id: string, newTitle: string) => {
+    setSteps((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s))
+    );
+  };
+
+  const handleToggleStepCompleted = (id: string) => {
+    setSteps((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isCompleted: !s.isCompleted, updatedAt: Date.now() } : s))
+    );
+  };
+
   const prevGroupsLength = useRef(groups.length);
   useEffect(() => {
     if (isOpen) {
@@ -88,9 +117,17 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
   if (!isOpen) return null;
 
   const handleSave = () => {
+    const cleanSteps = steps.filter(s => s.title.trim() !== "");
     if (todo) {
       const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
-      onSave({ title, groupId, type, date: firstSetting.date, dateMode: firstSetting.dateMode as "due" | "on" });
+      onSave({
+        title,
+        groupId,
+        type,
+        date: firstSetting.date,
+        dateMode: firstSetting.dateMode as "due" | "on",
+        steps: cleanSteps
+      });
     } else {
       onSave({
         title,
@@ -99,7 +136,8 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         dates: dateSettings.map((s) => ({
           date: s.date,
           dateMode: s.dateMode as "due" | "on"
-        }))
+        })),
+        steps: cleanSteps
       });
     }
   };
@@ -214,6 +252,46 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
                 </button>
               </div>
             )}
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.inputLabel}>ステップ (サブタスク)</label>
+            <div className={styles.stepsListModal}>
+              {steps.map((step) => (
+                <div key={step.id} className={styles.stepItemModal}>
+                  <input
+                    type="checkbox"
+                    checked={step.isCompleted}
+                    onChange={() => handleToggleStepCompleted(step.id)}
+                    className={styles.stepCheckbox}
+                  />
+                  <input
+                    type="text"
+                    value={step.title}
+                    onChange={(e) => handleUpdateStepTitle(step.id, e.target.value)}
+                    className={styles.stepInputModal}
+                    placeholder="例: 牛乳を買う"
+                  />
+                  <button
+                    type="button"
+                    className={styles.deleteStepBtn}
+                    onClick={() => handleRemoveStep(step.id)}
+                    title="削除"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex' }}>
+              <button
+                type="button"
+                className={styles.addStepBtn}
+                onClick={handleAddStep}
+              >
+                <i className="fa-solid fa-plus"></i> ステップを追加
+              </button>
+            </div>
           </div>
         </div>
 
