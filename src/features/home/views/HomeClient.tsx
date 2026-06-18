@@ -71,6 +71,8 @@ export default function HomeClient() {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [upcomingAnniversaries, setUpcomingAnniversaries] = useState<Anniversary[]>([]);
   const [upcomingTodos, setUpcomingTodos] = useState<Todo[]>([]);
+  const [overdueTodos, setOverdueTodos] = useState<Todo[]>([]);
+  const [noDeadlineTodos, setNoDeadlineTodos] = useState<Todo[]>([]);
   const [wishlistGroups, setWishlistGroups] = useState<Group[]>([]);
   const [openCalendarDate, setOpenCalendarDate] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<string>("themePinkyRibbon");
@@ -83,6 +85,37 @@ export default function HomeClient() {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [todoGroups, setTodoGroups] = useState<Group[]>([]);
   const [isTodoSubmitting, setIsTodoSubmitting] = useState(false);
+
+  const refreshTodos = async (userId: string) => {
+    try {
+      const allTodos = await getTodosForCalendar();
+      const userTodos = allTodos.filter(t => {
+        if (t.isCompleted) return false;
+        if (t.type !== "couple" && t.uid !== userId) return false;
+        return true;
+      });
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // 1. 期限切れのTODO (昨日以前)
+      const overdue = userTodos.filter(t => t.date && t.date < todayStr);
+      overdue.sort((a, b) => a.date!.localeCompare(b.date!));
+      setOverdueTodos(overdue);
+
+      // 2. 直近のTODO (今日以降、最大3件)
+      const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
+      upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
+      setUpcomingTodos(upcoming.slice(0, 3));
+
+      // 3. 期限なしのTODO (すべて)
+      const noDeadline = userTodos.filter(t => !t.date || t.date === "");
+      noDeadline.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      setNoDeadlineTodos(noDeadline);
+    } catch (e) {
+      console.error("Failed to refresh todos:", e);
+    }
+  };
 
   useEffect(() => {
     // ログイン直後の演出用
@@ -200,21 +233,10 @@ export default function HomeClient() {
           });
           setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
 
-          // TODOのフィルタとソート（日付設定されている未完了TODO3件）
-          const validTodos = allTodos.filter(t => {
-            if (t.isCompleted) return false;
-            if (!t.date) return false;
-            if (t.type !== "couple" && t.uid !== user.uid) return false;
-            return true;
+          // TODOのフィルタとソート
+          refreshTodos(user.uid).then(() => {
+            setLoading(false);
           });
-
-          validTodos.sort((a, b) => {
-            return a.date!.localeCompare(b.date!);
-          });
-
-          setUpcomingTodos(validTodos.slice(0, 3));
-
-          setLoading(false);
         });
       }).catch((e) => {
         console.error("Error loading dashboard data:", e);
@@ -243,20 +265,7 @@ export default function HomeClient() {
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
         });
-        setUpcomingTodos((prev) =>
-          prev.map((t) =>
-            t.id === editingTodo.id
-              ? {
-                  ...t,
-                  title: data.title,
-                  groupId: data.groupId,
-                  date: data.date || "",
-                  dateMode: data.dateMode || "due",
-                  steps: data.steps || [],
-                }
-              : t
-          )
-        );
+        await refreshTodos(user.uid);
       }
       setIsTodoModalOpen(false);
       setEditingTodo(null);
@@ -558,7 +567,7 @@ export default function HomeClient() {
           />
         </div>
 
-        {!loading && (upcomingEvents.length > 0 || upcomingTodos.length > 0) && (
+        {!loading && (upcomingEvents.length > 0 || upcomingTodos.length > 0 || overdueTodos.length > 0 || noDeadlineTodos.length > 0) && (
           <div className={styles.notificationList} style={{ marginBottom: '24px' }}>
             {upcomingEvents.length > 0 && (
               <div className={styles.notificationGroup}>
@@ -588,6 +597,61 @@ export default function HomeClient() {
                           <span className={styles.countdownBadge}>{countdownText}</span>
                         </div>
                         <span className={styles.notificationTitle}>{e.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {overdueTodos.length > 0 && (
+              <div className={styles.notificationGroup}>
+                <div className={styles.notificationHeader}>
+                  <i className={`fa-solid fa-triangle-exclamation ${styles.notificationIcon}`} style={{ color: '#c62828' }}></i>
+                  <span className={styles.notificationText} style={{ color: '#c62828' }}>
+                    期限切れのTODO
+                  </span>
+                </div>
+                <div className={styles.notificationItems}>
+                  {overdueTodos.map(t => {
+                    let badgeClass = styles.badgeCouple;
+                    let typeLabel = "2人";
+                    if (t.type !== 'couple') {
+                      if (t.uid === user?.uid) {
+                        badgeClass = styles.badgeMe;
+                        typeLabel = userData?.nickname || "自分";
+                      } else {
+                        badgeClass = styles.badgePartner;
+                        typeLabel = partnerData?.nickname || "パートナー";
+                      }
+                    }
+
+                    const [y, m, d] = t.date!.split('-').map(Number);
+                    const todoDateOnly = new Date(y, m - 1, d);
+                    const todayVal = new Date();
+                    todayVal.setHours(0, 0, 0, 0);
+                    const diffTime = todayVal.getTime() - todoDateOnly.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                    const countdownText = `⚠️ 遅延(${diffDays}日)`;
+                    const badgeStyle = { background: '#ffebee', color: '#c62828', borderColor: '#c62828' };
+
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setEditingTodo(t);
+                          setIsTodoModalOpen(true);
+                        }}
+                        className={styles.notificationSubItem}
+                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                        </div>
+                        <span className={styles.notificationTitle}>{t.title}</span>
                       </div>
                     );
                   })}
@@ -630,9 +694,6 @@ export default function HomeClient() {
                       countdownText = "🎉 本日！";
                     } else if (diffDays === 1) {
                       countdownText = "✨ 明日！";
-                    } else if (diffDays < 0) {
-                      countdownText = `⚠️ 遅延(${Math.abs(diffDays)}日)`;
-                      badgeStyle = { background: '#ffebee', color: '#c62828', borderColor: '#c62828' };
                     }
 
                     return (
@@ -649,6 +710,50 @@ export default function HomeClient() {
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                        </div>
+                        <span className={styles.notificationTitle}>{t.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {noDeadlineTodos.length > 0 && (
+              <div className={styles.notificationGroup}>
+                <div className={styles.notificationHeader}>
+                  <i className={`fa-solid fa-calendar-minus ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
+                  <span className={styles.notificationText}>
+                    期限なしのTODO
+                  </span>
+                </div>
+                <div className={styles.notificationItems}>
+                  {noDeadlineTodos.map(t => {
+                    let badgeClass = styles.badgeCouple;
+                    let typeLabel = "2人";
+                    if (t.type !== 'couple') {
+                      if (t.uid === user?.uid) {
+                        badgeClass = styles.badgeMe;
+                        typeLabel = userData?.nickname || "自分";
+                      } else {
+                        badgeClass = styles.badgePartner;
+                        typeLabel = partnerData?.nickname || "パートナー";
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setEditingTodo(t);
+                          setIsTodoModalOpen(true);
+                        }}
+                        className={styles.notificationSubItem}
+                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                          <span className={styles.countdownBadge} style={{ background: '#f5f0fa', color: '#7a5ba0', borderColor: '#7a5ba0' }}>🏷️ 期限なし</span>
                         </div>
                         <span className={styles.notificationTitle}>{t.title}</span>
                       </div>
