@@ -1,4 +1,5 @@
 import { db, storage } from "@/src/lib/firebase";
+import EXIF from "exif-js";
 import {
   collection,
   addDoc,
@@ -106,8 +107,47 @@ export async function getPhotos(albumId: string): Promise<Photo[]> {
   return snap.docs.map((d) => toPlainObject(d) as Photo);
 }
 
+// 画像ファイルからExifの撮影日時(DateTimeOriginal)を取得するヘルパー関数
+export function getExifTakenAt(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    if (file.type !== "image/jpeg" && file.type !== "image/jpg") {
+      resolve(null);
+      return;
+    }
+
+    try {
+      EXIF.getData(file as any, function (this: any) {
+        const dateTimeStr = EXIF.getTag(this, "DateTimeOriginal");
+        if (dateTimeStr) {
+          // EXIF形式 "YYYY:MM:DD HH:MM:SS" を JS Date でパース可能な形式に変換
+          const parts = dateTimeStr.split(" ");
+          if (parts.length === 2) {
+            const datePart = parts[0].replace(/:/g, "-");
+            const timePart = parts[1];
+            const date = new Date(`${datePart}T${timePart}`);
+            if (!isNaN(date.getTime())) {
+              resolve(date.getTime());
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    } catch (e) {
+      console.error("Exif parsing failed:", e);
+      resolve(null);
+    }
+  });
+}
+
 // 写真をアップロードしてDBに追加
 export async function uploadPhoto(albumId: string, file: File, uid: string): Promise<Photo> {
+  // Exifから撮影日時を抽出
+  let takenAt = await getExifTakenAt(file);
+  if (!takenAt) {
+    takenAt = file.lastModified || Date.now();
+  }
+
   // 画像ファイルをアップロード前に圧縮 (最大1200px, 品質0.75)
   const compressedFile = await compressImage(file, 1200, 0.75);
 
@@ -122,6 +162,7 @@ export async function uploadPhoto(albumId: string, file: File, uid: string): Pro
     url,
     uid,
     createdAt: Date.now(),
+    takenAt,
   });
 
   return {
@@ -130,6 +171,7 @@ export async function uploadPhoto(albumId: string, file: File, uid: string): Pro
     url,
     uid,
     createdAt: Date.now(),
+    takenAt,
   };
 }
 

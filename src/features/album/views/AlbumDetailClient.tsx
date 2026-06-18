@@ -102,7 +102,13 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         ]);
 
         const photoData = await getPhotos(albumId);
-        setPhotos(photoData);
+        // 撮影日時の古い順（昇順）に並べ替える
+        const sortedPhotos = [...photoData].sort((a, b) => {
+          const timeA = a.takenAt ?? a.createdAt;
+          const timeB = b.takenAt ?? b.createdAt;
+          return timeA - timeB;
+        });
+        setPhotos(sortedPhotos);
       } else {
         // アルバムが存在しない
         router.replace("/albums");
@@ -700,7 +706,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                   {album.name} ({activeIndex !== -1 ? activeIndex + 1 : 0} / {photos.length})
                 </h2>
                 <div className={styles.lightboxUploader}>
-                  {getUploaderName(activePhoto)}
+                  {getUploaderName(activePhoto)} • {activePhoto.takenAt ? "撮影" : "アップロード"}: {formatUploadDate(activePhoto.takenAt ?? activePhoto.createdAt)}
                 </div>
               </div>
               <button className={styles.lightboxClose} onClick={() => setActivePhoto(null)}>
