@@ -1,0 +1,399 @@
+.container {
+  padding: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: inherit;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #7a5ba0;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title i {
+  color: #F7A8C4;
+}
+
+/* Glassmorphism style card */
+.card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border: 2px solid #f3e5f5;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.cardTitle {
+  font-size: 16px;
+  color: #7a5ba0;
+  margin-bottom: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardTitle i {
+  color: #A0E7D2;
+}
+
+/* Form Row */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.inputDisabled {
+  background-color: #f5f0fa !important;
+  color: #7a5ba0 !important;
+  cursor: not-allowed;
+  font-weight: bold;
+  border-color: #ebdcf5 !important;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: bold;
+  color: #666;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 2px solid #ebdcf5;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #9B7CC3;
+  box-shadow: 0 0 0 3px rgba(155, 124, 195, 0.2);
+}
+
+/* Candy Button */
+.btn {
+  background: linear-gradient(135deg, #F7A8C4 0%, #f48fb1 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(247, 168, 196, 0.3);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(247, 168, 196, 0.4);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btnSecondary {
+  background: linear-gradient(135deg, #A0E7D2 0%, #80cbc4 100%);
+  box-shadow: 0 4px 10px rgba(160, 231, 210, 0.3);
+}
+
+.btnSecondary:hover {
+  box-shadow: 0 6px 14px rgba(160, 231, 210, 0.4);
+}
+
+/* Tooltip & Interactive Chart */
+.chartWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.chartSvg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.gridLine {
+  stroke: #f1e6f8;
+  stroke-width: 1;
+  stroke-dasharray: 4,4;
+}
+
+.axisLine {
+  stroke: #ebdcf5;
+  stroke-width: 2;
+}
+
+.chartPath {
+  fill: none;
+  stroke: #9B7CC3;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chartArea {
+  fill: url(#chartGrad);
+}
+
+.chartPoint {
+  fill: #fff;
+  stroke: #F7A8C4;
+  stroke-width: 3;
+  cursor: pointer;
+  transition: r 0.2s ease, stroke-width 0.2s ease;
+}
+
+.chartPoint:hover {
+  r: 7;
+  stroke-width: 4;
+}
+
+.axisText {
+  font-size: 10px;
+  fill: #999;
+  font-family: inherit;
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #F7A8C4;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(247, 168, 196, 0.2);
+  pointer-events: none;
+  font-size: 11px;
+  color: #333;
+  z-index: 10;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, left 0.15s ease, top 0.15s ease;
+}
+
+.tooltipTitle {
+  font-weight: bold;
+  color: #7a5ba0;
+  margin-bottom: 2px;
+}
+
+/* List Table Styles */
+.tableContainer {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 2px solid #ebdcf5;
+  border-radius: 16px;
+  box-shadow: inset 0 2px 8px rgba(155, 124, 195, 0.05);
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.thead {
+  position: sticky;
+  top: 0;
+  background: #f8f1fb;
+  z-index: 1;
+}
+
+.th {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #7a5ba0;
+  font-weight: bold;
+  border-bottom: 2px solid #ebdcf5;
+}
+
+.tr {
+  transition: background 0.15s ease;
+}
+
+.tr:nth-child(even) {
+  background: #faf6fc;
+}
+
+.tr:hover {
+  background: #f3eafd;
+}
+
+.td {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #444;
+  border-bottom: 1px solid #f3e5f5;
+  vertical-align: middle;
+}
+
+.tdAge {
+  font-weight: bold;
+  color: #7a5ba0;
+}
+
+.tdYear {
+  color: #888;
+  font-family: monospace;
+}
+
+.tdResult {
+  font-weight: bold;
+  color: #7a5ba0;
+}
+
+.tdSosan {
+  color: #e57373;
+  font-weight: bold;
+}
+
+/* Age Investment Input Controller */
+.inputCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ageInvestInput {
+  border: 2px solid #ebdcf5;
+  border-radius: 8px;
+  padding: 6px 8px;
+  width: 90px;
+  font-size: 13px;
+  text-align: right;
+  outline: none;
+  font-family: monospace;
+}
+
+.ageInvestInput:focus {
+  border-color: #9B7CC3;
+}
+
+.stepBtn {
+  background: #f3e5f5;
+  color: #7a5ba0;
+  border: none;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.stepBtn:hover {
+  background: #ebdcf5;
+}
+
+.stepBtn:active {
+  transform: scale(0.9);
+}
+
+/* Bulk Setter Tool */
+.bulkSetter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  background: #faf6fc;
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px dashed #9B7CC3;
+  margin-top: 12px;
+}
+
+.bulkSetterTitle {
+  font-size: 13px;
+  font-weight: bold;
+  color: #7a5ba0;
+  width: 100%;
+}
+
+.bulkRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bulkInput {
+  border: 2px solid #ebdcf5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  width: 70px;
+  text-align: center;
+}
+
+.bulkInputInvest {
+  width: 110px;
+  text-align: right;
+}
+
+.bulkInput:focus {
+  border-color: #9B7CC3;
+}
+
+/* Mobile responsive fixes */
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+  .bulkSetter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .bulkRow {
+    justify-content: space-between;
+  }
+  .th, .td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .ageInvestInput {
+    width: 70px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .stepBtn {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+}

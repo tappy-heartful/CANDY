@@ -150,3 +150,17 @@ export interface Municipality {
   name: string;
   prefCode: string;
 }
+
+export interface InvestmentSimulation {
+  id: string; // 通常は uid
+  uid: string;
+  annualRate: number; // 想定年利 (%)
+  startAge: number; // 開始年齢 (例: 26)
+  startYear: number; // 開始年 (例: 2024)
+  endAge: number; // 終了年齢 (例: 80)
+  endYear: number; // 終了年 (例: 2078)
+  investments: { [age: string]: number }; // 年齢ごとの投資額 (年齢の文字列 -> 金額)
+  createdAt: number;
+  updatedAt: number;
+}
+
