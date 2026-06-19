@@ -98,6 +98,8 @@ export interface CalendarEvent {
   uid: string; // 作成者
   createdAt: number;
   updatedAt: number;
+  isRecurring?: boolean;
+  recurrenceId?: string;
 }
 
 export interface DailyStatus {
