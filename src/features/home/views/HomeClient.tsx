@@ -42,6 +42,15 @@ const CLOCK_THEMES = [
   "themeGalaxyMagic",
 ];
 
+const getDiffDays = (dateStr: string) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const target = new Date(y, m - 1, d);
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export default function HomeClient() {
   const { user, userData, refreshUserData } = useAuth();
   const searchParams = useSearchParams();
@@ -103,10 +112,12 @@ export default function HomeClient() {
       overdue.sort((a, b) => a.date!.localeCompare(b.date!));
       setOverdueTodos(overdue);
 
-      // 2. 直近のTODO (今日以降、最大5件)
+      // 2. 直近のTODO (今日以降、基本最大3件、一週間以内はすべて表示)
       const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
       upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
-      setUpcomingTodos(upcoming.slice(0, 5));
+      const withinAWeekTodosCount = upcoming.filter(t => getDiffDays(t.date!) <= 7).length;
+      const todoLimit = Math.max(3, withinAWeekTodosCount);
+      setUpcomingTodos(upcoming.slice(0, todoLimit));
 
       // 3. 期限なしのTODO (すべて)
       const noDeadline = userTodos.filter(t => !t.date || t.date === "");
@@ -212,8 +223,10 @@ export default function HomeClient() {
             return 0;
           });
 
-          // 予定：最大5件
-          setUpcomingEvents(validEvents.slice(0, 5));
+          // 予定：基本最大3件、一週間以内はすべて表示
+          const withinAWeekEventsCount = validEvents.filter(e => getDiffDays(e.startDate) <= 7).length;
+          const eventLimit = Math.max(3, withinAWeekEventsCount);
+          setUpcomingEvents(validEvents.slice(0, eventLimit));
           setWishlistGroups(groups);
           setTodoGroups(tGroups);
 
@@ -581,6 +594,8 @@ export default function HomeClient() {
                   {upcomingEvents.map(e => {
                     const [y, m, d] = e.startDate.split('-').map(Number);
                     const eventDateOnly = new Date(y, m - 1, d);
+                    const days = ['日', '月', '火', '水', '木', '金', '土'];
+                    const day = days[eventDateOnly.getDay()];
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     const diffTime = eventDateOnly.getTime() - today.getTime();
@@ -607,7 +622,7 @@ export default function HomeClient() {
                       <div key={e.id} className={styles.notificationSubItem} onClick={() => setOpenCalendarDate(e.startDate)} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
                           <span className={styles.countdownBadge}>{countdownText}</span>
                         </div>
 
@@ -660,6 +675,8 @@ export default function HomeClient() {
 
                     const [y, m, d] = t.date!.split('-').map(Number);
                     const todoDateOnly = new Date(y, m - 1, d);
+                    const days = ['日', '月', '火', '水', '木', '金', '土'];
+                    const day = days[todoDateOnly.getDay()];
                     const todayVal = new Date();
                     todayVal.setHours(0, 0, 0, 0);
                     const diffTime = todayVal.getTime() - todoDateOnly.getTime();
@@ -680,7 +697,7 @@ export default function HomeClient() {
                       >
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
                         </div>
                         <span className={styles.notificationTitle}>{t.title}</span>
@@ -715,6 +732,8 @@ export default function HomeClient() {
 
                     const [y, m, d] = t.date!.split('-').map(Number);
                     const todoDateOnly = new Date(y, m - 1, d);
+                    const days = ['日', '月', '火', '水', '木', '金', '土'];
+                    const day = days[todoDateOnly.getDay()];
                     const todayVal = new Date();
                     todayVal.setHours(0, 0, 0, 0);
                     const diffTime = todoDateOnly.getTime() - todayVal.getTime();
@@ -740,7 +759,7 @@ export default function HomeClient() {
                       >
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
+                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
                           <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
                         </div>
                         <span className={styles.notificationTitle}>{t.title}</span>
