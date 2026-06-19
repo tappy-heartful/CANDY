@@ -117,7 +117,33 @@
 .eventList {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  background: #fafafc;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #f0edf4;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #685c73;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(155, 124, 195, 0.2);
+  margin-bottom: 8px;
+}
+
+.sectionContent {
+  display: flex;
+  flex-direction: column;
 }
 
 .eventRow {
@@ -126,10 +152,16 @@
   gap: 16px;
   cursor: pointer;
   transition: opacity 0.2s;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(155, 124, 195, 0.08);
 }
 
 .eventRow:active {
   opacity: 0.6;
+}
+
+.noBorder {
+  border-bottom: none !important;
 }
 
 .timeCol {

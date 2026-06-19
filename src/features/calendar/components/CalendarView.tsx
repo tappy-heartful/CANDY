@@ -1375,6 +1375,8 @@ export default function CalendarView({
           todos={visibleTodos.filter((t) => t.date === activeDateStr)}
           anniversaries={anniversaries.filter((a) => a.date === activeDateStr.slice(5))}
           currentUserId={currentUserId}
+          myNickname={myNickname}
+          partnerNickname={partnerNickname}
           myPictureUrl={myPictureUrl}
           partnerPictureUrl={partnerPictureUrl}
           onClose={() => setIsDailyAgendaOpen(false)}
