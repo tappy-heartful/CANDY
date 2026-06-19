@@ -25,6 +25,102 @@ interface CalendarViewProps {
 
 const padZero = (n: number) => n.toString().padStart(2, "0");
 
+const getDaysDiff = (dateStr1: string, dateStr2: string): number => {
+  const d1 = new Date(dateStr1);
+  const d2 = new Date(dateStr2);
+  const diffTime = d2.getTime() - d1.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const shiftDateString = (dateStr: string, diffDays: number): string => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + diffDays);
+  return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())}`;
+};
+
+const generateRecurrenceDates = (
+  startDate: string,
+  config: {
+    interval: number;
+    unit: "day" | "week" | "month" | "year";
+    monthlyOption?: "dayOfMonth" | "dayOfWeek";
+    yearlyOption?: "dayOfYear" | "dayOfWeekOfYear";
+    endDate: string;
+  }
+): string[] => {
+  const dates: string[] = [startDate];
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const baseDate = new Date(startYear, startMonth - 1, startDay);
+  
+  const baseDayOfWeek = baseDate.getDay();
+  const baseWeekNum = Math.ceil(startDay / 7);
+
+  // 無限ループ防止用の最大件数リミット（最大1000件）
+  const maxSafetyLimit = 1000;
+
+  for (let i = 1; i < maxSafetyLimit; i++) {
+    const nextDate = new Date(startYear, startMonth - 1, startDay);
+    let nextDateStr = "";
+
+    if (config.unit === "day") {
+      nextDate.setDate(baseDate.getDate() + i * config.interval);
+      nextDateStr = `${nextDate.getFullYear()}-${padZero(nextDate.getMonth() + 1)}-${padZero(nextDate.getDate())}`;
+    } else if (config.unit === "week") {
+      nextDate.setDate(baseDate.getDate() + i * config.interval * 7);
+      nextDateStr = `${nextDate.getFullYear()}-${padZero(nextDate.getMonth() + 1)}-${padZero(nextDate.getDate())}`;
+    } else if (config.unit === "month") {
+      // Nヶ月進める
+      const targetMonth = startMonth - 1 + i * config.interval;
+      if (config.monthlyOption === "dayOfWeek") {
+        // 毎月第X曜日
+        const tempDate = new Date(startYear, targetMonth, 1);
+        const firstDayOfWeek = tempDate.getDay();
+        let firstTargetDay = 1 + (baseDayOfWeek - firstDayOfWeek);
+        if (firstTargetDay <= 0) firstTargetDay += 7;
+        const targetDay = firstTargetDay + (baseWeekNum - 1) * 7;
+        const lastDayOfMonth = new Date(startYear, targetMonth + 1, 0).getDate();
+        const finalDay = targetDay > lastDayOfMonth ? targetDay - 7 : targetDay;
+        const finalDate = new Date(startYear, targetMonth, finalDay);
+        nextDateStr = `${finalDate.getFullYear()}-${padZero(finalDate.getMonth() + 1)}-${padZero(finalDate.getDate())}`;
+      } else {
+        // 毎月N日
+        const lastDayOfMonth = new Date(startYear, targetMonth + 1, 0).getDate();
+        const finalDay = startDay > lastDayOfMonth ? lastDayOfMonth : startDay;
+        const finalDate = new Date(startYear, targetMonth, finalDay);
+        nextDateStr = `${finalDate.getFullYear()}-${padZero(finalDate.getMonth() + 1)}-${padZero(finalDate.getDate())}`;
+      }
+    } else if (config.unit === "year") {
+      // N年進める
+      const targetYear = startYear + i * config.interval;
+      if (config.yearlyOption === "dayOfWeekOfYear") {
+        // 毎年M月第X曜日
+        const tempDate = new Date(targetYear, startMonth - 1, 1);
+        const firstDayOfWeek = tempDate.getDay();
+        let firstTargetDay = 1 + (baseDayOfWeek - firstDayOfWeek);
+        if (firstTargetDay <= 0) firstTargetDay += 7;
+        const targetDay = firstTargetDay + (baseWeekNum - 1) * 7;
+        const lastDayOfMonth = new Date(targetYear, startMonth, 0).getDate();
+        const finalDay = targetDay > lastDayOfMonth ? targetDay - 7 : targetDay;
+        const finalDate = new Date(targetYear, startMonth - 1, finalDay);
+        nextDateStr = `${finalDate.getFullYear()}-${padZero(finalDate.getMonth() + 1)}-${padZero(finalDate.getDate())}`;
+      } else {
+        // 毎年M月N日
+        const lastDayOfMonth = new Date(targetYear, startMonth, 0).getDate();
+        const finalDay = startDay > lastDayOfMonth ? lastDayOfMonth : startDay;
+        const finalDate = new Date(targetYear, startMonth - 1, finalDay);
+        nextDateStr = `${finalDate.getFullYear()}-${padZero(finalDate.getMonth() + 1)}-${padZero(finalDate.getDate())}`;
+      }
+    }
+
+    if (nextDateStr > config.endDate) {
+      break;
+    }
+    dates.push(nextDateStr);
+  }
+  return dates;
+};
+
 export default function CalendarView({
   currentUserId,
   myNickname = "自分",
@@ -367,6 +463,7 @@ export default function CalendarView({
             <div className={styles.timelineItemTitle}>
               <div className={styles.timelineIconCol} style={{ marginRight: '4px' }}>{icon}</div>
               <span className={styles.timelineItemText}>
+                {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', fontSize: '10px', color: '#999' }}></i>}
                 {item.title} {item.note && <i className="fa-regular fa-file-lines"></i>}
               </span>
             </div>
@@ -592,6 +689,9 @@ export default function CalendarView({
         key={`event-${item.id}`}
         className={`${spanClass} ${pillClass}`}
       >
+        {titleStr && item.isRecurring && (
+          <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '2px', fontSize: '9px' }}></i>
+        )}
         {titleStr || "\u00A0"}
       </span>
     );
@@ -617,27 +717,102 @@ export default function CalendarView({
     setIsModalOpen(true);
   };
 
-  const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
+  const handleSaveEvent = async (eventData: Partial<CalendarEvent>, targetRange?: "only" | "all") => {
     showSpinner();
     try {
       if (activeModalEvent?.id) {
         // Edit Mode
-        await updateEvent(activeModalEvent.id, eventData);
-        setEvents((prev) =>
-          prev.map((e) =>
-            e.id === activeModalEvent.id ? ({ ...e, ...eventData } as CalendarEvent) : e
-          )
-        );
+        if (activeModalEvent.isRecurring && targetRange === "only") {
+          // この予定のみ変更 -> 繰り返しから外して単体にする
+          const updatedData = {
+            ...eventData,
+            isRecurring: false,
+            recurrenceId: "",
+          };
+          await updateEvent(activeModalEvent.id, updatedData);
+          setEvents((prev) =>
+            prev.map((e) =>
+              e.id === activeModalEvent.id ? ({ ...e, ...updatedData } as CalendarEvent) : e
+            )
+          );
+        } else if (activeModalEvent.isRecurring && targetRange === "all" && activeModalEvent.recurrenceId) {
+          // すべての繰り返し予定を一括変更
+          const diffStart = getDaysDiff(activeModalEvent.startDate!, eventData.startDate || activeModalEvent.startDate!);
+          const diffEnd = getDaysDiff(activeModalEvent.endDate!, eventData.endDate || activeModalEvent.endDate!);
+          
+          const recurringEvents = events.filter((e) => e.recurrenceId === activeModalEvent.recurrenceId);
+          
+          const updates = recurringEvents.map(async (e) => {
+            const nextStartDate = shiftDateString(e.startDate, diffStart);
+            const nextEndDate = shiftDateString(e.endDate, diffEnd);
+            const dataToUpdate = {
+              ...eventData,
+              startDate: nextStartDate,
+              endDate: nextEndDate,
+            };
+            await updateEvent(e.id, dataToUpdate);
+            return { id: e.id, data: dataToUpdate };
+          });
+          
+          const results = await Promise.all(updates);
+          setEvents((prev) =>
+            prev.map((e) => {
+              const res = results.find((r) => r.id === e.id);
+              return res ? ({ ...e, ...res.data } as CalendarEvent) : e;
+            })
+          );
+        } else {
+          // 通常の編集
+          await updateEvent(activeModalEvent.id, eventData);
+          setEvents((prev) =>
+            prev.map((e) =>
+              e.id === activeModalEvent.id ? ({ ...e, ...eventData } as CalendarEvent) : e
+            )
+          );
+        }
       } else {
         // Create Mode
-        const docRef = await addEvent(eventData);
-        const newEventItem = {
-          id: docRef.id,
-          ...eventData,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        } as CalendarEvent;
-        setEvents((prev) => [...prev, newEventItem]);
+        const recurrenceConfig = (eventData as any).recurrenceConfig;
+        if (eventData.isRecurring && recurrenceConfig) {
+          // 繰り返し予定の生成登録
+          const recId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          const targetDates = generateRecurrenceDates(eventData.startDate!, recurrenceConfig);
+          
+          const baseData = { ...eventData };
+          delete (baseData as any).recurrenceConfig;
+
+          const creations = targetDates.map(async (d) => {
+            const dateDiff = getDaysDiff(eventData.startDate!, d);
+            const nextEndDate = shiftDateString(eventData.endDate!, dateDiff);
+            const itemData = {
+              ...baseData,
+              startDate: d,
+              endDate: nextEndDate,
+              recurrenceId: recId,
+              isRecurring: true,
+            };
+            const docRef = await addEvent(itemData);
+            return {
+              id: docRef.id,
+              ...itemData,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            } as CalendarEvent;
+          });
+          
+          const addedEvents = await Promise.all(creations);
+          setEvents((prev) => [...prev, ...addedEvents]);
+        } else {
+          // 通常登録
+          const docRef = await addEvent(eventData);
+          const newEventItem = {
+            id: docRef.id,
+            ...eventData,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          } as CalendarEvent;
+          setEvents((prev) => [...prev, newEventItem]);
+        }
       }
       setIsModalOpen(false);
       setActiveModalEvent(null);
@@ -649,11 +824,20 @@ export default function CalendarView({
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = async (id: string, targetRange?: "only" | "all") => {
     showSpinner();
     try {
-      await deleteEvent(id);
-      setEvents((prev) => prev.filter((e) => e.id !== id));
+      if (activeModalEvent?.isRecurring && targetRange === "all" && activeModalEvent.recurrenceId) {
+        // すべて一括削除
+        const recurringEvents = events.filter((e) => e.recurrenceId === activeModalEvent.recurrenceId);
+        const deletions = recurringEvents.map((e) => deleteEvent(e.id));
+        await Promise.all(deletions);
+        setEvents((prev) => prev.filter((e) => e.recurrenceId !== activeModalEvent.recurrenceId));
+      } else {
+        // この予定のみ削除（通常削除）
+        await deleteEvent(id);
+        setEvents((prev) => prev.filter((e) => e.id !== id));
+      }
       setIsModalOpen(false);
       setActiveModalEvent(null);
     } catch (e) {

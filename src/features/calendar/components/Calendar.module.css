@@ -1057,3 +1057,131 @@
   overflow: hidden;
   width: 100%;
 }
+
+/* Recurrence Settings */
+.recurrenceSettings {
+  background: #f8fcfb;
+  padding: 14px;
+  border-radius: 14px;
+  border: 2px dashed #A0E7D2;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: modalEnter 0.2s ease-out;
+}
+
+.recurrenceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: bold;
+  color: #555;
+}
+
+.recurrenceSelect {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 2px solid #A0E7D2;
+  font-size: 14px;
+  background: white;
+  outline: none;
+}
+
+.recurrenceRadioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.recurrenceRadioLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #666;
+  cursor: pointer;
+}
+
+.recurrenceRadioLabel input {
+  accent-color: #A0E7D2;
+}
+
+/* Confirm Popup for Recurring Event Change */
+.confirmOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 30px;
+}
+
+.confirmBox {
+  background: white;
+  width: 100%;
+  max-width: 320px;
+  border-radius: 20px;
+  border: 3px solid #9B7CC3;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  box-sizing: border-box;
+  animation: modalEnter 0.15s ease-out;
+}
+
+.confirmMessage {
+  font-size: 14px;
+  font-weight: bold;
+  color: #444;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.confirmButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirmBtn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+  transition: transform 0.1s;
+}
+
+.confirmBtn:active {
+  transform: scale(0.97);
+}
+
+.btnConfirmOnly {
+  background: #A0E7D2;
+  color: white;
+}
+
+.btnConfirmAll {
+  background: #9B7CC3;
+  color: white;
+}
+
+.btnConfirmCancel {
+  background: white;
+  border: 2px solid #ddd;
+  color: #666;
+}

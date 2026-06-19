@@ -296,6 +296,7 @@ export default function DailyAgendaModal({
                         <div className={styles.eventTitle}>
                           <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
                           <span>
+                            {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', color: '#999', fontSize: '12px' }}></i>}
                             {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
                           </span>
                         </div>

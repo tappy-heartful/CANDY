@@ -195,6 +195,9 @@ export default function Header() {
           <Link href="/albums" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-images ${styles.menuIcon}`}></i> アルバム
           </Link>
+          <Link href="/investment" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-chart-line ${styles.menuIcon}`}></i> 投資シミュレーション
+          </Link>
         </div>
       </div>
     </>
