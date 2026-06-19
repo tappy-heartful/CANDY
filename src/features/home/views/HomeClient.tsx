@@ -112,12 +112,10 @@ export default function HomeClient() {
       overdue.sort((a, b) => a.date!.localeCompare(b.date!));
       setOverdueTodos(overdue);
 
-      // 2. 直近のTODO (今日以降、基本最大3件、一週間以内はすべて表示)
+      // 2. 直近のTODO (今日以降、直近の4件を表示)
       const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
       upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
-      const withinAWeekTodosCount = upcoming.filter(t => getDiffDays(t.date!) <= 7).length;
-      const todoLimit = Math.max(3, withinAWeekTodosCount);
-      setUpcomingTodos(upcoming.slice(0, todoLimit));
+      setUpcomingTodos(upcoming.slice(0, 4));
 
       // 3. 期限なしのTODO (すべて)
       const noDeadline = userTodos.filter(t => !t.date || t.date === "");
@@ -223,10 +221,8 @@ export default function HomeClient() {
             return 0;
           });
 
-          // 予定：基本最大3件、一週間以内はすべて表示
-          const withinAWeekEventsCount = validEvents.filter(e => getDiffDays(e.startDate) <= 7).length;
-          const eventLimit = Math.max(3, withinAWeekEventsCount);
-          setUpcomingEvents(validEvents.slice(0, eventLimit));
+          // 予定：直近の4件を表示
+          setUpcomingEvents(validEvents.slice(0, 4));
           setWishlistGroups(groups);
           setTodoGroups(tGroups);
 
