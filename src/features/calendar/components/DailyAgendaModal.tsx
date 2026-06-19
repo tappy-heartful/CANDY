@@ -11,6 +11,8 @@ interface DailyAgendaModalProps {
   todos?: Todo[];
   anniversaries?: Anniversary[];
   currentUserId: string;
+  myNickname?: string;
+  partnerNickname?: string;
   myPictureUrl?: string;
   partnerPictureUrl?: string;
   onClose: () => void;
@@ -27,6 +29,8 @@ export default function DailyAgendaModal({
   todos = [],
   anniversaries = [],
   currentUserId,
+  myNickname = "自分",
+  partnerNickname = "パートナー",
   myPictureUrl = "/icon.png",
   partnerPictureUrl = "/icon.png",
   onClose,
@@ -52,12 +56,12 @@ export default function DailyAgendaModal({
     };
   }, [activeDateStr]);
 
-  // Sort events:
-  // 1. Continued from previous days (activeDateStr > startDate)
-  // 2. Starts today, sorted by start time
-  // 3. All-day events at the end
-  // 予定(events)とTODO(todos)を混ぜて、時系列順にソートする
-  const combinedAgendaItems = useMemo(() => {
+  // 予定(events)とTODO(todos)を混ぜて、所有者グループごとに分類し、ソートする
+  const { coupleItems, myItems, partnerItems } = useMemo(() => {
+    const couple: any[] = [];
+    const me: any[] = [];
+    const partner: any[] = [];
+
     const items = [
       ...events.map((e) => ({
         ...e,
@@ -76,7 +80,17 @@ export default function DailyAgendaModal({
       })),
     ];
 
-    return items.sort((a, b) => {
+    items.forEach((item) => {
+      if (item.type === "couple") {
+        couple.push(item);
+      } else if (item.uid === currentUserId) {
+        me.push(item);
+      } else {
+        partner.push(item);
+      }
+    });
+
+    const sortFn = (a: any, b: any) => {
       // 1. 予定(isTodo: false)を優先、TODO(isTodo: true)を後にする
       if (a.isTodo !== b.isTodo) {
         return a.isTodo ? 1 : -1;
@@ -97,11 +111,6 @@ export default function DailyAgendaModal({
         if (a.startTime && !b.startTime) return 1;
         if (!a.startTime && b.startTime) return -1;
 
-        // その他は所有者順 (couple -> me -> partner)
-        const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
-        const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
-        if (orderA !== orderB) return orderA - orderB;
-
         return ((a as any).createdAt || 0) - ((b as any).createdAt || 0);
       }
 
@@ -111,16 +120,17 @@ export default function DailyAgendaModal({
       const bComp = b.isCompleted ? 1 : 0;
       if (aComp !== bComp) return aComp - bComp;
 
-      // 所有者順 (couple -> me -> partner)
-      const orderA = a.type === "couple" ? 0 : (a.uid === currentUserId ? 1 : 2);
-      const orderB = b.type === "couple" ? 0 : (b.uid === currentUserId ? 1 : 2);
-      if (orderA !== orderB) return orderA - orderB;
-
       // 作成順
       const aTimeVal = (a as any).createdAt || 0;
       const bTimeVal = (b as any).createdAt || 0;
       return aTimeVal - bTimeVal;
-    });
+    };
+
+    return {
+      coupleItems: couple.sort(sortFn),
+      myItems: me.sort(sortFn),
+      partnerItems: partner.sort(sortFn),
+    };
   }, [events, todos, currentUserId]);
 
   const getEventColor = (e: CalendarEvent) => {
@@ -168,7 +178,7 @@ export default function DailyAgendaModal({
         </div>
 
         <div className={styles.eventList}>
-          {combinedAgendaItems.length === 0 && anniversaries.length === 0 ? (
+          {coupleItems.length === 0 && myItems.length === 0 && partnerItems.length === 0 && anniversaries.length === 0 ? (
             <div className={styles.emptyState}>予定・TODOはありません</div>
           ) : (
             <>
@@ -184,127 +194,169 @@ export default function DailyAgendaModal({
                 </div>
               ))}
 
-              {combinedAgendaItems.map((item) => {
-                const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
-                const icon = item.type === "couple" ? (
-                  <>
+              {(() => {
+                const renderAgendaItem = (item: any, isLast: boolean) => {
+                  const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+                  const icon = item.type === "couple" ? (
+                    <>
+                      <img src={myPictureUrl} alt="Me" className={styles.eventUserIcon} />
+                      <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} style={{ marginLeft: "-12px" }} />
+                    </>
+                  ) : (item.uid === currentUserId ? (
                     <img src={myPictureUrl} alt="Me" className={styles.eventUserIcon} />
-                    <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} style={{ marginLeft: "-12px" }} />
-                  </>
-                ) : (item.uid === currentUserId ? (
-                  <img src={myPictureUrl} alt="Me" className={styles.eventUserIcon} />
-                ) : (
-                  <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} />
-                ));
+                  ) : (
+                    <img src={partnerPictureUrl} alt="Partner" className={styles.eventUserIcon} />
+                  ));
 
-                if (item.isTodo) {
-                  // TODO のレンダリング
-                  const isEditable = item.type === "couple" || item.uid === currentUserId;
-                  return (
-                    <div
-                      key={`todo-${item.id}`}
-                      className={styles.eventRow}
-                      onClick={() => {
-                        if (isEditable && onEditTodo) {
-                          onEditTodo(item as unknown as Todo);
-                        }
-                      }}
-                      style={{ cursor: isEditable ? 'pointer' : 'default' }}
-                    >
-                      <div 
-                        className={styles.timeCol} 
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleTodo && onToggleTodo(item.id, !!item.isCompleted);
-                        }}
-                      >
-                        <span className={styles.timeText} style={{ fontSize: '20px' }}>
-                          {item.isCompleted ? (
-                            <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
-                          ) : (
-                            <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
-                          )}
-                        </span>
-                      </div>
-                      <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
-                        <div className={styles.eventTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
-                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{icon}</div>
-                          <span>{item.title}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  // 予定(イベント)のレンダリング
-                  return (
-                    <div key={`event-${item.id}`} className={styles.eventRow} onClick={() => onEditEvent(item)} style={{ alignItems: 'stretch', cursor: 'pointer' }}>
-                      <div className={styles.timeCol} style={{ alignItems: 'center' }}>
-                        {(() => {
-                          if (item.startDate !== item.endDate) {
-                            const isStart = activeDateStr === item.startDate;
-                            const isEnd = activeDateStr === item.endDate;
-                            const isMiddle = activeDateStr > item.startDate && activeDateStr < item.endDate;
-
-                            const wavyLineStyle: React.CSSProperties = {
-                              width: '6px',
-                              flex: 1,
-                              backgroundColor: color,
-                              WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                              WebkitMaskRepeat: "repeat-y",
-                              WebkitMaskSize: "6px 12px",
-                              maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
-                              maskRepeat: "repeat-y",
-                              maskSize: "6px 12px",
-                            };
-
-                            if (isStart) {
-                              return (
-                                <>
-                                  <span className={styles.timeText} style={{ marginTop: '8px' }}>{item.isAllDay ? "終日" : item.startTime}</span>
-                                  <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
-                                </>
-                              );
-                            }
-                            if (isMiddle) {
-                              return (
-                                <div style={{ ...wavyLineStyle }}></div>
-                              );
-                            }
-                            if (isEnd) {
-                              return (
-                                <>
-                                  <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
-                                  <span className={styles.timeText} style={{ marginBottom: '8px' }}>{item.isAllDay ? "終日" : item.endTime}</span>
-                                </>
-                              );
-                            }
+                  if (item.isTodo) {
+                    const isEditable = item.type === "couple" || item.uid === currentUserId;
+                    return (
+                      <div
+                        key={`todo-${item.id}`}
+                        className={`${styles.eventRow} ${isLast ? styles.noBorder : ""}`}
+                        onClick={() => {
+                          if (isEditable && onEditTodo) {
+                            onEditTodo(item as unknown as Todo);
                           }
-                          
-                          // 単日イベントの場合
-                          return item.isAllDay ? (
-                            <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
-                              <span className={styles.timeText}>{item.startTime}</span>
-                              <span className={styles.timeTextSub}>{item.endTime}</span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                      <div className={styles.mainCol} style={{ borderLeftColor: color }}>
-                        <div className={styles.eventTitle}>
-                          <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
-                          <span>
-                            {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', color: '#999', fontSize: '12px' }}></i>}
-                            {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                        }}
+                        style={{ cursor: isEditable ? 'pointer' : 'default' }}
+                      >
+                        <div 
+                          className={styles.timeCol} 
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleTodo && onToggleTodo(item.id, !!item.isCompleted);
+                          }}
+                        >
+                          <span className={styles.timeText} style={{ fontSize: '20px' }}>
+                            {item.isCompleted ? (
+                              <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
+                            ) : (
+                              <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
+                            )}
                           </span>
                         </div>
+                        <div className={styles.mainCol} style={{ borderLeftColor: color, opacity: item.isCompleted ? 0.4 : 1 }}>
+                          <div className={styles.eventTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+                            <div className={styles.iconCol} style={{ marginRight: '8px' }}>{icon}</div>
+                            <span>{item.title}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                }
-              })}
+                    );
+                  } else {
+                    return (
+                      <div key={`event-${item.id}`} className={`${styles.eventRow} ${isLast ? styles.noBorder : ""}`} onClick={() => onEditEvent(item)} style={{ alignItems: 'stretch', cursor: 'pointer' }}>
+                        <div className={styles.timeCol} style={{ alignItems: 'center' }}>
+                          {(() => {
+                            if (item.startDate !== item.endDate) {
+                              const isStart = activeDateStr === item.startDate;
+                              const isEnd = activeDateStr === item.endDate;
+                              const isMiddle = activeDateStr > item.startDate && activeDateStr < item.endDate;
+
+                              const wavyLineStyle: React.CSSProperties = {
+                                width: '6px',
+                                flex: 1,
+                                backgroundColor: color,
+                                WebkitMaskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                                WebkitMaskRepeat: "repeat-y",
+                                WebkitMaskSize: "6px 12px",
+                                maskImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 3 0 Q 6 3 3 6 T 3 12' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E\")",
+                                maskRepeat: "repeat-y",
+                                maskSize: "6px 12px",
+                              };
+
+                              if (isStart) {
+                                return (
+                                  <>
+                                    <span className={styles.timeText} style={{ marginTop: '8px' }}>{item.isAllDay ? "終日" : item.startTime}</span>
+                                    <div style={{ ...wavyLineStyle, marginTop: '4px' }}></div>
+                                  </>
+                                );
+                              }
+                              if (isMiddle) {
+                                return (
+                                  <div style={{ ...wavyLineStyle }}></div>
+                                );
+                              }
+                              if (isEnd) {
+                                return (
+                                  <>
+                                    <div style={{ ...wavyLineStyle, marginBottom: '4px' }}></div>
+                                    <span className={styles.timeText} style={{ marginBottom: '8px' }}>{item.isAllDay ? "終日" : item.endTime}</span>
+                                  </>
+                                );
+                              }
+                            }
+                            
+                            return item.isAllDay ? (
+                              <span className={styles.timeText} style={{ marginTop: '8px', alignSelf: 'flex-end' }}>終日</span>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '8px', width: '100%' }}>
+                                <span className={styles.timeText}>{item.startTime}</span>
+                                <span className={styles.timeTextSub}>{item.endTime}</span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <div className={styles.mainCol} style={{ borderLeftColor: color }}>
+                          <div className={styles.eventTitle}>
+                            <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
+                            <span>
+                              {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', color: '#999', fontSize: '12px' }}></i>}
+                              {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                };
+
+                return (
+                  <>
+                    {/* 1. 2人の予定・TODO */}
+                    {coupleItems.length > 0 && (
+                      <div className={styles.sectionBlock}>
+                        <div className={styles.sectionHeader}>
+                          <i className="fa-solid fa-users" style={{ color: "#9B7CC3" }}></i>
+                          <span>2人の予定・TODO</span>
+                        </div>
+                        <div className={styles.sectionContent}>
+                          {coupleItems.map((item, idx) => renderAgendaItem(item, idx === coupleItems.length - 1))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. 自分の予定・TODO */}
+                    {myItems.length > 0 && (
+                      <div className={styles.sectionBlock}>
+                        <div className={styles.sectionHeader}>
+                          <i className="fa-solid fa-user" style={{ color: "#F7A8C4" }}></i>
+                          <span>{myNickname}の予定・TODO</span>
+                        </div>
+                        <div className={styles.sectionContent}>
+                          {myItems.map((item, idx) => renderAgendaItem(item, idx === myItems.length - 1))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. 相手の予定・TODO */}
+                    {partnerItems.length > 0 && (
+                      <div className={styles.sectionBlock}>
+                        <div className={styles.sectionHeader}>
+                          <i className="fa-solid fa-user-friends" style={{ color: "#A0E7D2" }}></i>
+                          <span>{partnerNickname}の予定・TODO</span>
+                        </div>
+                        <div className={styles.sectionContent}>
+                          {partnerItems.map((item, idx) => renderAgendaItem(item, idx === partnerItems.length - 1))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
         </div>
