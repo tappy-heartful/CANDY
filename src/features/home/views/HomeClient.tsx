@@ -103,10 +103,10 @@ export default function HomeClient() {
       overdue.sort((a, b) => a.date!.localeCompare(b.date!));
       setOverdueTodos(overdue);
 
-      // 2. 直近のTODO (今日以降、最大3件)
+      // 2. 直近のTODO (今日以降、最大5件)
       const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
       upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
-      setUpcomingTodos(upcoming.slice(0, 3));
+      setUpcomingTodos(upcoming.slice(0, 5));
 
       // 3. 期限なしのTODO (すべて)
       const noDeadline = userTodos.filter(t => !t.date || t.date === "");
@@ -212,11 +212,11 @@ export default function HomeClient() {
             return 0;
           });
 
-          // 予定：最大3件
-          setUpcomingEvents(validEvents.slice(0, 3));
+          // 予定：最大5件
+          setUpcomingEvents(validEvents.slice(0, 5));
           setWishlistGroups(groups);
           setTodoGroups(tGroups);
-          
+
           // 最近の写真とアルバム名のマッピングを設定
           // 最新の50枚の中からランダムに最大8枚を抽出
           const shuffledPics = [...recentPics].sort(() => 0.5 - Math.random()).slice(0, 8);
@@ -226,7 +226,7 @@ export default function HomeClient() {
             mapping[alb.id] = alb.name;
           });
           setAlbumsMap(mapping);
-          
+
           // 記念日のソート（直近のもの3件）
           const sortedAnniversaries = [...anniversaries].sort((a, b) => {
             return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
@@ -506,8 +506,8 @@ export default function HomeClient() {
               <div className={styles.goalTitle}>
                 <i className="fa-solid fa-bullseye" style={{ color: "#F7A8C4" }}></i>
                 <span>{userData?.nickname || userData?.displayName || "自分"}の目標</span>
-                <button 
-                  className={styles.editGoalBtn} 
+                <button
+                  className={styles.editGoalBtn}
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsGoalModalOpen(true);
@@ -610,7 +610,7 @@ export default function HomeClient() {
                           <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}</span>
                           <span className={styles.countdownBadge}>{countdownText}</span>
                         </div>
-                        
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', marginTop: '6px' }}>
                           {/* 左側：時間表示エリア（縦並び） */}
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: '65px', paddingRight: '12px', borderRight: '1px solid #eee' }}>
@@ -625,7 +625,7 @@ export default function HomeClient() {
                               </>
                             )}
                           </div>
-                          
+
                           {/* 右側：イベントタイトル */}
                           <span className={styles.notificationTitle} style={{ flex: 1 }}>{e.title}</span>
                         </div>
@@ -797,6 +797,39 @@ export default function HomeClient() {
           </div>
         )}
 
+        {!loading && upcomingAnniversaries.length > 0 && (
+          <div className={styles.notificationList} style={{ marginBottom: '24px' }}>
+            <div className={styles.notificationGroup}>
+              <div className={styles.notificationHeader}>
+                <i className={`fa-solid fa-cake-candles ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
+                <span className={styles.notificationText}>
+                  もうすぐ記念日
+                </span>
+              </div>
+              <div className={styles.notificationItems}>
+                {upcomingAnniversaries.map(a => {
+                  const { diffDays, isToday } = getNextAnniversaryDiff(a.date);
+                  let countdownText = `あと${diffDays}日`;
+                  if (isToday) countdownText = "🎉 今日です！";
+                  else if (diffDays === 1) countdownText = "✨ 明日！";
+
+                  const displayDate = a.date.replace("-", "/"); // MM/DD
+
+                  return (
+                    <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
+                        <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
+                      </div>
+                      <span className={styles.notificationTitle}>{a.title}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {user && (
           <CalendarView
             currentUserId={user.uid}
@@ -819,7 +852,7 @@ export default function HomeClient() {
           currentUserId={user?.uid || ""}
         />
 
-        {!loading && (recentWishlist.length > 0 || upcomingAnniversaries.length > 0) && (
+        {!loading && recentWishlist.length > 0 && (
           <div className={styles.notificationList} style={{ marginTop: '24px', marginBottom: '24px' }}>
             {(() => {
               const grouped: { uid: string; creatorName: string; items: Wishlist[] }[] = [];
@@ -880,37 +913,6 @@ export default function HomeClient() {
                 </div>
               ));
             })()}
-
-            {upcomingAnniversaries.length > 0 && (
-              <div className={styles.notificationGroup}>
-                <div className={styles.notificationHeader}>
-                  <i className={`fa-solid fa-cake-candles ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
-                  <span className={styles.notificationText}>
-                    もうすぐ記念日
-                  </span>
-                </div>
-                <div className={styles.notificationItems}>
-                  {upcomingAnniversaries.map(a => {
-                    const { diffDays, isToday } = getNextAnniversaryDiff(a.date);
-                    let countdownText = `あと${diffDays}日`;
-                    if (isToday) countdownText = "🎉 今日です！";
-                    else if (diffDays === 1) countdownText = "✨ 明日！";
-                    
-                    const displayDate = a.date.replace("-", "/"); // MM/DD
-
-                    return (
-                      <div key={a.id} className={styles.notificationSubItem} onClick={() => router.push('/anniversaries')} style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{displayDate}</span>
-                          <span className={styles.countdownBadge} style={{ background: '#f3e5f5', color: '#9B7CC3' }}>{countdownText}</span>
-                        </div>
-                        <span className={styles.notificationTitle}>{a.title}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
