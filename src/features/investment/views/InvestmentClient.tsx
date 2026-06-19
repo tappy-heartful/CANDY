@@ -5,6 +5,8 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getInvestmentSimulation, saveInvestmentSimulation } from "../api/investment-client-service";
+import { getPartnerData } from "@/src/features/user/api/user-client-service";
+import { User, InvestmentSimulation } from "@/src/lib/firestore/types";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import styles from "./Investment.module.css";
 
@@ -44,7 +46,7 @@ interface SimulationRow {
 }
 
 export default function InvestmentClient() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
 
   // パンくずリストの設定
@@ -72,17 +74,25 @@ export default function InvestmentClient() {
   }
 
   // ステート定義
-  const [annualRate, setAnnualRate] = useState<number>(10);
-  const [startAge, setStartAge] = useState<number>(26);
-  const [startYear, setStartYear] = useState<number>(2024);
-  const [endYear, setEndYear] = useState<number>(2078);
-  const [endAge, setEndAge] = useState<number>(80);
-  const [investments, setInvestments] = useState<{ [age: string]: number }>(defaultInvestments);
+  const [annualRate, setAnnualRate] = useState<number | "">(10);
+  const [startAge, setStartAge] = useState<number | "">(26);
+  const [startYear, setStartYear] = useState<number | "">(2024);
+  const [endYear, setEndYear] = useState<number | "">(2078);
+  const [endAge, setEndAge] = useState<number | "">(80);
+  const [investments, setInvestments] = useState<{ [age: string]: number | "" }>(defaultInvestments);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // パートナー関連ステート
+  const [partnerData, setPartnerData] = useState<User | null>(null);
+  const [partnerSimulation, setPartnerSimulation] = useState<InvestmentSimulation | null>(null);
+  const [activeTab, setActiveTab] = useState<"me" | "partner">("me");
 
   // 終了西暦の自動計算
   useEffect(() => {
-    setEndYear(startYear + (endAge - startAge));
+    const sAge = startAge === "" ? 26 : startAge;
+    const sYear = startYear === "" ? 2024 : startYear;
+    const eAge = endAge === "" ? 80 : endAge;
+    setEndYear(sYear + (eAge - sAge));
   }, [startAge, startYear, endAge]);
 
   // グラフツールチップ用ステート
@@ -125,17 +135,70 @@ export default function InvestmentClient() {
       });
   }, [user]);
 
+  // パートナー情報のロード
+  useEffect(() => {
+    if (!user) return;
+    getPartnerData(user.uid)
+      .then((partner) => {
+        if (partner) {
+          setPartnerData(partner);
+          getInvestmentSimulation(partner.id)
+            .then((sim) => {
+              if (sim) {
+                setPartnerSimulation(sim);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to load partner simulation:", err);
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load partner data:", err);
+      });
+  }, [user]);
+
+  // 現在アクティブなシミュレーション設定パラメータ (タブによって切り替える)
+  const activeParams = useMemo(() => {
+    if (activeTab === "partner" && partnerSimulation) {
+      return {
+        annualRate: partnerSimulation.annualRate ?? 10,
+        startAge: partnerSimulation.startAge ?? 26,
+        startYear: partnerSimulation.startYear ?? 2024,
+        endAge: partnerSimulation.endAge ?? 80,
+        endYear: partnerSimulation.endYear ?? (partnerSimulation.startYear + (partnerSimulation.endAge - partnerSimulation.startAge)),
+        investments: partnerSimulation.investments ?? {},
+      };
+    }
+    return {
+      annualRate,
+      startAge,
+      startYear,
+      endAge,
+      endYear,
+      investments,
+    };
+  }, [activeTab, partnerSimulation, annualRate, startAge, startYear, endAge, endYear, investments]);
+
   // シミュレーション計算
   const simulationRows = useMemo<SimulationRow[]>(() => {
     const rows: SimulationRow[] = [];
     let currentCumulative = 0;
 
-    for (let age = startAge; age <= endAge; age++) {
-      const year = startYear + (age - startAge);
-      const investment = investments[String(age)] ?? 0;
+    const sAge = activeParams.startAge === "" ? 26 : activeParams.startAge;
+    const sYear = activeParams.startYear === "" ? 2024 : activeParams.startYear;
+    const eAge = activeParams.endAge === "" ? 80 : activeParams.endAge;
+    const aRate = activeParams.annualRate === "" ? 0 : activeParams.annualRate;
+
+    if (eAge < sAge) return [];
+
+    for (let age = sAge; age <= eAge; age++) {
+      const year = sYear + (age - sAge);
+      const investmentRaw = activeParams.investments[String(age)];
+      const investment = investmentRaw === "" || investmentRaw === undefined ? 0 : investmentRaw;
 
       // 計算式: 当年累積 = 前年累積 * (1 + 年利) + 当年投資額
-      const rateFactor = 1 + (annualRate / 100);
+      const rateFactor = 1 + (aRate / 100);
       currentCumulative = currentCumulative * rateFactor + investment;
 
       const roundedCumulative = Math.round(currentCumulative);
@@ -149,7 +212,12 @@ export default function InvestmentClient() {
       });
     }
     return rows;
-  }, [startAge, startYear, annualRate, investments]);
+  }, [activeParams]);
+
+  // 総投資額の算出
+  const totalInvestment = useMemo(() => {
+    return simulationRows.reduce((sum, r) => sum + r.investment, 0);
+  }, [simulationRows]);
 
   // データ保存処理
   const handleSaveSettings = async () => {
@@ -157,15 +225,36 @@ export default function InvestmentClient() {
     setIsSaving(true);
     showSpinner();
     try {
-      await saveInvestmentSimulation(user.uid, {
-        annualRate,
-        startAge,
-        startYear,
-        endAge,
-        endYear,
-        investments,
+      const cleanAnnualRate = annualRate === "" ? 10 : annualRate;
+      const cleanStartAge = startAge === "" ? 26 : startAge;
+      const cleanStartYear = startYear === "" ? 2024 : startYear;
+      const cleanEndAge = endAge === "" ? 80 : endAge;
+      const cleanEndYear = endYear === "" ? 2078 : endYear;
+
+      const cleanInvestments: { [age: string]: number } = {};
+      Object.keys(investments).forEach((key) => {
+        const val = investments[key];
+        cleanInvestments[key] = val === "" || val === undefined ? 0 : val;
       });
-      showDialog("シミュレーション設定を保存しました！🍬");
+
+      await saveInvestmentSimulation(user.uid, {
+        annualRate: cleanAnnualRate,
+        startAge: cleanStartAge,
+        startYear: cleanStartYear,
+        endAge: cleanEndAge,
+        endYear: cleanEndYear,
+        investments: cleanInvestments,
+      });
+
+      // Synchronize back with cleaned numeric values
+      setAnnualRate(cleanAnnualRate);
+      setStartAge(cleanStartAge);
+      setStartYear(cleanStartYear);
+      setEndAge(cleanEndAge);
+      setEndYear(cleanEndYear);
+      setInvestments(cleanInvestments);
+
+      showDialog("シミュレーション設定を保存しました！🍬", true);
     } catch (e) {
       console.error(e);
       showDialog("保存に失敗しました", true);
@@ -176,8 +265,16 @@ export default function InvestmentClient() {
   };
 
   // 年齢別の投資額変更
-  const handleInvestmentChange = (age: number, value: number) => {
-    const safeValue = Math.max(0, value);
+  const handleInvestmentChange = (age: number, valStr: string) => {
+    if (valStr === "") {
+      setInvestments((prev) => ({
+        ...prev,
+        [String(age)]: "",
+      }));
+      return;
+    }
+    const valNum = parseInt(valStr, 10);
+    const safeValue = Math.max(0, isNaN(valNum) ? 0 : valNum);
     setInvestments((prev) => ({
       ...prev,
       [String(age)]: safeValue,
@@ -232,8 +329,11 @@ export default function InvestmentClient() {
   const yGridValues = [0, maxAsset * 0.25, maxAsset * 0.5, maxAsset * 0.75, maxAsset];
   const xGridPoints = useMemo(() => {
     const res: { x: number; label: string }[] = [];
+    const sAge = activeParams.startAge === "" ? 26 : activeParams.startAge;
+    const eAge = activeParams.endAge === "" ? 80 : activeParams.endAge;
+
     points.forEach((p) => {
-      if (p.row.age % 10 === 0 || p.row.age === startAge || p.row.age === endAge) {
+      if (p.row.age % 10 === 0 || p.row.age === sAge || p.row.age === eAge) {
         // 重複防止
         if (!res.some((r) => Math.abs(r.x - p.x) < 25)) {
           res.push({ x: p.x, label: `${p.row.age}歳` });
@@ -241,7 +341,7 @@ export default function InvestmentClient() {
       }
     });
     return res;
-  }, [points, startAge, endAge]);
+  }, [points, activeParams.startAge, activeParams.endAge]);
 
   return (
     <AuthGuard>
@@ -250,307 +350,376 @@ export default function InvestmentClient() {
           <i className="fa-solid fa-chart-line"></i> 投資シミュレーション
         </h1>
 
-        {/* 1. 基本設定カード */}
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <i className="fa-solid fa-sliders"></i> シミュレーション基本設定
-          </div>
-          <div className={styles.formGrid}>
-            {/* 開始設定グループ */}
-            <div className={`${styles.formSection} ${styles.sectionStart}`}>
-              <div className={styles.formSectionTitle}>
-                <i className="fa-solid fa-play"></i> シミュレーション開始設定
-              </div>
-              <div className={styles.inputPairGrid}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.label} htmlFor="sim-start-age">
-                    開始年齢 (歳)
-                  </label>
-                  <input
-                    type="number"
-                    id="sim-start-age"
-                    className={styles.input}
-                    value={startAge}
-                    min={18}
-                    max={75}
-                    onChange={(e) => setStartAge(parseInt(e.target.value, 10) || 26)}
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label className={styles.label} htmlFor="sim-start-year">
-                    開始西暦 (年)
-                  </label>
-                  <input
-                    type="number"
-                    id="sim-start-year"
-                    className={styles.input}
-                    value={startYear}
-                    min={1990}
-                    max={2100}
-                    onChange={(e) => setStartYear(parseInt(e.target.value, 10) || 2024)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 終了設定グループ */}
-            <div className={`${styles.formSection} ${styles.sectionEnd}`}>
-              <div className={styles.formSectionTitle}>
-                <i className="fa-solid fa-flag-checkered"></i> シミュレーション終了設定
-              </div>
-              <div className={styles.inputPairGrid}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.label} htmlFor="sim-end-age">
-                    終了年齢 (歳)
-                  </label>
-                  <input
-                    type="number"
-                    id="sim-end-age"
-                    className={styles.input}
-                    value={endAge}
-                    min={startAge}
-                    max={100}
-                    onChange={(e) => setEndAge(parseInt(e.target.value, 10) || 80)}
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label className={styles.label} htmlFor="sim-end-year">
-                    終了西暦 (年 - 自動計算)
-                  </label>
-                  <input
-                    type="number"
-                    id="sim-end-year"
-                    className={`${styles.input} ${styles.inputDisabled}`}
-                    value={endYear}
-                    disabled
-                    readOnly
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 運用設定グループ */}
-            <div className={`${styles.formSection} ${styles.sectionRate}`}>
-              <div className={styles.formSectionTitle}>
-                <i className="fa-solid fa-percent"></i> 運用設定
-              </div>
-              <div className={styles.inputGroup}>
-                <label className={styles.label} htmlFor="sim-annual-rate">
-                  想定年利 (%)
-                </label>
-                <input
-                  type="number"
-                  id="sim-annual-rate"
-                  className={styles.input}
-                  value={annualRate}
-                  min={0}
-                  max={50}
-                  step={0.1}
-                  onChange={(e) => setAnnualRate(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+        {/* タブ切り替えUI */}
+        {partnerData && (
+          <div className={styles.tabsContainer}>
             <button
               type="button"
-              className={styles.btn}
-              onClick={handleSaveSettings}
-              disabled={isSaving}
+              className={`${styles.tabBtn} ${activeTab === "me" ? styles.activeTab : ""}`}
+              onClick={() => setActiveTab("me")}
             >
-              <i className="fa-solid fa-floppy-disk"></i> 設定をクラウドに保存する
+              <i className="fa-solid fa-user"></i> {userData?.nickname || userData?.displayName || "自分"}のシミュレーション 🍬
+            </button>
+            <button
+              type="button"
+              className={`${styles.tabBtn} ${activeTab === "partner" ? styles.activeTab : ""}`}
+              onClick={() => setActiveTab("partner")}
+            >
+              <i className="fa-solid fa-heart"></i> {partnerData.nickname || "パートナー"}のシミュレーション 🍭
             </button>
           </div>
-        </div>
+        )}
 
-        {/* 2. 年齢別テーブルカード (設定フォームの直下に配置) */}
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <i className="fa-solid fa-table-list"></i> 年齢別投資計画とシミュレーション結果
+        {activeTab === "partner" && !partnerSimulation ? (
+          <div className={styles.emptyCard}>
+            <div className={styles.emptyIcon}>
+              <i className="fa-solid fa-piggy-bank"></i>
+            </div>
+            <div className={styles.emptyTitle}>
+              {partnerData?.nickname || "パートナー"}はまだ投資シミュレーションを登録していません
+            </div>
+            <div className={styles.emptyText}>
+              シミュレーション基本設定を保存すると、ここに表示されるようになります。🍬
+            </div>
           </div>
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead className={styles.thead}>
-                <tr>
-                  <th className={styles.th}>年齢</th>
-                  <th className={styles.th}>西暦</th>
-                  <th className={styles.th}>年間投資額</th>
-                  <th className={styles.th}>総資産額</th>
-                </tr>
-              </thead>
-              <tbody>
-                {simulationRows.map((row) => (
-                  <tr key={row.age} className={styles.tr}>
-                    <td className={`${styles.td} ${styles.tdAge}`}>{row.age}</td>
-                    <td className={`${styles.td} ${styles.tdYear}`}>{row.year}</td>
-                    <td className={styles.td}>
-                      <div className={styles.inputCell}>
-                        <input
-                          type="number"
-                          className={styles.ageInvestInput}
-                          value={row.investment}
-                          step={100000}
-                          min={0}
-                          onChange={(e) =>
-                            handleInvestmentChange(row.age, parseInt(e.target.value, 10) || 0)
-                          }
-                          aria-label={`${row.age}歳の年間投資額`}
-                        />
-                      </div>
-                    </td>
-                    <td className={`${styles.td} ${styles.tdResult}`}>
-                      <div className={styles.tdSosan}>{row.formattedCumulative}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 3. グラフ表示カード (最後に配置) */}
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>
-            <i className="fa-solid fa-chart-area"></i> 総資産シミュレーション
-          </div>
-
-          <div className={styles.chartWrapper}>
-            {hoveredPoint && (
-              <div
-                className={styles.tooltip}
-                style={{
-                  left: `${(hoveredPoint.x / svgW) * 100}%`,
-                  top: `${(hoveredPoint.y / svgH) * 100}%`,
-                }}
-              >
-                <div className={styles.tooltipTitle}>
-                  {hoveredPoint.age}歳 ({hoveredPoint.year}年)
-                </div>
-                <div>総資産: {formatSosan(hoveredPoint.val)}</div>
-                <div>年間投資額: {(investments[String(hoveredPoint.age)] || 0).toLocaleString()}円</div>
+        ) : (
+          <>
+            {/* 1. 基本設定カード */}
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>
+                <i className="fa-solid fa-sliders"></i> シミュレーション基本設定 {activeTab === "partner" && "(参照のみ)"}
               </div>
-            )}
+              <div className={styles.formGrid}>
+                {/* 開始設定グループ */}
+                <div className={`${styles.formSection} ${styles.sectionStart}`}>
+                  <div className={styles.formSectionTitle}>
+                    <i className="fa-solid fa-play"></i> シミュレーション開始設定
+                  </div>
+                  <div className={styles.inputPairGrid}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label} htmlFor="sim-start-age">
+                        開始年齢 (歳)
+                      </label>
+                      <input
+                        type="number"
+                        id="sim-start-age"
+                        className={styles.input}
+                        value={activeTab === "me" ? startAge : (partnerSimulation?.startAge ?? "")}
+                        min={18}
+                        max={75}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setStartAge(val === "" ? "" : parseInt(val, 10));
+                        }}
+                        disabled={activeTab === "partner"}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label} htmlFor="sim-start-year">
+                        開始西暦 (年)
+                      </label>
+                      <input
+                        type="number"
+                        id="sim-start-year"
+                        className={styles.input}
+                        value={activeTab === "me" ? startYear : (partnerSimulation?.startYear ?? "")}
+                        min={1990}
+                        max={2100}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setStartYear(val === "" ? "" : parseInt(val, 10));
+                        }}
+                        disabled={activeTab === "partner"}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <svg
-              viewBox={`0 0 ${svgW} ${svgH}`}
-              className={styles.chartSvg}
-              onMouseLeave={() => setHoveredPoint(null)}
-              onTouchEnd={() => setHoveredPoint(null)}
-            >
-              <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F7A8C4" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#9B7CC3" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
+                {/* 終了設定グループ */}
+                <div className={`${styles.formSection} ${styles.sectionEnd}`}>
+                  <div className={styles.formSectionTitle}>
+                    <i className="fa-solid fa-flag-checkered"></i> シミュレーション終了設定
+                  </div>
+                  <div className={styles.inputPairGrid}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label} htmlFor="sim-end-age">
+                        終了年齢 (歳)
+                      </label>
+                      <input
+                        type="number"
+                        id="sim-end-age"
+                        className={styles.input}
+                        value={activeTab === "me" ? endAge : (partnerSimulation?.endAge ?? "")}
+                        min={activeTab === "me" ? (startAge === "" ? 18 : startAge) : (partnerSimulation?.startAge ?? 18)}
+                        max={100}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEndAge(val === "" ? "" : parseInt(val, 10));
+                        }}
+                        disabled={activeTab === "partner"}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label} htmlFor="sim-end-year">
+                        終了西暦 (年 - 自動計算)
+                      </label>
+                      <input
+                        type="number"
+                        id="sim-end-year"
+                        className={`${styles.input} ${styles.inputDisabled}`}
+                        value={activeTab === "me" ? endYear : (partnerSimulation?.endYear ?? "")}
+                        disabled
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              {/* Y軸グリッド線とラベル */}
-              {yGridValues.map((val, idx) => {
-                const y = (paddingTop + chartH) - (val / maxAsset) * chartH;
-                return (
-                  <g key={`y-grid-${idx}`}>
-                    <line
-                      x1={paddingLeft}
-                      y1={y}
-                      x2={svgW - paddingRight}
-                      y2={y}
-                      className={styles.gridLine}
+                {/* 運用設定グループ */}
+                <div className={`${styles.formSection} ${styles.sectionRate}`}>
+                  <div className={styles.formSectionTitle}>
+                    <i className="fa-solid fa-percent"></i> 運用設定
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label} htmlFor="sim-annual-rate">
+                      想定年利 (%)
+                    </label>
+                    <input
+                      type="number"
+                      id="sim-annual-rate"
+                      className={styles.input}
+                      value={activeTab === "me" ? annualRate : (partnerSimulation?.annualRate ?? "")}
+                      min={0}
+                      max={50}
+                      step={0.1}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAnnualRate(val === "" ? "" : parseFloat(val));
+                      }}
+                      disabled={activeTab === "partner"}
                     />
-                    <text
-                      x={paddingLeft - 8}
-                      y={y + 4}
-                      textAnchor="end"
-                      className={styles.axisText}
-                    >
-                      {formatYAxisLabel(val)}
-                    </text>
-                  </g>
-                );
-              })}
+                  </div>
+                </div>
+              </div>
 
-              {/* X軸グリッド線とラベル */}
-              {xGridPoints.map((gp, idx) => (
-                <g key={`x-grid-${idx}`}>
-                  <line
-                    x1={gp.x}
-                    y1={paddingTop}
-                    x2={gp.x}
-                    y2={paddingTop + chartH}
-                    className={styles.gridLine}
-                  />
-                  <text
-                    x={gp.x}
-                    y={paddingTop + chartH + 16}
-                    textAnchor="middle"
-                    className={styles.axisText}
+              {activeTab === "me" && (
+                <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    className={styles.btn}
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
                   >
-                    {gp.label}
-                  </text>
-                </g>
-              ))}
+                    <i className="fa-solid fa-floppy-disk"></i> 設定をクラウドに保存する
+                  </button>
+                </div>
+              )}
+            </div>
 
-              {/* グラフの塗りつぶし領域 */}
-              {areaPathD && <path d={areaPathD} className={styles.chartArea} />}
+            {/* 2. 年齢別テーブルカード */}
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>
+                <i className="fa-solid fa-table-list"></i> 年齢別投資計画とシミュレーション結果
+              </div>
 
-              {/* グラフの線 */}
-              {linePathD && <path d={linePathD} className={styles.chartPath} />}
+              {/* 総投資額の表示バッジ */}
+              <div className={styles.summaryBadge}>
+                <i className="fa-solid fa-piggy-bank"></i>
+                総投資額:{" "}
+                <span className={styles.summaryValue}>
+                  {totalInvestment.toLocaleString()}円
+                </span>
+                <span className={styles.summaryText}>
+                  ({formatSosan(totalInvestment)})
+                </span>
+              </div>
 
-              {/* プロット点（インタラクティブ用） */}
-              {points.map((p, idx) => {
-                const isHovered = hoveredPoint?.age === p.row.age;
-                return (
-                  <circle
-                    key={`point-${idx}`}
-                    cx={p.x}
-                    cy={p.y}
-                    r={isHovered ? 6 : 4}
-                    className={styles.chartPoint}
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead className={styles.thead}>
+                    <tr>
+                      <th className={styles.th}>年齢</th>
+                      <th className={styles.th}>西暦</th>
+                      <th className={styles.th}>年間投資額</th>
+                      <th className={styles.th}>総資産額</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {simulationRows.map((row) => (
+                      <tr key={row.age} className={styles.tr}>
+                        <td className={`${styles.td} ${styles.tdAge}`}>{row.age}</td>
+                        <td className={`${styles.td} ${styles.tdYear}`}>{row.year}</td>
+                        <td className={styles.td}>
+                          <div className={styles.inputCell}>
+                            <input
+                              type="number"
+                              className={styles.ageInvestInput}
+                              value={activeTab === "me" ? (investments[String(row.age)] ?? "") : (partnerSimulation?.investments[String(row.age)] ?? 0)}
+                              step={100000}
+                              min={0}
+                              onChange={(e) =>
+                                handleInvestmentChange(row.age, e.target.value)
+                              }
+                              disabled={activeTab === "partner"}
+                              aria-label={`${row.age}歳の年間投資額`}
+                            />
+                          </div>
+                        </td>
+                        <td className={`${styles.td} ${styles.tdResult}`}>
+                          <div className={styles.tdSosan}>{row.formattedCumulative}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 3. グラフ表示カード */}
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>
+                <i className="fa-solid fa-chart-area"></i> 総資産シミュレーション
+              </div>
+
+              <div className={styles.chartWrapper}>
+                {hoveredPoint && (
+                  <div
+                    className={styles.tooltip}
                     style={{
-                      fill: isHovered ? "#9B7CC3" : "#fff",
-                      stroke: isHovered ? "#F7A8C4" : "#9B7CC3",
+                      left: `${(hoveredPoint.x / svgW) * 100}%`,
+                      top: `${(hoveredPoint.y / svgH) * 100}%`,
                     }}
-                    onMouseEnter={() =>
-                      setHoveredPoint({
-                        age: p.row.age,
-                        year: p.row.year,
-                        val: p.row.cumulativeInvestment,
-                        x: p.x,
-                        y: p.y,
-                      })
-                    }
-                    onTouchStart={() =>
-                      setHoveredPoint({
-                        age: p.row.age,
-                        year: p.row.year,
-                        val: p.row.cumulativeInvestment,
-                        x: p.x,
-                        y: p.y,
-                      })
-                    }
-                  />
-                );
-              })}
+                  >
+                    <div className={styles.tooltipTitle}>
+                      {hoveredPoint.age}歳 ({hoveredPoint.year}年)
+                    </div>
+                    <div>総資産: {formatSosan(hoveredPoint.val)}</div>
+                    <div>年間投資額: {((activeParams.investments)[String(hoveredPoint.age)] || 0).toLocaleString()}円</div>
+                  </div>
+                )}
 
-              {/* 軸線 */}
-              <line
-                x1={paddingLeft}
-                y1={paddingTop}
-                x2={paddingLeft}
-                y2={paddingTop + chartH}
-                className={styles.axisLine}
-              />
-              <line
-                x1={paddingLeft}
-                y1={paddingTop + chartH}
-                x2={svgW - paddingRight}
-                y2={paddingTop + chartH}
-                className={styles.axisLine}
-              />
-            </svg>
-          </div>
-        </div>
+                <svg
+                  viewBox={`0 0 ${svgW} ${svgH}`}
+                  className={styles.chartSvg}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                  onTouchEnd={() => setHoveredPoint(null)}
+                >
+                  <defs>
+                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F7A8C4" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#9B7CC3" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Y軸グリッド線とラベル */}
+                  {yGridValues.map((val, idx) => {
+                    const y = (paddingTop + chartH) - (val / maxAsset) * chartH;
+                    return (
+                      <g key={`y-grid-${idx}`}>
+                        <line
+                          x1={paddingLeft}
+                          y1={y}
+                          x2={svgW - paddingRight}
+                          y2={y}
+                          className={styles.gridLine}
+                        />
+                        <text
+                          x={paddingLeft - 8}
+                          y={y + 4}
+                          textAnchor="end"
+                          className={styles.axisText}
+                        >
+                          {formatYAxisLabel(val)}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* X軸グリッド線とラベル */}
+                  {xGridPoints.map((gp, idx) => (
+                    <g key={`x-grid-${idx}`}>
+                      <line
+                        x1={gp.x}
+                        y1={paddingTop}
+                        x2={gp.x}
+                        y2={paddingTop + chartH}
+                        className={styles.gridLine}
+                      />
+                      <text
+                        x={gp.x}
+                        y={paddingTop + chartH + 16}
+                        textAnchor="middle"
+                        className={styles.axisText}
+                      >
+                        {gp.label}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* グラフの塗りつぶし領域 */}
+                  {areaPathD && <path d={areaPathD} className={styles.chartArea} />}
+
+                  {/* グラフの線 */}
+                  {linePathD && <path d={linePathD} className={styles.chartPath} />}
+
+                  {/* プロット点（インタラクティブ用） */}
+                  {points.map((p, idx) => {
+                    const isHovered = hoveredPoint?.age === p.row.age;
+                    return (
+                      <circle
+                        key={`point-${idx}`}
+                        cx={p.x}
+                        cy={p.y}
+                        r={isHovered ? 6 : 4}
+                        className={styles.chartPoint}
+                        style={{
+                          fill: isHovered ? "#9B7CC3" : "#fff",
+                          stroke: isHovered ? "#F7A8C4" : "#9B7CC3",
+                        }}
+                        onMouseEnter={() =>
+                          setHoveredPoint({
+                            age: p.row.age,
+                            year: p.row.year,
+                            val: p.row.cumulativeInvestment,
+                            x: p.x,
+                            y: p.y,
+                          })
+                        }
+                        onTouchStart={() =>
+                          setHoveredPoint({
+                            age: p.row.age,
+                            year: p.row.year,
+                            val: p.row.cumulativeInvestment,
+                            x: p.x,
+                            y: p.y,
+                          })
+                        }
+                      />
+                    );
+                  })}
+
+                  {/* 軸線 */}
+                  <line
+                    x1={paddingLeft}
+                    y1={paddingTop}
+                    x2={paddingLeft}
+                    y2={paddingTop + chartH}
+                    className={styles.axisLine}
+                  />
+                  <line
+                    x1={paddingLeft}
+                    y1={paddingTop + chartH}
+                    x2={svgW - paddingRight}
+                    y2={paddingTop + chartH}
+                    className={styles.axisLine}
+                  />
+                </svg>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </AuthGuard>
   );
+
 }
