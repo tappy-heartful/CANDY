@@ -360,8 +360,8 @@ export default function InvestmentClient() {
               <tbody>
                 {simulationRows.map((row) => (
                   <tr key={row.age} className={styles.tr}>
-                    <td className={`${styles.td} ${styles.tdAge}`}>{row.age}歳</td>
-                    <td className={`${styles.td} ${styles.tdYear}`}>{row.year}年</td>
+                    <td className={`${styles.td} ${styles.tdAge}`}>{row.age}</td>
+                    <td className={`${styles.td} ${styles.tdYear}`}>{row.year}</td>
                     <td className={styles.td}>
                       <div className={styles.inputCell}>
                         <input
@@ -373,18 +373,12 @@ export default function InvestmentClient() {
                           onChange={(e) =>
                             handleInvestmentChange(row.age, parseInt(e.target.value, 10) || 0)
                           }
-                          aria-label={`${row.age}歳の年間投資額（円）`}
+                          aria-label={`${row.age}歳の年間投資額`}
                         />
-                        <span style={{ fontSize: "12px", color: "#888", marginLeft: "4px" }}>
-                          円
-                        </span>
                       </div>
                     </td>
                     <td className={`${styles.td} ${styles.tdResult}`}>
                       <div className={styles.tdSosan}>{row.formattedCumulative}</div>
-                      <div style={{ fontSize: "11px", color: "#999", fontFamily: "monospace" }}>
-                        {row.cumulativeInvestment.toLocaleString()}円
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -396,7 +390,7 @@ export default function InvestmentClient() {
         {/* 3. グラフ表示カード (最後に配置) */}
         <div className={styles.card}>
           <div className={styles.cardTitle}>
-            <i className="fa-solid fa-chart-area"></i> 80歳までの総資産シミュレーション
+            <i className="fa-solid fa-chart-area"></i> 総資産シミュレーション
           </div>
 
           <div className={styles.chartWrapper}>
