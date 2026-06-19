@@ -256,77 +256,99 @@ export default function InvestmentClient() {
             <i className="fa-solid fa-sliders"></i> シミュレーション基本設定
           </div>
           <div className={styles.formGrid}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="sim-start-age">
-                開始年齢 (歳)
-              </label>
-              <input
-                type="number"
-                id="sim-start-age"
-                className={styles.input}
-                value={startAge}
-                min={18}
-                max={75}
-                onChange={(e) => setStartAge(parseInt(e.target.value, 10) || 26)}
-              />
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="sim-start-year">
-                開始西暦 (年)
-              </label>
-              <input
-                type="number"
-                id="sim-start-year"
-                className={styles.input}
-                value={startYear}
-                min={1990}
-                max={2100}
-                onChange={(e) => setStartYear(parseInt(e.target.value, 10) || 2024)}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="sim-end-age">
-                終了年齢 (歳)
-              </label>
-              <input
-                type="number"
-                id="sim-end-age"
-                className={styles.input}
-                value={endAge}
-                min={startAge}
-                max={100}
-                onChange={(e) => setEndAge(parseInt(e.target.value, 10) || 80)}
-              />
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="sim-end-year">
-                終了西暦 (年 - 自動計算)
-              </label>
-              <input
-                type="number"
-                id="sim-end-year"
-                className={`${styles.input} ${styles.inputDisabled}`}
-                value={endYear}
-                disabled
-                readOnly
-              />
+            {/* 開始設定グループ */}
+            <div className={`${styles.formSection} ${styles.sectionStart}`}>
+              <div className={styles.formSectionTitle}>
+                <i className="fa-solid fa-play"></i> シミュレーション開始設定
+              </div>
+              <div className={styles.inputPairGrid}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label} htmlFor="sim-start-age">
+                    開始年齢 (歳)
+                  </label>
+                  <input
+                    type="number"
+                    id="sim-start-age"
+                    className={styles.input}
+                    value={startAge}
+                    min={18}
+                    max={75}
+                    onChange={(e) => setStartAge(parseInt(e.target.value, 10) || 26)}
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label} htmlFor="sim-start-year">
+                    開始西暦 (年)
+                  </label>
+                  <input
+                    type="number"
+                    id="sim-start-year"
+                    className={styles.input}
+                    value={startYear}
+                    min={1990}
+                    max={2100}
+                    onChange={(e) => setStartYear(parseInt(e.target.value, 10) || 2024)}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="sim-annual-rate">
-                想定年利 (%)
-              </label>
-              <input
-                type="number"
-                id="sim-annual-rate"
-                className={styles.input}
-                value={annualRate}
-                min={0}
-                max={50}
-                step={0.1}
-                onChange={(e) => setAnnualRate(parseFloat(e.target.value) || 0)}
-              />
+            {/* 終了設定グループ */}
+            <div className={`${styles.formSection} ${styles.sectionEnd}`}>
+              <div className={styles.formSectionTitle}>
+                <i className="fa-solid fa-flag-checkered"></i> シミュレーション終了設定
+              </div>
+              <div className={styles.inputPairGrid}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label} htmlFor="sim-end-age">
+                    終了年齢 (歳)
+                  </label>
+                  <input
+                    type="number"
+                    id="sim-end-age"
+                    className={styles.input}
+                    value={endAge}
+                    min={startAge}
+                    max={100}
+                    onChange={(e) => setEndAge(parseInt(e.target.value, 10) || 80)}
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label} htmlFor="sim-end-year">
+                    終了西暦 (年 - 自動計算)
+                  </label>
+                  <input
+                    type="number"
+                    id="sim-end-year"
+                    className={`${styles.input} ${styles.inputDisabled}`}
+                    value={endYear}
+                    disabled
+                    readOnly
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 運用設定グループ */}
+            <div className={`${styles.formSection} ${styles.sectionRate}`}>
+              <div className={styles.formSectionTitle}>
+                <i className="fa-solid fa-percent"></i> 運用設定
+              </div>
+              <div className={styles.inputGroup}>
+                <label className={styles.label} htmlFor="sim-annual-rate">
+                  想定年利 (%)
+                </label>
+                <input
+                  type="number"
+                  id="sim-annual-rate"
+                  className={styles.input}
+                  value={annualRate}
+                  min={0}
+                  max={50}
+                  step={0.1}
+                  onChange={(e) => setAnnualRate(parseFloat(e.target.value) || 0)}
+                />
+              </div>
             </div>
           </div>
 
