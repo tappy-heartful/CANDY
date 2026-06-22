@@ -97,6 +97,11 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    match /notificationSettings/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+
     // ============================
 
     // ログ・認証系（システム用）

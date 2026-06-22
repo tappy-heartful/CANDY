@@ -198,7 +198,11 @@ export default function Header() {
           <Link href="/investment" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-chart-line ${styles.menuIcon}`}></i> 投資シミュレーション
           </Link>
+          <Link href="/settings" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-bell ${styles.menuIcon}`}></i> 通知設定
+          </Link>
         </div>
+
       </div>
     </>
   );

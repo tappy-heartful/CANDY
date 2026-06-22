@@ -164,3 +164,15 @@ export interface InvestmentSimulation {
   updatedAt: number;
 }
 
+export interface NotificationSetting {
+  id: string; // uid (ユーザーID)
+  uid: string;
+  morningEnabled: boolean; // 朝の通知メッセージ有効フラグ
+  morningTime: string; // 朝の通知時間 (例: "08:00")
+  eventReminderEnabled: boolean; // イベント前通知有効フラグ
+  eventReminderMinutes: number; // 何分前か (1〜60)
+  createdAt: number;
+  updatedAt: number;
+}
+
+

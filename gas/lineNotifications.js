@@ -1,15 +1,13 @@
 /**
- * CANDY 毎朝の通知自動送信スクリプト (GAS用)
+ * CANDY LINE通知自動送信スクリプト (GAS用)
  *
  * 【このスクリプトがやること】
- * 1. 毎朝（例: 7時や8時）にトリガー実行。
- * 2. Firestoreの users コレクションから全ユーザーを取得。
- * 3. 各ユーザーに対して以下の情報を抽出：
- *    - 今日の予定（events コレクション）
- *    - 今日のTODO（todos コレクション）
- *    - 直近のイベント3件（あと○日表示）
- *    - 直近のTODO3件
- * 4. 各ユーザーにLINEでメッセージを送信。
+ * 1. 毎朝の定期通知 (execDailyMorningNotification)
+ *    - 毎朝（例: 7時や8時）にトリガー実行。
+ *    - 各ユーザーに対して、今日の予定、未完了のTODO、直近の記念日をLINEで送信。
+ * 2. 予定の10分前リマインダー通知 (checkAndSendEventReminders)
+ *    - 毎分（1分ごと）にトリガー実行。
+ *    - 10分後に開始される予定がある場合、対象のユーザーにリマインダーをLINEで送信。
  */
 
 const props = PropertiesService.getScriptProperties();
@@ -30,14 +28,17 @@ const cuteMessages = [
   "今日も一日、〇〇ちゃんにいいことがたくさん起きますように🍀",
 ];
 
+/**
+ * 毎朝の定期通知を実行する関数 (毎分トリガー推奨。各ユーザーの設定時間に送信します)
+ */
 function execDailyMorningNotification() {
   try {
     const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
 
-    // 今日の日付文字列を日本時間(JST)で確実に取得
-    // GASのタイムゾーン設定(UTC)によるズレを防ぐため Utilities を使用
+    // 今日の日付と現在時刻(JST)を確実に取得
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
+    const currentTimeStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "HH:mm");
 
     // 各コレクションからデータ取得
     const usersDocs = firestore.getDocuments('users');
@@ -45,6 +46,12 @@ function execDailyMorningNotification() {
     const todosDocs = firestore.getDocuments('todos');
     const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
     const anniversariesDocs = firestore.getDocuments('anniversaries');
+    let settingsDocs = [];
+    try {
+      settingsDocs = firestore.getDocuments('notificationSettings');
+    } catch (e) {
+      Logger.log('Failed to fetch notificationSettings: ' + e.toString());
+    }
 
     const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
@@ -58,16 +65,32 @@ function execDailyMorningNotification() {
       lineMessagingIds[uid] = doc.obj.lineUid;
     });
 
+    // 通知設定をマッピング
+    const settingsMap = {};
+    settingsDocs.forEach(doc => {
+      const uid = doc.name.split('/').pop();
+      settingsMap[uid] = doc.obj;
+    });
+
     users.forEach(user => {
       // lineMessagingIdsコレクションから対象のlineUidを取得
       const lineUid = lineMessagingIds[user.id];
       if (!lineUid) return;
 
+      // 通知設定の取得と判定
+      const setting = settingsMap[user.id] || {};
+      const morningEnabled = setting.morningEnabled !== false; // デフォルト true
+      const morningTime = setting.morningTime || "08:00"; // デフォルト 08:00
+
+      // 通知が無効、または設定された時間と現在時刻が一致しない場合はスキップ
+      if (!morningEnabled || morningTime !== currentTimeStr) {
+        return;
+      }
+
       const nickname = user.nickname || "あなた";
 
-      // パートナーのIDを特定（自分以外のユーザー）
-      const partner = users.find(u => u.id !== user.id);
-      const partnerUid = partner ? partner.id : null;
+      // パートナーのIDを特定
+      const partnerUid = user.partnerUid || null;
 
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events.filter(e => e.type === 'couple' || e.uid === user.id);
@@ -211,6 +234,90 @@ function execDailyMorningNotification() {
   }
 }
 
+/**
+ * 予定開始の数分前のリマインダー通知を実行する関数 (毎分トリガー推奨)
+ */
+function checkAndSendEventReminders() {
+  try {
+    const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
+
+    const now = new Date();
+
+    // 各コレクションからデータ取得
+    const usersDocs = firestore.getDocuments('users');
+    const eventsDocs = firestore.getDocuments('events');
+    const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
+    let settingsDocs = [];
+    try {
+      settingsDocs = firestore.getDocuments('notificationSettings');
+    } catch (e) {
+      Logger.log('Failed to fetch notificationSettings: ' + e.toString());
+    }
+
+    const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+    // LINE Messaging IDsをマッピング
+    const lineMessagingIds = {};
+    lineMessagingIdsDocs.forEach(doc => {
+      const uid = doc.name.split('/').pop();
+      lineMessagingIds[uid] = doc.obj.lineUid;
+    });
+
+    // 通知設定をマッピング
+    const settingsMap = {};
+    settingsDocs.forEach(doc => {
+      const uid = doc.name.split('/').pop();
+      settingsMap[uid] = doc.obj;
+    });
+
+    users.forEach(user => {
+      const lineUid = lineMessagingIds[user.id];
+      if (!lineUid) return;
+
+      const nickname = user.nickname || "あなた";
+
+      // 設定の取得
+      const setting = settingsMap[user.id] || {};
+      const eventReminderEnabled = setting.eventReminderEnabled !== false; // デフォルト true
+      const eventReminderMinutes = setting.eventReminderMinutes !== undefined ? setting.eventReminderMinutes : 10; // デフォルト 10分
+
+      if (!eventReminderEnabled) return;
+
+      // ユーザー設定された分数後の日本時間(JST)の日付と時間を取得
+      const targetTime = new Date(now.getTime() + eventReminderMinutes * 60 * 1000);
+      const targetDateStr = Utilities.formatDate(targetTime, "Asia/Tokyo", "yyyy-MM-dd");
+      const targetTimeStr = Utilities.formatDate(targetTime, "Asia/Tokyo", "HH:mm");
+
+      // ユーザー設定分数後に開始されるイベントをフィルタリング (終日イベントは除外)
+      const userReminders = events.filter(e => {
+        if (e.isAllDay || !e.startTime) return false;
+        const isRelated = e.type === 'couple' || e.uid === user.id;
+        if (!isRelated) return false;
+        return e.startDate === targetDateStr && e.startTime === targetTimeStr;
+      });
+
+      if (userReminders.length > 0) {
+        userReminders.forEach(e => {
+          let message = `🔔予定のリマインダー\n`;
+          message += `${nickname}ちゃん、${eventReminderMinutes}分後に以下の予定があるよ！準備はできたかな？🍬\n\n`;
+          message += `⏰ ${e.startTime}〜\n`;
+          message += `📝 ${e.title}\n`;
+          if (e.note) {
+            message += `💡 メモ: ${e.note}\n`;
+          }
+          message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
+
+          sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+        });
+      }
+    });
+
+  } catch (e) {
+    Logger.log('Reminder Error: ' + e.toString());
+  }
+}
+
 // 2つの日付文字列("YYYY-MM-DD")の差分日数を計算するヘルパー関数
 function calculateDiffDays(d1Str, d2Str) {
   const d1 = new Date(d1Str.replace(/-/g, '/'));
@@ -254,3 +361,13 @@ function sendLineMessage(to, text, token) {
   };
   UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
 }
+
+/**
+ * すべての通知（朝のメッセージ＆予定リマインダー）を監視・送信する統合関数
+ * GASのエディタでこの関数に対して「時間主導型」-「分ベースのタイマー」-「1分おき」のトリガーを設定してください。
+ */
+function checkAllNotifications() {
+  execDailyMorningNotification();
+  checkAndSendEventReminders();
+}
+
