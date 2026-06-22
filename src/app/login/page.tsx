@@ -105,14 +105,9 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     const sid = sessionIdParam || pwaSessionId;
     
-    // Standaloneで自分でボタンを押した場合は、Safariで同じ画面を開かせる
+    // PWA Standaloneかつ自動リダイレクトでない場合は、リンククリックで遷移するためここでは何もしない
     if (isStandalone && !sessionIdParam) {
-      setShowPwaGuide(true);
       setIsLoggingIn(false);
-      
-      // window.open で外部ブラウザを起動（iOS PWA standalone仕様）
-      const url = `${window.location.origin}/login?pwaSessionId=${sid}`;
-      window.open(url, '_blank');
       return;
     }
 
@@ -163,13 +158,33 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              <button
-                className={`${styles.loginBtn} ${isLoggingIn ? styles.loggingIn : ''}`}
-                onClick={() => handleLogin()}
-                disabled={isLoggingIn}
-              >
-                {isLoggingIn ? '準備中...' : 'LINEでログイン'}
-              </button>
+              {isStandalone ? (
+                pwaSessionId ? (
+                  <a
+                    href={`${window.location.origin}/login?pwaSessionId=${pwaSessionId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.loginBtn}
+                    onClick={() => {
+                      setShowPwaGuide(true);
+                    }}
+                  >
+                    LINEでログイン
+                  </a>
+                ) : (
+                  <button className={styles.loginBtn} disabled>
+                    準備中...
+                  </button>
+                )
+              ) : (
+                <button
+                  className={`${styles.loginBtn} ${isLoggingIn ? styles.loggingIn : ''}`}
+                  onClick={() => handleLogin()}
+                  disabled={isLoggingIn}
+                >
+                  {isLoggingIn ? '準備中...' : 'LINEでログイン'}
+                </button>
+              )}
 
               <a
                 href="https://lin.ee/o8SSLxF"

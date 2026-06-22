@@ -75,6 +75,8 @@
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3);
+  text-decoration: none;
+  text-align: center;
 }
 
 .loginBtn:hover {
