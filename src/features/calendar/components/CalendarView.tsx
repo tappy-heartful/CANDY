@@ -1404,6 +1404,11 @@ export default function CalendarView({
                 rowMap.noTime = currentRow++;
               }
 
+              const hasSpecialRows = !!(rowMap.anniversary || rowMap.allDay || rowMap.todo || rowMap.noTime);
+              if (hasSpecialRows && slots.length > 0) {
+                rowMap.divider = currentRow++;
+              }
+
               rowMap.slotsStart = currentRow;
               const totalRows = currentRow + slots.length - 1;
 
@@ -1490,6 +1495,18 @@ export default function CalendarView({
               );
             };
 
+            const gridRowsStyle = (() => {
+              const rows: string[] = ["auto"]; // 行1はヘッダー
+              for (let r = 2; r <= cardTimetableData.totalRows; r++) {
+                if (cardTimetableData.rowMap.divider && r === cardTimetableData.rowMap.divider) {
+                  rows.push("auto");
+                } else {
+                  rows.push("minmax(36px, auto)");
+                }
+              }
+              return rows.join(" ");
+            })();
+
             return (
               <div
                 key={`timeline-${dateStr}`}
@@ -1520,7 +1537,7 @@ export default function CalendarView({
                       style={{ 
                         display: 'grid',
                         gridTemplateColumns: `40px ${colCount === 2 ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)'}`,
-                        gridTemplateRows: `auto repeat(${cardTimetableData.totalRows - 1}, minmax(36px, auto))`,
+                        gridTemplateRows: gridRowsStyle,
                         gap: '4px',
                         width: '100%'
                       }}
@@ -1529,6 +1546,19 @@ export default function CalendarView({
                       <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 1, visibility: 'hidden' }}>時間</div>
                       {showMe && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 2 }}>自分</div>}
                       {showPartner && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: colCount === 2 ? 3 : 2 }}>{partnerNickname}</div>}
+
+                      {/* 区切り線 */}
+                      {cardTimetableData.rowMap.divider && (
+                        <div 
+                          style={{ 
+                            gridRow: cardTimetableData.rowMap.divider, 
+                            gridColumn: '1 / -1', 
+                            borderTop: '1.5px dashed #e8e5ed', 
+                            margin: '4px 0',
+                            height: '0' 
+                          }} 
+                        />
+                      )}
 
                       {/* 記念日行 */}
                       {cardTimetableData.rowMap.anniversary && (

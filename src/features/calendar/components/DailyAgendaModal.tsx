@@ -255,6 +255,11 @@ export default function DailyAgendaModal({
       rowMap.noTime = currentRow++;
     }
 
+    const hasSpecialRows = !!(rowMap.anniversary || rowMap.allDay || rowMap.todo || rowMap.noTime);
+    if (hasSpecialRows && slots.length > 0) {
+      rowMap.divider = currentRow++;
+    }
+
     rowMap.slotsStart = currentRow;
     const totalRows = currentRow + slots.length - 1;
 
@@ -274,6 +279,18 @@ export default function DailyAgendaModal({
 
   const { slots, timePoints, rowMap, totalRows, showMe: hasMe, showPartner: hasPartner, hasCouple, timeEvents, specialItems, getNormalizedEndTime } = timetableData;
   const colCount = (hasMe ? 1 : 0) + (hasPartner ? 1 : 0);
+
+  const gridRowsStyle = useMemo(() => {
+    const rows: string[] = ["auto"]; // 行1はヘッダー
+    for (let r = 2; r <= totalRows; r++) {
+      if (rowMap.divider && r === rowMap.divider) {
+        rows.push("auto");
+      } else {
+        rows.push("minmax(44px, auto)");
+      }
+    }
+    return rows.join(" ");
+  }, [totalRows, rowMap.divider]);
 
   const renderTimetableCard = (item: any, additionalStyle?: React.CSSProperties) => {
     if (item.isAnniversary) {
@@ -418,7 +435,7 @@ export default function DailyAgendaModal({
                 className={styles.timetableGrid} 
                 style={{ 
                   gridTemplateColumns: `60px ${colCount === 2 ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)'}`,
-                  gridTemplateRows: `auto repeat(${totalRows - 1}, minmax(44px, auto))`,
+                  gridTemplateRows: gridRowsStyle,
                   gap: '6px'
                 }}
               >
@@ -433,6 +450,19 @@ export default function DailyAgendaModal({
                   <div className={styles.timetableHeaderCell} style={{ gridRow: 1, gridColumn: colCount === 2 ? 3 : 2 }}>
                     <i className="fa-solid fa-user-friends" style={{ color: "#A0E7D2" }}></i>{partnerNickname}
                   </div>
+                )}
+
+                {/* 区切り線 */}
+                {rowMap.divider && (
+                  <div 
+                    style={{ 
+                      gridRow: rowMap.divider, 
+                      gridColumn: '1 / -1', 
+                      borderTop: '2px dashed #e8e5ed', 
+                      margin: '6px 0',
+                      height: '0' 
+                    }} 
+                  />
                 )}
 
                 {/* 記念日行 */}
