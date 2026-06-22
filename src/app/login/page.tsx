@@ -35,8 +35,10 @@ export default function LoginPage() {
 
     if (standalone) {
       // PWA Standaloneモードの場合
-      // ランダムなセッションIDを生成 (UUIDライクな文字コード)
-      const sessionId = 'pwa-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now().toString(36);
+      // ランダムなセッションIDを生成 (暗号学的に安全なUUID、非対応ブラウザはフォールバック)
+      const sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'pwa-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now().toString(36);
       setPwaSessionId(sessionId);
 
       // LINEログインの認証URLを事前にサーバーから取得
@@ -123,7 +125,7 @@ export default function LoginPage() {
   const handleLogin = async (sessionIdParam?: string | null) => {
     setIsLoggingIn(true);
     const sid = sessionIdParam || pwaSessionId;
-    
+
     // PWA Standaloneかつ自動リダイレクトでない場合は、リンククリックで遷移するためここでは何もしない
     if (isStandalone && !sessionIdParam) {
       setIsLoggingIn(false);
