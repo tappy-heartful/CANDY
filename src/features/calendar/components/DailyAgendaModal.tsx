@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarEvent, Todo, Anniversary } from "@/src/lib/firestore/types";
 import styles from "./DailyAgenda.module.css";
@@ -21,6 +21,8 @@ interface DailyAgendaModalProps {
   onToggleTodo?: (id: string, currentStatus: boolean) => void;
   onAddTodo?: (dateStr: string) => void;
   onEditTodo?: (todoItem: Todo) => void;
+  defaultDisplayMode?: "list" | "timeline";
+  onChangeDisplayMode?: (mode: "list" | "timeline") => void;
 }
 
 export default function DailyAgendaModal({
@@ -39,8 +41,24 @@ export default function DailyAgendaModal({
   onToggleTodo,
   onAddTodo,
   onEditTodo,
+  defaultDisplayMode = "list",
+  onChangeDisplayMode,
 }: DailyAgendaModalProps) {
   const router = useRouter();
+  const [displayMode, setDisplayMode] = useState<"list" | "timeline">(defaultDisplayMode);
+
+  React.useEffect(() => {
+    if (defaultDisplayMode) {
+      setDisplayMode(defaultDisplayMode);
+    }
+  }, [defaultDisplayMode]);
+
+  const handleDisplayModeChange = (mode: "list" | "timeline") => {
+    setDisplayMode(mode);
+    if (onChangeDisplayMode) {
+      onChangeDisplayMode(mode);
+    }
+  };
 
   // Format the date parts to display date and weekday on different lines
   const dateInfo = useMemo(() => {
@@ -133,6 +151,217 @@ export default function DailyAgendaModal({
     };
   }, [events, todos, currentUserId]);
 
+  // タイムライン用のデータを抽出・ソート・グリッド行割り当て
+  const timetableData = useMemo(() => {
+    if (coupleItems.length === 0 && myItems.length === 0 && partnerItems.length === 0 && anniversaries.length === 0) {
+      return { 
+        slots: [] as { start: string; end: string }[], 
+        timePoints: [] as string[], 
+        rowMap: {} as Record<string, number>, 
+        totalRows: 1, 
+        showMe: false, 
+        showPartner: false,
+        hasCouple: false,
+        timeEvents: [] as any[],
+        specialItems: { anniversary: [] as any[], allDay: [] as any[], todo: [] as any[], noTime: [] as any[] },
+        getNormalizedEndTime: (item: any) => ""
+      };
+    }
+
+    const hasMe = myItems.length > 0;
+    const hasPartner = partnerItems.length > 0;
+    const hasCouple = coupleItems.length > 0 || anniversaries.length > 0;
+
+    const showMe = hasMe || hasCouple;
+    const showPartner = hasPartner || hasCouple;
+
+    // 時間指定のある予定の抽出
+    const timeEvents = [
+      ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
+      ...myItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
+      ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime)
+    ];
+
+    // 特殊予定の抽出
+    const specialItems = {
+      anniversary: anniversaries.map(a => ({
+        ...a,
+        isAnniversary: true,
+        isTodo: false,
+        title: `🎂 ${a.title}`,
+        type: 'couple'
+      })),
+      allDay: [
+        ...coupleItems.filter(e => !e.isTodo && e.isAllDay),
+        ...myItems.filter(e => !e.isTodo && e.isAllDay),
+        ...partnerItems.filter(e => !e.isTodo && e.isAllDay)
+      ],
+      todo: [
+        ...coupleItems.filter(e => e.isTodo),
+        ...myItems.filter(e => e.isTodo),
+        ...partnerItems.filter(e => e.isTodo)
+      ],
+      noTime: [
+        ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
+        ...myItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
+        ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime)
+      ]
+    };
+
+    // 時間指定の終了時間を補完する関数
+    const addOneHour = (timeStr: string): string => {
+      const [h, m] = timeStr.split(':').map(Number);
+      const nextH = (h + 1) % 24;
+      return `${nextH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+    const getNormalizedEndTime = (item: any) => {
+      if (item.endTime) return item.endTime;
+      return addOneHour(item.startTime);
+    };
+
+    // 時間の全境界値を取得
+    const timePointsSet = new Set<string>();
+    timeEvents.forEach(item => {
+      timePointsSet.add(item.startTime);
+      timePointsSet.add(getNormalizedEndTime(item));
+    });
+    const timePoints = Array.from(timePointsSet).sort((a, b) => a.localeCompare(b));
+
+    // 時間指定予定はあるが、境界値が不足している場合は補完
+    if (timeEvents.length > 0 && timePoints.length < 2) {
+      timePoints.push(addOneHour(timePoints[0]));
+    }
+
+    // タイムスロット（区間）の生成
+    const slots: { start: string; end: string }[] = [];
+    for (let i = 0; i < timePoints.length - 1; i++) {
+      slots.push({ start: timePoints[i], end: timePoints[i+1] });
+    }
+
+    // 行マップの計算
+    let currentRow = 2; // ヘッダー（行1）の次
+    const rowMap: Record<string, number> = {};
+
+    if (specialItems.anniversary.length > 0) {
+      rowMap.anniversary = currentRow++;
+    }
+    if (specialItems.allDay.length > 0) {
+      rowMap.allDay = currentRow++;
+    }
+    if (specialItems.todo.length > 0) {
+      rowMap.todo = currentRow++;
+    }
+    if (specialItems.noTime.length > 0) {
+      rowMap.noTime = currentRow++;
+    }
+
+    const hasSpecialRows = !!(rowMap.anniversary || rowMap.allDay || rowMap.todo || rowMap.noTime);
+    if (hasSpecialRows && slots.length > 0) {
+      rowMap.divider = currentRow++;
+    }
+
+    rowMap.slotsStart = currentRow;
+    const totalRows = currentRow + slots.length - 1;
+
+    return {
+      slots,
+      timePoints,
+      rowMap,
+      totalRows,
+      showMe,
+      showPartner,
+      hasCouple,
+      timeEvents,
+      specialItems,
+      getNormalizedEndTime
+    };
+  }, [coupleItems, myItems, partnerItems, anniversaries]);
+
+  const { slots, timePoints, rowMap, totalRows, showMe: hasMe, showPartner: hasPartner, hasCouple, timeEvents, specialItems, getNormalizedEndTime } = timetableData;
+  const colCount = (hasMe ? 1 : 0) + (hasPartner ? 1 : 0);
+
+  const gridRowsStyle = useMemo(() => {
+    const rows: string[] = ["auto"]; // 行1はヘッダー
+    for (let r = 2; r <= totalRows; r++) {
+      if (rowMap.divider && r === rowMap.divider) {
+        rows.push("auto");
+      } else {
+        rows.push("minmax(44px, auto)");
+      }
+    }
+    return rows.join(" ");
+  }, [totalRows, rowMap.divider]);
+
+  const renderTimetableCard = (item: any, additionalStyle?: React.CSSProperties) => {
+    if (item.isAnniversary) {
+      return (
+        <div key={`anniv-card-${item.id}`} className={styles.timetableCard} style={{ background: '#f5f0fa', border: '1px solid #9B7CC3', color: '#7a5ba0', ...additionalStyle }}>
+          <span className={styles.timetableCardTitle}>{item.title}</span>
+        </div>
+      );
+    }
+
+    const isEditable = item.type === "couple" || item.uid === currentUserId;
+    
+    if (item.isTodo) {
+      const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+      return (
+        <div 
+          key={`todo-card-${item.id}`} 
+          className={styles.timetableCard} 
+          style={{ 
+            background: 'white', 
+            border: `2px solid ${color}`, 
+            color: '#333',
+            opacity: item.isCompleted ? 0.4 : 1,
+            cursor: isEditable ? 'pointer' : 'default',
+            ...additionalStyle
+          }}
+          onClick={() => {
+            if (isEditable && onEditTodo) {
+              onEditTodo(item as unknown as Todo);
+            }
+          }}
+        >
+          <span onClick={(e) => {
+            e.stopPropagation();
+            onToggleTodo && onToggleTodo(item.id, !!item.isCompleted);
+          }} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            {item.isCompleted ? (
+              <i className="fa-regular fa-square-check" style={{color: '#9B7CC3'}}></i>
+            ) : (
+              <i className="fa-regular fa-square" style={{color: '#ccc'}}></i>
+            )}
+          </span>
+          <span className={styles.timetableCardTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+            {item.title}
+          </span>
+        </div>
+      );
+    }
+
+    const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+    const bgColor = item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7");
+    const textColor = item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534");
+    return (
+      <div 
+        key={`event-card-${item.id}`} 
+        className={styles.timetableCard} 
+        style={{ 
+          background: bgColor, 
+          color: textColor,
+          border: `1px solid ${color}`,
+          cursor: 'pointer',
+          ...additionalStyle
+        }}
+        onClick={() => onEditEvent(item)}
+      >
+        {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ fontSize: '10px', color: textColor }}></i>}
+        <span className={styles.timetableCardTitle}>{item.title}</span>
+      </div>
+    );
+  };
+
   const getEventColor = (e: CalendarEvent) => {
     if (e.type === "couple") return "#9B7CC3";
     if (e.uid === currentUserId) return "#F7A8C4";
@@ -177,9 +406,285 @@ export default function DailyAgendaModal({
           </div>
         </div>
 
+        {/* 表示モード切り替えタブ */}
+        {(coupleItems.length > 0 || myItems.length > 0 || partnerItems.length > 0 || anniversaries.length > 0) && (
+          <div className={styles.modeSelectRow}>
+            <div className={styles.modeSelectTabs}>
+              <button 
+                className={`${styles.modeTab} ${displayMode === "list" ? styles.modeTabActive : ""}`}
+                onClick={() => handleDisplayModeChange("list")}
+              >
+                リスト
+              </button>
+              <button 
+                className={`${styles.modeTab} ${displayMode === "timeline" ? styles.modeTabActive : ""}`}
+                onClick={() => handleDisplayModeChange("timeline")}
+              >
+                タイムライン
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={styles.eventList}>
           {coupleItems.length === 0 && myItems.length === 0 && partnerItems.length === 0 && anniversaries.length === 0 ? (
             <div className={styles.emptyState}>予定・TODOはありません</div>
+          ) : displayMode === "timeline" ? (
+            <div className={styles.timetableWrapper}>
+              <div 
+                className={styles.timetableGrid} 
+                style={{ 
+                  gridTemplateColumns: `60px ${colCount === 2 ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)'}`,
+                  gridTemplateRows: gridRowsStyle,
+                  gap: '6px'
+                }}
+              >
+                {/* ヘッダー行 */}
+                <div className={styles.timetableHeaderCell} style={{ gridRow: 1, gridColumn: 1, visibility: 'hidden' }}>時間</div>
+                {hasMe && (
+                  <div className={styles.timetableHeaderCell} style={{ gridRow: 1, gridColumn: 2 }}>
+                    <i className="fa-solid fa-user" style={{ color: "#F7A8C4" }}></i>{myNickname}
+                  </div>
+                )}
+                {hasPartner && (
+                  <div className={styles.timetableHeaderCell} style={{ gridRow: 1, gridColumn: colCount === 2 ? 3 : 2 }}>
+                    <i className="fa-solid fa-user-friends" style={{ color: "#A0E7D2" }}></i>{partnerNickname}
+                  </div>
+                )}
+
+                {/* 区切り線 */}
+                {rowMap.divider && (
+                  <div 
+                    style={{ 
+                      gridRow: rowMap.divider, 
+                      gridColumn: '1 / -1', 
+                      borderTop: '2px dashed #e8e5ed', 
+                      margin: '6px 0',
+                      height: '0' 
+                    }} 
+                  />
+                )}
+
+                {/* 記念日行 */}
+                {rowMap.anniversary && (
+                  <>
+                    <div className={styles.timeCell} style={{ gridRow: rowMap.anniversary, gridColumn: 1 }}>
+                      <span className={styles.timeCellLabel}>記念日</span>
+                    </div>
+                    <div className={styles.itemCell} style={{ gridRow: rowMap.anniversary, gridColumn: colCount === 2 ? '2 / 4' : 2 }}>
+                      {specialItems.anniversary.map(item => renderTimetableCard(item))}
+                    </div>
+                  </>
+                )}
+
+                {/* 終日行 */}
+                {rowMap.allDay && (() => {
+                  const couple = specialItems.allDay.filter(item => item.type === 'couple');
+                  const me = specialItems.allDay.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                  const partner = specialItems.allDay.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                  return (
+                    <>
+                      <div className={styles.timeCell} style={{ gridRow: rowMap.allDay, gridColumn: 1 }}>
+                        <span className={styles.timeCellLabel}>終日</span>
+                      </div>
+                      {colCount === 2 && couple.length > 0 && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.allDay, gridColumn: '2 / 4' }}>
+                          {couple.map(item => renderTimetableCard(item))}
+                        </div>
+                      )}
+                      {hasMe && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.allDay, gridColumn: 2 }}>
+                          {me.length > 0 ? (
+                            me.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                      {hasPartner && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.allDay, gridColumn: colCount === 2 ? 3 : 2 }}>
+                          {partner.length > 0 ? (
+                            partner.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* TODO行 */}
+                {rowMap.todo && (() => {
+                  const couple = specialItems.todo.filter(item => item.type === 'couple');
+                  const me = specialItems.todo.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                  const partner = specialItems.todo.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                  return (
+                    <>
+                      <div className={styles.timeCell} style={{ gridRow: rowMap.todo, gridColumn: 1 }}>
+                        <span className={styles.timeCellLabel}>TODO</span>
+                      </div>
+                      {colCount === 2 && couple.length > 0 && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.todo, gridColumn: '2 / 4' }}>
+                          {couple.map(item => renderTimetableCard(item))}
+                        </div>
+                      )}
+                      {hasMe && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.todo, gridColumn: 2 }}>
+                          {me.length > 0 ? (
+                            me.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                      {hasPartner && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.todo, gridColumn: colCount === 2 ? 3 : 2 }}>
+                          {partner.length > 0 ? (
+                            partner.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* 時間未定行 */}
+                {rowMap.noTime && (() => {
+                  const couple = specialItems.noTime.filter(item => item.type === 'couple');
+                  const me = specialItems.noTime.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                  const partner = specialItems.noTime.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                  return (
+                    <>
+                      <div className={styles.timeCell} style={{ gridRow: rowMap.noTime, gridColumn: 1 }}>
+                        <span className={styles.timeCellLabel}>時間未定</span>
+                      </div>
+                      {colCount === 2 && couple.length > 0 && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.noTime, gridColumn: '2 / 4' }}>
+                          {couple.map(item => renderTimetableCard(item))}
+                        </div>
+                      )}
+                      {hasMe && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.noTime, gridColumn: 2 }}>
+                          {me.length > 0 ? (
+                            me.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                      {hasPartner && (
+                        <div className={styles.itemCell} style={{ gridRow: rowMap.noTime, gridColumn: colCount === 2 ? 3 : 2 }}>
+                          {partner.length > 0 ? (
+                            partner.map(item => renderTimetableCard(item))
+                          ) : (
+                            colCount === 2 && couple.length === 0 ? <div className={styles.emptyCell} /> : null
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* 時間スロットのラベル（目盛り表示） */}
+                {timePoints.map((tp, i) => {
+                  const isLast = i === timePoints.length - 1;
+                  const gridRow = isLast ? rowMap.slotsStart! + i - 1 : rowMap.slotsStart! + i;
+                  return (
+                    <div 
+                      key={`time-tick-${i}`} 
+                      className={styles.timeCell} 
+                      style={{ 
+                        gridRow, 
+                        gridColumn: 1,
+                        background: 'none',
+                        border: 'none',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: isLast ? 'flex-end' : 'flex-start',
+                        alignItems: 'center',
+                        padding: isLast ? '0 0 2px 0' : '2px 0 0 0',
+                        minHeight: 'auto'
+                      }}
+                    >
+                      <span className={styles.timeCellLabel} style={{ fontSize: '11px', color: '#888', fontWeight: 'bold' }}>{tp}</span>
+                    </div>
+                  );
+                })}
+
+                {/* 時間指定予定カード */}
+                {timeEvents.map(item => {
+                  const startIdx = rowMap.slotsStart! + timePoints.indexOf(item.startTime);
+                  const endIdx = rowMap.slotsStart! + timePoints.indexOf(getNormalizedEndTime(item));
+                  
+                  let col = 2;
+                  if (colCount === 2) {
+                    if (item.type === 'couple') {
+                      col = 2;
+                    } else if (item.uid === currentUserId) {
+                      col = 2;
+                    } else {
+                      col = 3;
+                    }
+                  }
+                  
+                  const isCoupleEvent = item.type === 'couple';
+                  
+                  return (
+                    <div 
+                      key={`time-event-${item.id}`} 
+                      className={styles.itemCell} 
+                      style={{ 
+                        gridRow: `${startIdx} / ${endIdx}`, 
+                        gridColumn: (colCount === 2 && isCoupleEvent) ? '2 / 4' : col,
+                        zIndex: isCoupleEvent ? 2 : 1,
+                        height: '100%',
+                        justifyContent: 'stretch'
+                      }}
+                    >
+                      {renderTimetableCard(item, { height: '100%', display: 'flex', alignItems: 'center' })}
+                    </div>
+                  );
+                })}
+
+                {/* 時間枠用の空セル */}
+                {slots.map((slot, i) => {
+                  const gridRow = rowMap.slotsStart! + i;
+                  
+                  const hasCoupleInSlot = timeEvents.some(item => 
+                    item.type === 'couple' && 
+                    item.startTime < slot.end && 
+                    getNormalizedEndTime(item) > slot.start
+                  );
+                  const hasMeInSlot = timeEvents.some(item => 
+                    item.uid === currentUserId && 
+                    item.type !== 'couple' && 
+                    item.startTime < slot.end && 
+                    getNormalizedEndTime(item) > slot.start
+                  );
+                  const hasPartnerInSlot = timeEvents.some(item => 
+                    item.uid !== currentUserId && 
+                    item.type !== 'couple' && 
+                    item.startTime < slot.end && 
+                    getNormalizedEndTime(item) > slot.start
+                  );
+
+                  return (
+                    <React.Fragment key={`empty-cells-${i}`}>
+                      {hasMe && !hasCoupleInSlot && !hasMeInSlot && (
+                        <div className={styles.emptyCell} style={{ gridRow, gridColumn: 2, height: '100%' }} />
+                      )}
+                      {hasPartner && !hasCoupleInSlot && !hasPartnerInSlot && (
+                        <div className={styles.emptyCell} style={{ gridRow, gridColumn: colCount === 2 ? 3 : 2, height: '100%' }} />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <>
               {anniversaries.map((a) => (

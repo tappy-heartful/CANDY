@@ -173,12 +173,20 @@ export default function CalendarView({
   const [swipeX, setSwipeX] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  // モード設定（デフォルトは grid）
+  // モード設定
   const [calendarMode, setCalendarMode] = useState<"grid" | "timeline">("grid");
+  const [timelineMode, setTimelineMode] = useState<"list" | "columns">("list");
+  const [dailyAgendaMode, setDailyAgendaMode] = useState<"list" | "timeline">("list");
 
   useEffect(() => {
     if (userData?.calendarMode) {
       setCalendarMode(userData.calendarMode);
+    }
+    if (userData?.timelineMode) {
+      setTimelineMode(userData.timelineMode);
+    }
+    if (userData?.dailyAgendaMode) {
+      setDailyAgendaMode(userData.dailyAgendaMode);
     }
   }, [userData]);
 
@@ -188,6 +196,24 @@ export default function CalendarView({
       await updateProfile(currentUserId, { calendarMode: mode });
     } catch (e) {
       console.error("Failed to save calendar mode:", e);
+    }
+  };
+
+  const handleToggleTimelineMode = async (mode: "list" | "columns") => {
+    setTimelineMode(mode);
+    try {
+      await updateProfile(currentUserId, { timelineMode: mode });
+    } catch (e) {
+      console.error("Failed to save timeline mode:", e);
+    }
+  };
+
+  const handleToggleDailyAgendaMode = async (mode: "list" | "timeline") => {
+    setDailyAgendaMode(mode);
+    try {
+      await updateProfile(currentUserId, { dailyAgendaMode: mode });
+    } catch (e) {
+      console.error("Failed to save daily agenda mode:", e);
     }
   };
 
@@ -1112,6 +1138,24 @@ export default function CalendarView({
             </button>
           </div>
         </div>
+        {calendarMode === "timeline" && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingLeft: '48px', marginTop: '4px' }}>
+            <div className={styles.filterTabs}>
+              <button
+                className={`${styles.tab} ${timelineMode === "list" ? styles.active : ""}`}
+                onClick={() => handleToggleTimelineMode("list")}
+              >
+                リスト表示
+              </button>
+              <button
+                className={`${styles.tab} ${timelineMode === "columns" ? styles.active : ""}`}
+                onClick={() => handleToggleTimelineMode("columns")}
+              >
+                タイムライン表示
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.stickyHeader}>
@@ -1279,11 +1323,196 @@ export default function CalendarView({
 
             const dayName = ["日", "月", "火", "水", "木", "金", "土"][dayOfWeek];
 
+            const hasCouple = coupleItems.length > 0 || dayAnniversaries.length > 0;
+            const showMe = meItems.length > 0 || hasCouple;
+            const showPartner = partnerItems.length > 0 || hasCouple;
+            const colCount = (showMe ? 1 : 0) + (showPartner ? 1 : 0);
+            const isColumnMode = timelineMode === "columns" && hasAnyItems;
+
+            // 各カードのタイムテーブルデータを構築
+            const cardTimetableData = (() => {
+              const timeEvents = [
+                ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
+                ...meItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
+                ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime)
+              ];
+
+              const specialItems = {
+                anniversary: dayAnniversaries.map(a => ({
+                  ...a,
+                  isAnniversary: true,
+                  isTodo: false,
+                  title: `🎂 ${a.title}`,
+                  type: 'couple'
+                })),
+                allDay: [
+                  ...coupleItems.filter(e => !e.isTodo && e.isAllDay),
+                  ...meItems.filter(e => !e.isTodo && e.isAllDay),
+                  ...partnerItems.filter(e => !e.isTodo && e.isAllDay)
+                ],
+                todo: [
+                  ...coupleItems.filter(e => e.isTodo),
+                  ...meItems.filter(e => e.isTodo),
+                  ...partnerItems.filter(e => e.isTodo)
+                ],
+                noTime: [
+                  ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
+                  ...meItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
+                  ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime)
+                ]
+              };
+
+              const addOneHour = (timeStr: string): string => {
+                const [h, m] = timeStr.split(':').map(Number);
+                const nextH = (h + 1) % 24;
+                return `${nextH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+              };
+              const getNormalizedEndTime = (item: any) => {
+                if (item.endTime) return item.endTime;
+                return addOneHour(item.startTime);
+              };
+
+              const timePointsSet = new Set<string>();
+              timeEvents.forEach(item => {
+                timePointsSet.add(item.startTime);
+                timePointsSet.add(getNormalizedEndTime(item));
+              });
+              const timePoints = Array.from(timePointsSet).sort((a, b) => a.localeCompare(b));
+
+              if (timeEvents.length > 0 && timePoints.length < 2) {
+                timePoints.push(addOneHour(timePoints[0]));
+              }
+
+              const slots: { start: string; end: string }[] = [];
+              for (let i = 0; i < timePoints.length - 1; i++) {
+                slots.push({ start: timePoints[i], end: timePoints[i+1] });
+              }
+
+              let currentRow = 2;
+              const rowMap: Record<string, number> = {};
+
+              if (specialItems.anniversary.length > 0) {
+                rowMap.anniversary = currentRow++;
+              }
+              if (specialItems.allDay.length > 0) {
+                rowMap.allDay = currentRow++;
+              }
+              if (specialItems.todo.length > 0) {
+                rowMap.todo = currentRow++;
+              }
+              if (specialItems.noTime.length > 0) {
+                rowMap.noTime = currentRow++;
+              }
+
+              const hasSpecialRows = !!(rowMap.anniversary || rowMap.allDay || rowMap.todo || rowMap.noTime);
+              if (hasSpecialRows && slots.length > 0) {
+                rowMap.divider = currentRow++;
+              }
+
+              rowMap.slotsStart = currentRow;
+              const totalRows = currentRow + slots.length - 1;
+
+              return {
+                slots,
+                timePoints,
+                rowMap,
+                totalRows,
+                timeEvents,
+                specialItems,
+                getNormalizedEndTime
+              };
+            })();
+
+            const renderTimetableMiniCard = (item: any, additionalStyle?: React.CSSProperties) => {
+              if (item.isAnniversary) {
+                return (
+                  <div 
+                    key={`anniv-mini-${item.id}`} 
+                    className={styles.timelineTimetableCard} 
+                    style={{ 
+                      background: '#f5f0fa', 
+                      border: '1px solid #9B7CC3', 
+                      color: '#7a5ba0',
+                      ...additionalStyle
+                    }} 
+                    title={item.title}
+                  >
+                    <span className={styles.timetableCardTitle}>{item.title}</span>
+                  </div>
+                );
+              }
+
+              const isEditable = item.type === "couple" || item.uid === currentUserId;
+              if (item.isTodo) {
+                const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+                return (
+                  <div 
+                    key={`todo-mini-${item.id}`} 
+                    className={styles.timelineTimetableCard} 
+                    style={{ 
+                      background: 'white',
+                      border: `1.5px solid ${color}`, 
+                      color: '#333',
+                      opacity: item.isCompleted ? 0.4 : 1,
+                      cursor: isEditable ? 'pointer' : 'default',
+                      ...additionalStyle
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isEditable) handleEditTodo(item as unknown as Todo);
+                    }}
+                    title={item.title}
+                  >
+                    <span className={styles.timetableCardTitle} style={{ textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+                      {item.title}
+                    </span>
+                  </div>
+                );
+              }
+
+              const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
+              const bgColor = item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7");
+              const textColor = item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534");
+              return (
+                <div 
+                  key={`event-mini-${item.id}`} 
+                  className={styles.timelineTimetableCard} 
+                  style={{ 
+                    background: bgColor, 
+                    color: textColor,
+                    border: `1px solid ${color}`,
+                    cursor: 'pointer',
+                    ...additionalStyle
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditEvent(item);
+                  }}
+                  title={item.title}
+                >
+                  <span className={styles.timetableCardTitle}>{item.title}</span>
+                </div>
+              );
+            };
+
+            const gridRowsStyle = (() => {
+              const rows: string[] = ["auto"]; // 行1はヘッダー
+              for (let r = 2; r <= cardTimetableData.totalRows; r++) {
+                if (cardTimetableData.rowMap.divider && r === cardTimetableData.rowMap.divider) {
+                  rows.push("auto");
+                } else {
+                  rows.push("minmax(36px, auto)");
+                }
+              }
+              return rows.join(" ");
+            })();
+
             return (
               <div
                 key={`timeline-${dateStr}`}
                 ref={isToday ? todayCardRef : null}
                 className={`${styles.timelineCard} ${isToday ? styles.timelineTodayCard : ""}`}
+                style={isColumnMode ? { flex: `0 0 ${Math.max(180, 50 + colCount * 85)}px` } : undefined}
               >
                 <div className={styles.timelineCardHeader}>
                   <span className={`${styles.timelineDateNum} ${isToday ? styles.timelineTodayCircle : ""}`}>
@@ -1301,42 +1530,294 @@ export default function CalendarView({
                   {isToday && <span className={styles.todayLabel}>今日</span>}
                 </div>
 
-                <div className={styles.timelineItemsContainer}>
-                  {dayAnniversaries.map((a) => (
-                    <div key={a.id} className={styles.timelineAnniversary}>
-                      🎂 {a.title}
+                {isColumnMode ? (
+                  <div className={styles.timelineTimetableWrapper}>
+                    <div 
+                      className={styles.timelineTimetableGrid} 
+                      style={{ 
+                        display: 'grid',
+                        gridTemplateColumns: `40px ${colCount === 2 ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)'}`,
+                        gridTemplateRows: gridRowsStyle,
+                        gap: '4px',
+                        width: '100%'
+                      }}
+                    >
+                      {/* ヘッダー */}
+                      <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 1, visibility: 'hidden' }}>時間</div>
+                      {showMe && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 2 }}>自分</div>}
+                      {showPartner && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: colCount === 2 ? 3 : 2 }}>{partnerNickname}</div>}
+
+                      {/* 区切り線 */}
+                      {cardTimetableData.rowMap.divider && (
+                        <div 
+                          style={{ 
+                            gridRow: cardTimetableData.rowMap.divider, 
+                            gridColumn: '1 / -1', 
+                            borderTop: '1.5px dashed #e8e5ed', 
+                            margin: '4px 0',
+                            height: '0' 
+                          }} 
+                        />
+                      )}
+
+                      {/* 記念日行 */}
+                      {cardTimetableData.rowMap.anniversary && (
+                        <>
+                          <div className={styles.timelineTimeCell} style={{ gridRow: cardTimetableData.rowMap.anniversary, gridColumn: 1 }}>
+                            <span>記念日</span>
+                          </div>
+                          <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.anniversary, gridColumn: colCount === 2 ? '2 / 4' : 2 }}>
+                            {cardTimetableData.specialItems.anniversary.map(item => renderTimetableMiniCard(item))}
+                          </div>
+                        </>
+                      )}
+
+                      {/* 終日行 */}
+                      {cardTimetableData.rowMap.allDay && (() => {
+                        const couple = cardTimetableData.specialItems.allDay.filter(item => item.type === 'couple');
+                        const me = cardTimetableData.specialItems.allDay.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                        const partner = cardTimetableData.specialItems.allDay.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                        return (
+                          <>
+                            <div className={styles.timelineTimeCell} style={{ gridRow: cardTimetableData.rowMap.allDay, gridColumn: 1 }}>
+                              <span>終日</span>
+                            </div>
+                            {colCount === 2 && couple.length > 0 && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.allDay, gridColumn: '2 / 4' }}>
+                                {couple.map(item => renderTimetableMiniCard(item))}
+                              </div>
+                            )}
+                            {showMe && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.allDay, gridColumn: 2 }}>
+                                {me.length > 0 ? (
+                                  me.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                            {showPartner && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.allDay, gridColumn: colCount === 2 ? 3 : 2 }}>
+                                {partner.length > 0 ? (
+                                  partner.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+
+                      {/* TODO行 */}
+                      {cardTimetableData.rowMap.todo && (() => {
+                        const couple = cardTimetableData.specialItems.todo.filter(item => item.type === 'couple');
+                        const me = cardTimetableData.specialItems.todo.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                        const partner = cardTimetableData.specialItems.todo.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                        return (
+                          <>
+                            <div className={styles.timelineTimeCell} style={{ gridRow: cardTimetableData.rowMap.todo, gridColumn: 1 }}>
+                              <span>TODO</span>
+                            </div>
+                            {colCount === 2 && couple.length > 0 && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.todo, gridColumn: '2 / 4' }}>
+                                {couple.map(item => renderTimetableMiniCard(item))}
+                              </div>
+                            )}
+                            {showMe && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.todo, gridColumn: 2 }}>
+                                {me.length > 0 ? (
+                                  me.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                            {showPartner && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.todo, gridColumn: colCount === 2 ? 3 : 2 }}>
+                                {partner.length > 0 ? (
+                                  partner.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+
+                      {/* 時間未定行 */}
+                      {cardTimetableData.rowMap.noTime && (() => {
+                        const couple = cardTimetableData.specialItems.noTime.filter(item => item.type === 'couple');
+                        const me = cardTimetableData.specialItems.noTime.filter(item => item.uid === currentUserId && item.type !== 'couple');
+                        const partner = cardTimetableData.specialItems.noTime.filter(item => item.uid !== currentUserId && item.type !== 'couple');
+                        return (
+                          <>
+                            <div className={styles.timelineTimeCell} style={{ gridRow: cardTimetableData.rowMap.noTime, gridColumn: 1 }}>
+                              <span>未定</span>
+                            </div>
+                            {colCount === 2 && couple.length > 0 && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.noTime, gridColumn: '2 / 4' }}>
+                                {couple.map(item => renderTimetableMiniCard(item))}
+                              </div>
+                            )}
+                            {showMe && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.noTime, gridColumn: 2 }}>
+                                {me.length > 0 ? (
+                                  me.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                            {showPartner && (
+                              <div className={styles.timelineItemCell} style={{ gridRow: cardTimetableData.rowMap.noTime, gridColumn: colCount === 2 ? 3 : 2 }}>
+                                {partner.length > 0 ? (
+                                  partner.map(item => renderTimetableMiniCard(item))
+                                ) : (
+                                  colCount === 2 && couple.length === 0 ? <div className={styles.timelineEmptyCell} /> : null
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+
+                      {/* 時間スロットのラベル（目盛り表示） */}
+                      {cardTimetableData.timePoints.map((tp, i) => {
+                        const isLast = i === cardTimetableData.timePoints.length - 1;
+                        const gridRow = isLast ? cardTimetableData.rowMap.slotsStart! + i - 1 : cardTimetableData.rowMap.slotsStart! + i;
+                        return (
+                          <div 
+                            key={`time-tick-mini-${i}`} 
+                            className={styles.timelineTimeCell} 
+                            style={{ 
+                              gridRow, 
+                              gridColumn: 1,
+                              background: 'none',
+                              border: 'none',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: isLast ? 'flex-end' : 'flex-start',
+                              alignItems: 'center',
+                              padding: isLast ? '0 0 1px 0' : '1px 0 0 0',
+                              minHeight: 'auto'
+                            }}
+                          >
+                            <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold' }}>{tp}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* 時間指定予定カード */}
+                      {cardTimetableData.timeEvents.map(item => {
+                        const startIdx = cardTimetableData.rowMap.slotsStart! + cardTimetableData.timePoints.indexOf(item.startTime);
+                        const endIdx = cardTimetableData.rowMap.slotsStart! + cardTimetableData.timePoints.indexOf(cardTimetableData.getNormalizedEndTime(item));
+                        
+                        let col = 2;
+                        if (colCount === 2) {
+                          if (item.type === 'couple') {
+                            col = 2;
+                          } else if (item.uid === currentUserId) {
+                            col = 2;
+                          } else {
+                            col = 3;
+                          }
+                        }
+                        
+                        const isCoupleEvent = item.type === 'couple';
+                        
+                        return (
+                          <div 
+                            key={`time-event-mini-${item.id}`} 
+                            className={styles.timelineItemCell} 
+                            style={{ 
+                              gridRow: `${startIdx} / ${endIdx}`, 
+                              gridColumn: (colCount === 2 && isCoupleEvent) ? '2 / 4' : col,
+                              zIndex: isCoupleEvent ? 2 : 1,
+                              height: '100%',
+                              justifyContent: 'stretch'
+                            }}
+                          >
+                            {renderTimetableMiniCard(item, { height: '100%', display: 'flex', alignItems: 'center' })}
+                          </div>
+                        );
+                      })}
+
+                      {/* 時間枠用の空セル */}
+                      {cardTimetableData.slots.map((slot, i) => {
+                        const gridRow = cardTimetableData.rowMap.slotsStart! + i;
+                        
+                        const hasCoupleInSlot = cardTimetableData.timeEvents.some(item => 
+                          item.type === 'couple' && 
+                          item.startTime < slot.end && 
+                          cardTimetableData.getNormalizedEndTime(item) > slot.start
+                        );
+                        const hasMeInSlot = cardTimetableData.timeEvents.some(item => 
+                          item.uid === currentUserId && 
+                          item.type !== 'couple' && 
+                          item.startTime < slot.end && 
+                          cardTimetableData.getNormalizedEndTime(item) > slot.start
+                        );
+                        const hasPartnerInSlot = cardTimetableData.timeEvents.some(item => 
+                          item.uid !== currentUserId && 
+                          item.type !== 'couple' && 
+                          item.startTime < slot.end && 
+                          cardTimetableData.getNormalizedEndTime(item) > slot.start
+                        );
+
+                        return (
+                          <React.Fragment key={`empty-cells-${i}`}>
+                            {showMe && !hasCoupleInSlot && !hasMeInSlot && (
+                              <div className={styles.timelineEmptyCell} style={{ gridRow, gridColumn: 2, height: '100%' }} />
+                            )}
+                            {showPartner && !hasCoupleInSlot && !hasPartnerInSlot && (
+                              <div className={styles.timelineEmptyCell} style={{ gridRow, gridColumn: colCount === 2 ? 3 : 2, height: '100%' }} />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {!hasAnyItems ? (
-                    <div className={styles.timelineNoItems}>予定なし</div>
-                  ) : (
-                    <>
-                      {/* 1. 2人の予定グループ */}
-                      {coupleItems.map((item) => renderTimelineItem(item))}
-                      {Array.from({ length: timelineCellsData.maxCouple - coupleItems.length }).map((_, i) => (
-                        <div key={`timeline-place-couple-${i}`} className={styles.timelinePlaceholder} />
-                      ))}
+                  </div>
+                ) : (
+                  <div className={styles.timelineItemsContainer}>
+                    {dayAnniversaries.map((a) => (
+                      <div key={a.id} className={styles.timelineAnniversary}>
+                        🎂 {a.title}
+                      </div>
+                    ))}
+                    {!hasAnyItems ? (
+                      <div className={styles.timelineNoItems}>予定なし</div>
+                    ) : (
+                      <>
+                        {/* 1. 2人の予定グループ */}
+                        {coupleItems.map((item) => renderTimelineItem(item))}
+                        {Array.from({ length: timelineCellsData.maxCouple - coupleItems.length }).map((_, i) => (
+                          <div key={`timeline-place-couple-${i}`} className={styles.timelinePlaceholder} />
+                        ))}
 
-                      {/* 境界線1 */}
-                      <div className={styles.timelineGroupDivider} />
+                        {/* 境界線1 */}
+                        <div className={styles.timelineGroupDivider} />
 
-                      {/* 2. 自分の予定グループ */}
-                      {meItems.map((item) => renderTimelineItem(item))}
-                      {Array.from({ length: timelineCellsData.maxMe - meItems.length }).map((_, i) => (
-                        <div key={`timeline-place-me-${i}`} className={styles.timelinePlaceholder} />
-                      ))}
+                        {/* 2. 自分の予定グループ */}
+                        {meItems.map((item) => renderTimelineItem(item))}
+                        {Array.from({ length: timelineCellsData.maxMe - meItems.length }).map((_, i) => (
+                          <div key={`timeline-place-me-${i}`} className={styles.timelinePlaceholder} />
+                        ))}
 
-                      {/* 境界線2 */}
-                      <div className={styles.timelineGroupDivider} />
+                        {/* 境界線2 */}
+                        <div className={styles.timelineGroupDivider} />
 
-                      {/* 3. パートナーの予定グループ */}
-                      {partnerItems.map((item) => renderTimelineItem(item))}
-                      {Array.from({ length: timelineCellsData.maxPartner - partnerItems.length }).map((_, i) => (
-                        <div key={`timeline-place-partner-${i}`} className={styles.timelinePlaceholder} />
-                      ))}
-                    </>
-                  )}
-                </div>
+                        {/* 3. パートナーの予定グループ */}
+                        {partnerItems.map((item) => renderTimelineItem(item))}
+                        {Array.from({ length: timelineCellsData.maxPartner - partnerItems.length }).map((_, i) => (
+                          <div key={`timeline-place-partner-${i}`} className={styles.timelinePlaceholder} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <div className={styles.timelineCardFooter} style={{ display: 'flex', gap: '6px', width: '100%' }}>
                   <button
@@ -1385,6 +1866,8 @@ export default function CalendarView({
           onToggleTodo={handleToggleTodo}
           onAddTodo={handleAddNewTodo}
           onEditTodo={handleEditTodo}
+          defaultDisplayMode={dailyAgendaMode}
+          onChangeDisplayMode={handleToggleDailyAgendaMode}
         />
       )}
 

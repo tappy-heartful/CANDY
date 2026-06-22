@@ -464,6 +464,11 @@
 .cardPartner { background-color: #9B7CC3 !important; }
 .cardMe { background-color: #FFD166 !important; }
 .cardHistory { background-color: #90CAF9 !important; }
+.cardSettings { background-color: #B5EAD7 !important; }
+.cardFullWidth {
+  grid-column: span 2;
+}
+
 
 
 

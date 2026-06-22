@@ -1185,3 +1185,105 @@
   border: 2px solid #ddd;
   color: #666;
 }
+
+/* タイムラインの3列テーブル用の追加スタイル */
+.timelineTimetableWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  flex: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.timelineTimetableHeader {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid #f0edf4;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+}
+
+.timelineTableHeaderCell {
+  text-align: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: #9B7CC3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.timelineTimetableGrid {
+  display: grid;
+  gap: 4px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.timelineTimeCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: #555;
+  background: #fafafc;
+  border: 1px solid #f0edf4;
+  border-radius: 6px;
+  padding: 2px;
+  min-height: 24px;
+  box-sizing: border-box;
+}
+
+.timelineItemCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.timelineTimetableCard {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: normal;
+  word-break: break-all;
+  text-align: left;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.timetableCardTitle {
+  flex: 1;
+  white-space: normal;
+  word-break: break-all;
+  text-align: left;
+}
+
+.timelineEmptyCell {
+  background: #fafafc;
+  border: 1px dashed #e8e5ed;
+  border-radius: 6px;
+  min-height: 24px;
+  box-sizing: border-box;
+  opacity: 0.5;
+}
+
+.timelineTimetableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
