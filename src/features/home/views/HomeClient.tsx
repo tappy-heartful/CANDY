@@ -968,6 +968,14 @@ export default function HomeClient() {
           </button>
         </div>
 
+        <div className={styles.menuGrid}>
+          <Link href="/settings" className={`${styles.menuCard} ${styles.cardSettings} ${styles.cardFullWidth}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-bell"></i></span>
+            <span className={styles.cardTitle}>通知設定を変更する</span>
+          </Link>
+        </div>
+
+
         <DailyStatusModal
           isOpen={isDailyStatusModalOpen}
           status={myDailyStatus}
