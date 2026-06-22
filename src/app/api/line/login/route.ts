@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
       isPwaLogin = true;
       await adminDb.collection('pwaAuthSessions').doc(stateData.pwaSessionId).set({
         customToken,
-        profile: { displayName: verifyData.name, pictureUrl: verifyData.picture },
+        profile: {
+          displayName: verifyData.name || '',
+          pictureUrl: verifyData.picture || '',
+        },
         createdAt: new Date(),
         status: 'completed',
         uid: hashedUserId,
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       customToken,
-      profile: { displayName: verifyData.name, pictureUrl: verifyData.picture },
+      profile: { displayName: verifyData.name || '', pictureUrl: verifyData.picture || '' },
       redirectAfterLogin: stateData?.redirectAfterLogin,
       isPwaLogin,
     });
