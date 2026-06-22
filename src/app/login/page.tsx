@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [pwaSessionId, setPwaSessionId] = useState<string | null>(null);
+  const [pwaLoginUrl, setPwaLoginUrl] = useState<string | null>(null);
   const isRedirectingRef = useRef(false);
 
   useEffect(() => {
@@ -35,6 +36,18 @@ export default function LoginPage() {
       // ランダムなセッションIDを生成 (UUIDライクな文字コード)
       const sessionId = 'pwa-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now().toString(36);
       setPwaSessionId(sessionId);
+
+      // LINEログインの認証URLを事前にサーバーから取得
+      const fetchPwaLoginUrl = async () => {
+        try {
+          const res = await fetch(`/api/line/get-url?pwaSessionId=${sessionId}`);
+          const { loginUrl } = await res.json();
+          setPwaLoginUrl(loginUrl);
+        } catch (err) {
+          console.error('Failed to pre-fetch PWA login URL:', err);
+        }
+      };
+      fetchPwaLoginUrl();
 
       // Firestore の監視
       const unsub = onSnapshot(doc(db, 'pwaAuthSessions', sessionId), async (snapshot) => {
@@ -159,9 +172,9 @@ export default function LoginPage() {
           ) : (
             <>
               {isStandalone ? (
-                pwaSessionId ? (
+                pwaLoginUrl ? (
                   <a
-                    href={`${window.location.origin}/login?pwaSessionId=${pwaSessionId}`}
+                    href={pwaLoginUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.loginBtn}
