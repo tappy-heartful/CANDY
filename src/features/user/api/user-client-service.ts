@@ -17,12 +17,18 @@ export async function updateProfile(uid: string, data: Partial<User>) {
  */
 export async function getPartnerData(myUid: string): Promise<User | null> {
   try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("__name__", "!=", myUid), limit(1));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return toPlainObject(querySnapshot.docs[0]) as User;
+    const myUserRef = doc(db, "users", myUid);
+    const myUserSnap = await getDoc(myUserRef);
+    if (!myUserSnap.exists()) return null;
+
+    const myUserData = myUserSnap.data() as User;
+    const partnerUid = myUserData.partnerUid;
+    if (!partnerUid) return null;
+
+    const partnerRef = doc(db, "users", partnerUid);
+    const partnerSnap = await getDoc(partnerRef);
+    if (partnerSnap.exists()) {
+      return toPlainObject(partnerSnap) as User;
     }
     return null;
   } catch (error) {

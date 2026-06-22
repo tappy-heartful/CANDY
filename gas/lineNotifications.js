@@ -66,9 +66,8 @@ function execDailyMorningNotification() {
 
       const nickname = user.nickname || "あなた";
 
-      // パートナーのIDを特定（自分以外のユーザー）
-      const partner = users.find(u => u.id !== user.id);
-      const partnerUid = partner ? partner.id : null;
+      // パートナーのIDを特定
+      const partnerUid = user.partnerUid || null;
 
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events.filter(e => e.type === 'couple' || e.uid === user.id);
