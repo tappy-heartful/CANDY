@@ -284,4 +284,141 @@
   transform: scale(0.9);
 }
 
+/* 表示モード切り替えタブ */
+.modeSelectRow {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  margin-top: -12px;
+}
+
+.modeSelectTabs {
+  display: flex;
+  background-color: #f3edf7;
+  padding: 4px;
+  border-radius: 20px;
+  gap: 4px;
+}
+
+.modeTab {
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  background: none;
+  color: #9B7CC3;
+  transition: all 0.2s;
+}
+
+.modeTabActive {
+  background-color: white;
+  color: #9b7cc3;
+  box-shadow: 0 2px 6px rgba(155, 124, 195, 0.15);
+}
+
+/* 3列タイムラインテーブル */
+.timetableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 10px;
+  box-sizing: border-box;
+}
+
+.timetableGrid {
+  display: grid;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.timetableHeaderCell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #685c73;
+  background-color: #fafafc;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid #f0edf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #555;
+  background-color: #fafafc;
+  border: 1px solid #f0edf4;
+  border-radius: 10px;
+  padding: 6px 4px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.timeCellLabel {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.timeCellSub {
+  font-size: 9px;
+  color: #999;
+}
+
+.itemCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.timetableCard {
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s, opacity 0.2s;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+}
+
+.timetableCard:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+
+.timetableCardTitle {
+  flex: 1;
+  white-space: normal;
+  word-break: break-all;
+  text-align: left;
+}
+
+.emptyCell {
+  background-color: #fafafc;
+  border: 1px dashed #e8e5ed;
+  border-radius: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  opacity: 0.5;
+}
+
+
 
