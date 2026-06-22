@@ -13,12 +13,15 @@ function CallbackContent() {
   const searchParams = useSearchParams();
   const hasCalled = useRef(false);
   const [message, setMessage] = useState(LOADING_MESSAGES[0]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setMessage(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
     }, 1500);
-    return () => clearInterval(interval);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -63,6 +66,16 @@ function CallbackContent() {
         throw new Error(result.error);
       }
 
+      if (result.isPwaLogin) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        setMessage("ログインに成功しました！CANDYアプリ（ホーム画面のアイコン）に戻ってください。このブラウザ画面は閉じて構いません。");
+        hideSpinner();
+        return;
+      }
+
       const userCredential = await signInWithCustomToken(auth, result.customToken);
       const user = userCredential.user;
 
@@ -103,6 +116,10 @@ function CallbackContent() {
 
     } catch (e) {
       console.error(e);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       await showDialog("ログインに失敗しました。通信環境を確認してください。", true);
       router.push("/login");
     } finally {

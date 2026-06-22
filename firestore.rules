@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // ログイン済みか
     function isSignedIn() {
       return request.auth != null;
@@ -102,5 +102,10 @@ service cloud.firestore {
     // ログ・認証系（システム用）
     match /logs/{id} { allow create: if isSignedIn(); }
     match /oauthStates/{id} { allow read, write: if false; }
+    match /pwaAuthSessions/{id} {
+      // 誰でも読み取り可能だが、悪意あるスキャンを防ぐため、作成から15分以内のみ読み取り可能
+      allow read: if resource == null || (request.time - resource.data.createdAt) < duration.value(15, 'm');
+      allow write: if false;
+    }
   }
 }

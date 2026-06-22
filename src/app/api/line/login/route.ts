@@ -72,10 +72,27 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     }, { merge: true });
 
+    // PWAログイン用のセッション同期処理
+    let isPwaLogin = false;
+    if (stateData?.pwaSessionId) {
+      isPwaLogin = true;
+      await adminDb.collection('pwaAuthSessions').doc(stateData.pwaSessionId).set({
+        customToken,
+        profile: {
+          displayName: verifyData.name || '',
+          pictureUrl: verifyData.picture || '',
+        },
+        createdAt: new Date(),
+        status: 'completed',
+        uid: hashedUserId,
+      });
+    }
+
     return NextResponse.json({
       customToken,
-      profile: { displayName: verifyData.name, pictureUrl: verifyData.picture },
+      profile: { displayName: verifyData.name || '', pictureUrl: verifyData.picture || '' },
       redirectAfterLogin: stateData?.redirectAfterLogin,
+      isPwaLogin,
     });
   } catch (err) {
     console.error(err);

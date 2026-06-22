@@ -7,12 +7,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const origin = req.headers.get('origin') || new URL(req.url).origin;
     const redirectAfterLogin = searchParams.get('redirectAfterLogin') || '';
+    const pwaSessionId = searchParams.get('pwaSessionId') || '';
 
     const state = crypto.randomBytes(16).toString('hex');
     await adminDb.collection('oauthStates').doc(state).set({
       createdAt: new Date(),
       origin,
       redirectAfterLogin,
+      pwaSessionId,
     });
 
     const clientId = process.env.LINE_CLIENT_ID;
