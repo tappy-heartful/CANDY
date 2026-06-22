@@ -147,3 +147,39 @@
   0% { transform: translate(0, 0); }
   100% { transform: translate(20px, 40px); }
 }
+
+.pwaGuideBox {
+  background-color: #F8F9FA;
+  border: 2px dashed #9B7CC3;
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.pwaGuideText {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  text-align: left;
+}
+
+.pwaCancelBtn {
+  background-color: #f1f1f1;
+  color: #666;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.pwaCancelBtn:hover {
+  background-color: #e5e5e5;
+}

@@ -102,5 +102,9 @@ service cloud.firestore {
     // ログ・認証系（システム用）
     match /logs/{id} { allow create: if isSignedIn(); }
     match /oauthStates/{id} { allow read, write: if false; }
+    match /pwaAuthSessions/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

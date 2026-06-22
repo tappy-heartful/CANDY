@@ -63,6 +63,12 @@ function CallbackContent() {
         throw new Error(result.error);
       }
 
+      if (result.isPwaLogin) {
+        setMessage("ログインに成功しました！CANDYアプリ（ホーム画面のアイコン）に戻ってください。このブラウザ画面は閉じて構いません。");
+        hideSpinner();
+        return;
+      }
+
       const userCredential = await signInWithCustomToken(auth, result.customToken);
       const user = userCredential.user;
 
