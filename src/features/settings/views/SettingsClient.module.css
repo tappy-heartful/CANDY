@@ -1,0 +1,157 @@
+.editCard {
+  background: white;
+  border-radius: 30px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(155, 124, 195, 0.1);
+  border: 3px solid #f3e5f5;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 900;
+  color: #9B7CC3;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  border-bottom: 2px dashed #f3e5f5;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formGroup {
+  margin-bottom: 25px;
+}
+
+.inputLabel {
+  display: block;
+  text-align: left;
+  font-weight: 900;
+  color: #9B7CC3;
+  margin-bottom: 8px;
+  margin-left: 5px;
+  font-size: 14px;
+}
+
+.switchContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fcf8ff;
+  padding: 12px 18px;
+  border-radius: 15px;
+  border: 2px solid #f3e5f5;
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.switchLabel {
+  font-weight: 900;
+  color: #555;
+  font-size: 15px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 54px;
+  height: 30px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e0e0e0;
+  transition: .3s;
+  border-radius: 30px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+input:checked + .slider {
+  background-color: #A0E7D2;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.appInput,
+.appSelect {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 2px solid #F7A8C4;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+.appInput:focus,
+.appSelect:focus {
+  border-color: #9B7CC3;
+}
+
+.appInput:disabled,
+.appSelect:disabled {
+  background-color: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.saveBtn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 30px;
+  background-color: #F7A8C4;
+  color: white;
+  border: none;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(247, 168, 196, 0.4);
+  margin-top: 15px;
+}
+
+.saveBtn:hover {
+  transform: translateY(-2px);
+  background-color: #f896b8;
+}
+
+.saveBtn:active {
+  transform: translateY(0);
+}
+
+.note {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+  text-align: center;
+}
