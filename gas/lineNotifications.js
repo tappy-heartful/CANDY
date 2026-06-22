@@ -1,15 +1,13 @@
 /**
- * CANDY 毎朝の通知自動送信スクリプト (GAS用)
+ * CANDY LINE通知自動送信スクリプト (GAS用)
  *
  * 【このスクリプトがやること】
- * 1. 毎朝（例: 7時や8時）にトリガー実行。
- * 2. Firestoreの users コレクションから全ユーザーを取得。
- * 3. 各ユーザーに対して以下の情報を抽出：
- *    - 今日の予定（events コレクション）
- *    - 今日のTODO（todos コレクション）
- *    - 直近のイベント3件（あと○日表示）
- *    - 直近のTODO3件
- * 4. 各ユーザーにLINEでメッセージを送信。
+ * 1. 毎朝の定期通知 (execDailyMorningNotification)
+ *    - 毎朝（例: 7時や8時）にトリガー実行。
+ *    - 各ユーザーに対して、今日の予定、未完了のTODO、直近の記念日をLINEで送信。
+ * 2. 予定の10分前リマインダー通知 (checkAndSendEventReminders)
+ *    - 毎分（1分ごと）にトリガー実行。
+ *    - 10分後に開始される予定がある場合、対象のユーザーにリマインダーをLINEで送信。
  */
 
 const props = PropertiesService.getScriptProperties();
@@ -30,6 +28,9 @@ const cuteMessages = [
   "今日も一日、〇〇ちゃんにいいことがたくさん起きますように🍀",
 ];
 
+/**
+ * 毎朝の定期通知を実行する関数 (朝のトリガー推奨)
+ */
 function execDailyMorningNotification() {
   try {
     const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
@@ -208,6 +209,72 @@ function execDailyMorningNotification() {
 
   } catch (e) {
     Logger.log('Notification Error: ' + e.toString());
+  }
+}
+
+/**
+ * 予定開始10分前のリマインダー通知を実行する関数 (毎分トリガー推奨)
+ */
+function checkAndSendEventReminders() {
+  try {
+    const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
+
+    // 10分後の日本時間(JST)の日付と時間を取得
+    const now = new Date();
+    const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
+    const targetDateStr = Utilities.formatDate(tenMinutesLater, "Asia/Tokyo", "yyyy-MM-dd");
+    const targetTimeStr = Utilities.formatDate(tenMinutesLater, "Asia/Tokyo", "HH:mm");
+
+    // 各コレクションからデータ取得
+    const usersDocs = firestore.getDocuments('users');
+    const eventsDocs = firestore.getDocuments('events');
+    const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
+
+    const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+    // LINE Messaging IDsをマッピング
+    const lineMessagingIds = {};
+    lineMessagingIdsDocs.forEach(doc => {
+      const uid = doc.name.split('/').pop();
+      lineMessagingIds[uid] = doc.obj.lineUid;
+    });
+
+    // 10分後に開始されるイベントをフィルタリング (終日イベントは除外)
+    const targetEvents = events.filter(e => {
+      if (e.isAllDay || !e.startTime) return false;
+      return e.startDate === targetDateStr && e.startTime === targetTimeStr;
+    });
+
+    if (targetEvents.length === 0) return;
+
+    users.forEach(user => {
+      const lineUid = lineMessagingIds[user.id];
+      if (!lineUid) return;
+
+      const nickname = user.nickname || "あなた";
+
+      // 対象ユーザーに関連するイベント（カップル用 or 自身）
+      const userReminders = targetEvents.filter(e => e.type === 'couple' || e.uid === user.id);
+
+      if (userReminders.length > 0) {
+        userReminders.forEach(e => {
+          let message = `🔔予定のリマインダー\n`;
+          message += `${nickname}ちゃん、10分後に以下の予定があるよ！準備はできたかな？🍬\n\n`;
+          message += `⏰ ${e.startTime}〜\n`;
+          message += `📝 ${e.title}\n`;
+          if (e.note) {
+            message += `💡 メモ: ${e.note}\n`;
+          }
+          message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
+
+          sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+        });
+      }
+    });
+
+  } catch (e) {
+    Logger.log('Reminder Error: ' + e.toString());
   }
 }
 
