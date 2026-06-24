@@ -173,6 +173,8 @@ export interface NotificationSetting {
   morningTime: string; // 朝の通知時間 (例: "08:00")
   eventReminderEnabled: boolean; // イベント前通知有効フラグ
   eventReminderMinutes: number; // 何分前か (1〜60)
+  dailyStatusEnabled?: boolean; // パートナーの今日のひとこと通知を受け取るか
+  dailyStatusCommentEnabled?: boolean; // 自分のひとことへのパートナーのコメント通知を受け取るか
   createdAt: number;
   updatedAt: number;
 }
