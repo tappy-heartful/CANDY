@@ -1544,7 +1544,7 @@ export default function CalendarView({
                     >
                       {/* ヘッダー */}
                       <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 1, visibility: 'hidden' }}>時間</div>
-                      {showMe && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 2 }}>自分</div>}
+                      {showMe && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: 2 }}>{myNickname}</div>}
                       {showPartner && <div className={styles.timelineTableHeaderCell} style={{ gridRow: 1, gridColumn: colCount === 2 ? 3 : 2 }}>{partnerNickname}</div>}
 
                       {/* 区切り線 */}
