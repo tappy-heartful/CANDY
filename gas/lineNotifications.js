@@ -314,8 +314,16 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
       });
 
       if (userReminders.length > 0) {
+        const hour = Number(Utilities.formatDate(now, "Asia/Tokyo", "H"));
+        let greeting = "こんにちは！☀️";
+        if (hour >= 5 && hour < 11) {
+          greeting = "おはよう！☀️";
+        } else if (hour >= 18 || hour < 5) {
+          greeting = "こんばんは！🌙";
+        }
+
         userReminders.forEach(e => {
-          let message = `🔔予定のリマインダー\n`;
+          let message = `${greeting}\n`;
           message += `${nickname}ちゃん、${eventReminderMinutes}分後に以下の予定があるよ！準備はできたかな？🍬\n\n`;
           message += `⏰ ${e.startTime}〜\n`;
           message += `📝 ${e.title}\n`;
