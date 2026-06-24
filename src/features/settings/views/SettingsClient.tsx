@@ -5,6 +5,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import BackToHome from "@/src/components/Common/BackToHome";
 import { getNotificationSetting, saveNotificationSetting } from "@/src/features/settings/api/settings-client-service";
+import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
 import styles from "./SettingsClient.module.css";
@@ -14,11 +15,14 @@ export default function SettingsClient() {
   const { setBreadcrumbs } = useBreadcrumb();
   const router = useRouter();
 
+  const [partnerNickname, setPartnerNickname] = useState("パートナー");
   const [formData, setFormData] = useState({
     morningEnabled: true,
     morningTime: "08:00",
     eventReminderEnabled: true,
     eventReminderMinutes: 10,
+    dailyStatusEnabled: true,
+    dailyStatusCommentEnabled: true,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -32,12 +36,20 @@ export default function SettingsClient() {
       if (!user) return;
       try {
         showSpinner();
-        const settings = await getNotificationSetting(user.uid);
+        const [settings, partner] = await Promise.all([
+          getNotificationSetting(user.uid),
+          getPartnerData(user.uid)
+        ]);
+        if (partner?.nickname) {
+          setPartnerNickname(partner.nickname);
+        }
         setFormData({
           morningEnabled: settings.morningEnabled,
           morningTime: settings.morningTime,
           eventReminderEnabled: settings.eventReminderEnabled,
           eventReminderMinutes: settings.eventReminderMinutes,
+          dailyStatusEnabled: settings.dailyStatusEnabled !== false,
+          dailyStatusCommentEnabled: settings.dailyStatusCommentEnabled !== false,
         });
       } catch (e) {
         console.error("Failed to load notification settings:", e);
@@ -50,7 +62,7 @@ export default function SettingsClient() {
     loadSettings();
   }, [user]);
 
-  const handleToggleChange = (name: "morningEnabled" | "eventReminderEnabled") => {
+  const handleToggleChange = (name: "morningEnabled" | "eventReminderEnabled" | "dailyStatusEnabled" | "dailyStatusCommentEnabled") => {
     setFormData(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
@@ -164,6 +176,35 @@ export default function SettingsClient() {
             onChange={handleInputChange}
             disabled={!formData.eventReminderEnabled}
           />
+        </div>
+
+        {/* 今日のひとこと通知セクション */}
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-pen-nib"></i> 今日のひとこと通知
+        </div>
+
+        <div className={styles.switchContainer}>
+          <span className={styles.switchLabel}>{partnerNickname}の一言の通知を受け取る</span>
+          <label className={styles.switch}>
+            <input
+              type="checkbox"
+              checked={formData.dailyStatusEnabled}
+              onChange={() => handleToggleChange("dailyStatusEnabled")}
+            />
+            <span className={styles.slider}></span>
+          </label>
+        </div>
+
+        <div className={styles.switchContainer}>
+          <span className={styles.switchLabel}>{partnerNickname}のコメントの通知を受け取る</span>
+          <label className={styles.switch}>
+            <input
+              type="checkbox"
+              checked={formData.dailyStatusCommentEnabled}
+              onChange={() => handleToggleChange("dailyStatusCommentEnabled")}
+            />
+            <span className={styles.slider}></span>
+          </label>
         </div>
 
         <button className={styles.saveBtn} onClick={handleSave}>

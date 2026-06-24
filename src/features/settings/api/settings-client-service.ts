@@ -9,6 +9,8 @@ export const DEFAULT_NOTIFICATION_SETTING = {
   morningTime: "08:00",
   eventReminderEnabled: true,
   eventReminderMinutes: 10,
+  dailyStatusEnabled: true,
+  dailyStatusCommentEnabled: true,
 };
 
 /**

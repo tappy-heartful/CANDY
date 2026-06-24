@@ -8,6 +8,7 @@ import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
+import { notifyDailyStatusSaved, notifyDailyStatusCommented } from "@/src/features/home/api/daily-status-server-actions";
 import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups, updateTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
@@ -303,6 +304,12 @@ export default function HomeClient() {
       const docRef = await saveDailyStatus(submitData);
       setMyDailyStatus({ ...myDailyStatus, ...submitData, id: docRef.id } as DailyStatus);
       setIsDailyStatusModalOpen(false);
+
+      if (submitData.comment && user?.uid) {
+        notifyDailyStatusSaved(user.uid, submitData.comment).catch((err) =>
+          console.error("Failed to send LINE notification for daily status update", err)
+        );
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -336,6 +343,12 @@ export default function HomeClient() {
         ...partnerDailyStatus,
         partnerComment: comment,
       });
+
+      if (comment && user?.uid && partnerDailyStatus.uid) {
+        notifyDailyStatusCommented(user.uid, partnerDailyStatus.uid, comment).catch((err) =>
+          console.error("Failed to send LINE notification for partner comment", err)
+        );
+      }
     } catch (e) {
       console.error("Failed to save partner comment", e);
     }
