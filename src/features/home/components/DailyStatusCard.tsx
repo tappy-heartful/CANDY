@@ -62,26 +62,35 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
   ) => {
     if (!currentUser || !currentStatus?.id) return;
     const userId = currentUser.id;
+    const orderField = targetField === "commentReactions" ? "commentReactionOrder" : "partnerCommentReactionOrder";
 
     const reactions = { ...(currentStatus[targetField] || {}) };
     const currentList = reactions[emoji] ? [...reactions[emoji]] : [];
+    let currentOrder = currentStatus[orderField] ? [...currentStatus[orderField]] : [];
 
     const index = currentList.indexOf(userId);
+    let added = false;
     if (index >= 0) {
       currentList.splice(index, 1);
     } else {
       currentList.push(userId);
+      added = true;
     }
 
     if (currentList.length === 0) {
       delete reactions[emoji];
+      currentOrder = currentOrder.filter(x => x !== emoji);
     } else {
       reactions[emoji] = currentList;
+      if (added && !currentOrder.includes(emoji)) {
+        currentOrder.push(emoji);
+      }
     }
 
     const updatedStatus = {
       ...currentStatus,
       [targetField]: reactions,
+      [orderField]: currentOrder,
     };
 
     setCurrentStatus(updatedStatus);
@@ -93,6 +102,7 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
       await saveDailyStatus({
         id: currentStatus.id,
         [targetField]: reactions,
+        [orderField]: currentOrder,
       });
     } catch (e) {
       console.error("Failed to save reaction", e);
@@ -106,12 +116,23 @@ export default function DailyStatusCard({ user, status, isMe, onEdit, onOpenHist
   const renderReactions = (targetField: "commentReactions" | "partnerCommentReactions", className?: string) => {
     if (!currentStatus) return null;
     const reactions = currentStatus[targetField] || {};
+    const orderField = targetField === "commentReactions" ? "commentReactionOrder" : "partnerCommentReactionOrder";
+    const order = currentStatus[orderField] || [];
     const userId = currentUser?.id;
+
+    const entries = Object.entries(reactions).filter(([_, uids]) => uids && uids.length > 0);
+    entries.sort(([emojiA], [emojiB]) => {
+      const idxA = order.indexOf(emojiA);
+      const idxB = order.indexOf(emojiB);
+      if (idxA >= 0 && idxB >= 0) return idxA - idxB;
+      if (idxA >= 0) return -1;
+      if (idxB >= 0) return 1;
+      return emojiA.localeCompare(emojiB);
+    });
 
     return (
       <div className={`${styles.reactionsContainer} ${className || ""}`} onClick={(e) => e.stopPropagation()}>
-        {Object.entries(reactions).map(([emoji, uids]) => {
-          if (!uids || uids.length === 0) return null;
+        {entries.map(([emoji, uids]) => {
           const isActive = userId ? uids.includes(userId) : false;
           return (
             <button
