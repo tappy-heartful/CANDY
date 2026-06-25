@@ -485,11 +485,13 @@ export default function CalendarView({
               </div>
             )}
           </div>
-          <div className={styles.timelineMainCol} style={{ borderLeftColor: color }}>
+          <div 
+            className={`${styles.timelineMainCol} ${item.isAllDay ? styles.timelineMainColAllDay : ""}`} 
+            style={item.isAllDay ? { backgroundColor: color } : { borderLeftColor: color }}
+          >
             <div className={styles.timelineItemTitle}>
               <div className={styles.timelineIconCol} style={{ marginRight: '4px' }}>{icon}</div>
               <span className={styles.timelineItemText}>
-                {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', fontSize: '10px', color: '#999' }}></i>}
                 {item.title} {item.note && <i className="fa-regular fa-file-lines"></i>}
               </span>
             </div>
@@ -715,9 +717,6 @@ export default function CalendarView({
         key={`event-${item.id}`}
         className={`${spanClass} ${pillClass}`}
       >
-        {titleStr && item.isRecurring && (
-          <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '2px', fontSize: '9px' }}></i>
-        )}
         {titleStr || "\u00A0"}
       </span>
     );
@@ -1471,16 +1470,21 @@ export default function CalendarView({
               }
 
               const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
-              const bgColor = item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7");
-              const textColor = item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534");
+              const isSolid = item.isAllDay;
+              const bgColor = isSolid 
+                ? color 
+                : (item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7"));
+              const textColor = isSolid 
+                ? "white" 
+                : (item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534"));
               return (
                 <div 
                   key={`event-mini-${item.id}`} 
-                  className={styles.timelineTimetableCard} 
+                  className={`${styles.timelineTimetableCard} ${isSolid ? styles.timelineTimetableCardSolid : ""}`} 
                   style={{ 
                     background: bgColor, 
                     color: textColor,
-                    border: `1px solid ${color}`,
+                    border: isSolid ? 'none' : `1px solid ${color}`,
                     cursor: 'pointer',
                     ...additionalStyle
                   }}

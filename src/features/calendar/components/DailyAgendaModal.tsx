@@ -341,22 +341,27 @@ export default function DailyAgendaModal({
     }
 
     const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
-    const bgColor = item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7");
-    const textColor = item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534");
+    const isSolid = item.isAllDay;
+    const bgColor = isSolid 
+      ? color 
+      : (item.type === "couple" ? "#f5f0fa" : (item.uid === currentUserId ? "#fdf2f8" : "#ebfcf7"));
+    const textColor = isSolid 
+      ? "white" 
+      : (item.type === "couple" ? "#7a5ba0" : (item.uid === currentUserId ? "#d15c85" : "#166534"));
+
     return (
       <div 
         key={`event-card-${item.id}`} 
-        className={styles.timetableCard} 
+        className={`${styles.timetableCard} ${isSolid ? styles.timetableCardSolid : ""}`} 
         style={{ 
           background: bgColor, 
           color: textColor,
-          border: `1px solid ${color}`,
+          border: isSolid ? 'none' : `1px solid ${color}`,
           cursor: 'pointer',
           ...additionalStyle
         }}
         onClick={() => onEditEvent(item)}
       >
-        {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ fontSize: '10px', color: textColor }}></i>}
         <span className={styles.timetableCardTitle}>{item.title}</span>
       </div>
     );
@@ -805,12 +810,14 @@ export default function DailyAgendaModal({
                             );
                           })()}
                         </div>
-                        <div className={styles.mainCol} style={{ borderLeftColor: color }}>
+                        <div 
+                          className={`${styles.mainCol} ${item.isAllDay ? styles.mainColAllDay : ""}`} 
+                          style={item.isAllDay ? { backgroundColor: color } : { borderLeftColor: color }}
+                        >
                           <div className={styles.eventTitle}>
                             <div className={styles.iconCol} style={{ marginRight: '8px' }}>{getEventIcon(item)}</div>
-                            <span>
-                              {item.isRecurring && <i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px', color: '#999', fontSize: '12px' }}></i>}
-                              {item.title} {item.note && <i className="fa-regular fa-clock"></i>}
+                            <span style={{ color: item.isAllDay ? 'white' : 'inherit' }}>
+                              {item.title} {item.note && <i className="fa-regular fa-clock" style={{ color: item.isAllDay ? 'rgba(255, 255, 255, 0.8)' : '#ccc' }}></i>}
                             </span>
                           </div>
                         </div>

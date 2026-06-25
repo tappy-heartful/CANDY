@@ -420,5 +420,33 @@
   opacity: 0.5;
 }
 
+/* 終日のボトムシート予定リスト用スタイル */
+.mainColAllDay {
+  border-left: none !important;
+  border-radius: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  color: white !important;
+}
+
+.mainColAllDay .eventTitle {
+  color: white !important;
+}
+
+.mainColAllDay .eventTitle i {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 終日のタイムテーブルカード（背景濃色・文字白）用の追加スタイル */
+.timetableCardSolid {
+  border: none !important;
+  color: white !important;
+}
+
+.timetableCardSolid i {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+
 
 

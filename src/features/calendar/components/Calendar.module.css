@@ -967,6 +967,8 @@
   font-weight: bold;
   color: white;
   flex-shrink: 0;
+  border: 1px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .bgMe {
@@ -1286,4 +1288,53 @@
   margin-top: 4px;
   box-sizing: border-box;
 }
+
+/* 終日のタイムライン予定用スタイル */
+.timelineMainColAllDay {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: none !important;
+  border-radius: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  min-height: 32px;
+  color: white !important;
+}
+
+.timelineMainColAllDay .timelineItemTitle {
+  color: white !important;
+}
+
+.timelineMainColAllDay .timelineItemText {
+  color: white !important;
+}
+
+.timelineMainColAllDay .timelineItemTitle i {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 終日予定の中にある、予定者と同じカラーのテキストアバターを白背景＋文字色をカラーにして見やすくする */
+.timelineMainColAllDay .bgMe {
+  background-color: white !important;
+  color: #F7A8C4 !important;
+}
+
+.timelineMainColAllDay .bgPartner {
+  background-color: white !important;
+  color: #A0E7D2 !important;
+}
+
+/* タイムラインカレンダーの終日予定用スタイル */
+.timelineTimetableCardSolid {
+  border: none !important;
+  color: white !important;
+}
+
+.timelineTimetableCardSolid i {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+
 
