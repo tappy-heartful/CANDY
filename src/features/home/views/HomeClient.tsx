@@ -589,6 +589,19 @@ export default function HomeClient() {
           />
         </div>
 
+        {user && (
+          <CalendarView
+            currentUserId={user.uid}
+            myNickname={userData?.nickname || userData?.displayName || "自分"}
+            partnerNickname={partnerData?.nickname || "パートナー"}
+            myPictureUrl={userData?.pictureUrl}
+            partnerPictureUrl={partnerData?.pictureUrl}
+            openDate={openCalendarDate}
+            onOpenDateClear={() => setOpenCalendarDate(null)}
+            userData={userData as FirestoreUser}
+          />
+        )}
+
         {!loading && (upcomingEvents.length > 0 || upcomingTodos.length > 0 || overdueTodos.length > 0 || noDeadlineTodos.length > 0) && (
           <div className={styles.notificationList} style={{ marginBottom: '24px' }}>
             {upcomingEvents.length > 0 && (
@@ -858,18 +871,7 @@ export default function HomeClient() {
           </div>
         )}
 
-        {user && (
-          <CalendarView
-            currentUserId={user.uid}
-            myNickname={userData?.nickname || userData?.displayName || "自分"}
-            partnerNickname={partnerData?.nickname || "パートナー"}
-            myPictureUrl={userData?.pictureUrl}
-            partnerPictureUrl={partnerData?.pictureUrl}
-            openDate={openCalendarDate}
-            onOpenDateClear={() => setOpenCalendarDate(null)}
-            userData={userData as FirestoreUser}
-          />
-        )}
+
 
         <PhotoSlideshow
           photos={recentPhotos}
