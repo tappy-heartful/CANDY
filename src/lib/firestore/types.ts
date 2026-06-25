@@ -114,6 +114,8 @@ export interface DailyStatus {
   partnerComment?: string;
   commentReactions?: { [emoji: string]: string[] };
   partnerCommentReactions?: { [emoji: string]: string[] };
+  commentReactionOrder?: string[];
+  partnerCommentReactionOrder?: string[];
   createdAt: number;
   updatedAt: number;
 }
