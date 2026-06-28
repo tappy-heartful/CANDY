@@ -10,6 +10,7 @@ import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import EventModal from "./EventModal";
 import DailyAgendaModal from "./DailyAgendaModal";
 import TodoModal from "@/src/features/todo/components/TodoModal";
+import { getEffectiveEventTimes } from "@/src/features/calendar/lib/event-utils";
 import styles from "./Calendar.module.css";
 
 interface CalendarViewProps {
@@ -476,12 +477,12 @@ export default function CalendarView({
           style={{ alignItems: 'stretch', cursor: 'pointer' }}
         >
           <div className={styles.timelineTimeCol} style={{ justifyContent: 'center' }}>
-            {item.isAllDay ? (
+            {item.effIsAllDay ?? item.isAllDay ? (
               <span className={styles.timelineTimeText}>終日</span>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%' }}>
-                <span className={styles.timelineTimeText}>{item.startTime}</span>
-                {item.endTime && <span className={styles.timelineTimeTextSub}>{item.endTime}</span>}
+                <span className={styles.timelineTimeText}>{item.effStartTime ?? item.startTime}</span>
+                {(item.effEndTime ?? item.endTime) && <span className={styles.timelineTimeTextSub}>{item.effEndTime ?? item.endTime}</span>}
               </div>
             )}
           </div>
@@ -517,8 +518,23 @@ export default function CalendarView({
       const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
 
       const combinedItems = [
-        ...dayEvents.map(e => ({ ...e, isTodo: false })),
-        ...dayTodos.map(t => ({ ...t, isTodo: true }))
+        ...dayEvents.map(e => {
+          const eff = getEffectiveEventTimes(e, dateStr);
+          return {
+            ...e,
+            isTodo: false as const,
+            effStartTime: eff.startTime,
+            effEndTime: eff.endTime,
+            effIsAllDay: eff.isAllDay
+          };
+        }),
+        ...dayTodos.map(t => ({
+          ...t,
+          isTodo: true as const,
+          effStartTime: undefined,
+          effEndTime: undefined,
+          effIsAllDay: undefined
+        }))
       ];
 
       combinedItems.sort((a, b) => {
@@ -542,11 +558,15 @@ export default function CalendarView({
         const bEnd = b.endDate || b.date;
         if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
 
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
+        const aAllDay = a.effIsAllDay ?? a.isAllDay;
+        const bAllDay = b.effIsAllDay ?? b.isAllDay;
+        if (aAllDay && !bAllDay) return -1;
+        if (!aAllDay && bAllDay) return 1;
 
-        if (a.startTime && b.startTime && a.startTime !== b.startTime) {
-          return a.startTime.localeCompare(b.startTime);
+        const aTime = a.effStartTime ?? a.startTime;
+        const bTime = b.effStartTime ?? b.startTime;
+        if (aTime && bTime && aTime !== bTime) {
+          return aTime.localeCompare(bTime);
         }
         return a.title.localeCompare(b.title);
       });
@@ -582,8 +602,23 @@ export default function CalendarView({
       const dayAnniversaries = anniversaries.filter((a) => a.date === mdStr);
 
       const combinedItems = [
-        ...dayEvents.map(e => ({ ...e, isTodo: false })),
-        ...dayTodos.map(t => ({ ...t, isTodo: true }))
+        ...dayEvents.map(e => {
+          const eff = getEffectiveEventTimes(e, dateStr);
+          return {
+            ...e,
+            isTodo: false as const,
+            effStartTime: eff.startTime,
+            effEndTime: eff.endTime,
+            effIsAllDay: eff.isAllDay
+          };
+        }),
+        ...dayTodos.map(t => ({
+          ...t,
+          isTodo: true as const,
+          effStartTime: undefined,
+          effEndTime: undefined,
+          effIsAllDay: undefined
+        }))
       ];
 
       combinedItems.sort((a, b) => {
@@ -608,11 +643,15 @@ export default function CalendarView({
         const bEnd = b.endDate || b.date;
         if (aEnd !== bEnd) return bEnd.localeCompare(aEnd);
 
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
+        const aAllDay = a.effIsAllDay ?? a.isAllDay;
+        const bAllDay = b.effIsAllDay ?? b.isAllDay;
+        if (aAllDay && !bAllDay) return -1;
+        if (!aAllDay && bAllDay) return 1;
 
-        if (a.startTime && b.startTime && a.startTime !== b.startTime) {
-          return a.startTime.localeCompare(b.startTime);
+        const aTime = a.effStartTime ?? a.startTime;
+        const bTime = b.effStartTime ?? b.startTime;
+        if (aTime && bTime && aTime !== bTime) {
+          return aTime.localeCompare(bTime);
         }
         return a.title.localeCompare(b.title);
       });
@@ -1331,9 +1370,9 @@ export default function CalendarView({
             // 各カードのタイムテーブルデータを構築
             const cardTimetableData = (() => {
               const timeEvents = [
-                ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
-                ...meItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
-                ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime)
+                ...coupleItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime),
+                ...meItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime),
+                ...partnerItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime)
               ];
 
               const specialItems = {
@@ -1345,9 +1384,9 @@ export default function CalendarView({
                   type: 'couple'
                 })),
                 allDay: [
-                  ...coupleItems.filter(e => !e.isTodo && e.isAllDay),
-                  ...meItems.filter(e => !e.isTodo && e.isAllDay),
-                  ...partnerItems.filter(e => !e.isTodo && e.isAllDay)
+                  ...coupleItems.filter(e => !e.isTodo && e.effIsAllDay),
+                  ...meItems.filter(e => !e.isTodo && e.effIsAllDay),
+                  ...partnerItems.filter(e => !e.isTodo && e.effIsAllDay)
                 ],
                 todo: [
                   ...coupleItems.filter(e => e.isTodo),
@@ -1355,9 +1394,9 @@ export default function CalendarView({
                   ...partnerItems.filter(e => e.isTodo)
                 ],
                 noTime: [
-                  ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
-                  ...meItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
-                  ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime)
+                  ...coupleItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime),
+                  ...meItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime),
+                  ...partnerItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime)
                 ]
               };
 
@@ -1367,13 +1406,14 @@ export default function CalendarView({
                 return `${nextH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
               };
               const getNormalizedEndTime = (item: any) => {
-                if (item.endTime) return item.endTime;
-                return addOneHour(item.startTime);
+                if (item.effEndTime) return item.effEndTime;
+                if (item.endTime && !item.startDate) return item.endTime;
+                return addOneHour(item.effStartTime || item.startTime);
               };
 
               const timePointsSet = new Set<string>();
               timeEvents.forEach(item => {
-                timePointsSet.add(item.startTime);
+                timePointsSet.add(item.effStartTime || item.startTime);
                 timePointsSet.add(getNormalizedEndTime(item));
               });
               const timePoints = Array.from(timePointsSet).sort((a, b) => a.localeCompare(b));
@@ -1716,7 +1756,7 @@ export default function CalendarView({
 
                       {/* 時間指定予定カード */}
                       {cardTimetableData.timeEvents.map(item => {
-                        const startIdx = cardTimetableData.rowMap.slotsStart! + cardTimetableData.timePoints.indexOf(item.startTime);
+                        const startIdx = cardTimetableData.rowMap.slotsStart! + cardTimetableData.timePoints.indexOf(item.effStartTime || item.startTime);
                         const endIdx = cardTimetableData.rowMap.slotsStart! + cardTimetableData.timePoints.indexOf(cardTimetableData.getNormalizedEndTime(item));
                         
                         let col = 2;
@@ -1755,19 +1795,19 @@ export default function CalendarView({
                         
                         const hasCoupleInSlot = cardTimetableData.timeEvents.some(item => 
                           item.type === 'couple' && 
-                          item.startTime < slot.end && 
+                          (item.effStartTime || item.startTime) < slot.end && 
                           cardTimetableData.getNormalizedEndTime(item) > slot.start
                         );
                         const hasMeInSlot = cardTimetableData.timeEvents.some(item => 
                           item.uid === currentUserId && 
                           item.type !== 'couple' && 
-                          item.startTime < slot.end && 
+                          (item.effStartTime || item.startTime) < slot.end && 
                           cardTimetableData.getNormalizedEndTime(item) > slot.start
                         );
                         const hasPartnerInSlot = cardTimetableData.timeEvents.some(item => 
                           item.uid !== currentUserId && 
                           item.type !== 'couple' && 
-                          item.startTime < slot.end && 
+                          (item.effStartTime || item.startTime) < slot.end && 
                           cardTimetableData.getNormalizedEndTime(item) > slot.start
                         );
 
