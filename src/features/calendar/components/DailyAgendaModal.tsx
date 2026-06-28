@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarEvent, Todo, Anniversary } from "@/src/lib/firestore/types";
+import { getEffectiveEventTimes } from "@/src/features/calendar/lib/event-utils";
 import styles from "./DailyAgenda.module.css";
 
 interface DailyAgendaModalProps {
@@ -81,12 +82,18 @@ export default function DailyAgendaModal({
     const partner: any[] = [];
 
     const items = [
-      ...events.map((e) => ({
-        ...e,
-        isTodo: false as const,
-        date: undefined,
-        isCompleted: undefined,
-      })),
+      ...events.map((e) => {
+        const eff = getEffectiveEventTimes(e, activeDateStr);
+        return {
+          ...e,
+          isTodo: false as const,
+          date: undefined,
+          isCompleted: undefined,
+          effStartTime: eff.startTime,
+          effEndTime: eff.endTime,
+          effIsAllDay: eff.isAllDay,
+        };
+      }),
       ...todos.map((t) => ({
         ...t,
         isTodo: true as const,
@@ -95,6 +102,9 @@ export default function DailyAgendaModal({
         endDate: undefined,
         startTime: undefined,
         endTime: undefined,
+        effStartTime: undefined,
+        effEndTime: undefined,
+        effIsAllDay: undefined,
       })),
     ];
 
@@ -116,18 +126,22 @@ export default function DailyAgendaModal({
 
       // --- 予定同士のソート ---
       if (!a.isTodo && !b.isTodo) {
-        // 終日イベント(isAllDay: true)を優先
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
+        const aAllDay = a.effIsAllDay ?? a.isAllDay;
+        const bAllDay = b.effIsAllDay ?? b.isAllDay;
+        // 終日イベントを優先
+        if (aAllDay && !bAllDay) return -1;
+        if (!aAllDay && bAllDay) return 1;
 
+        const aStart = a.effStartTime ?? a.startTime;
+        const bStart = b.effStartTime ?? b.startTime;
         // 両方時間指定がある場合は、開始時間順にソート
-        if (a.startTime && b.startTime) {
-          return a.startTime.localeCompare(b.startTime);
+        if (aStart && bStart) {
+          return aStart.localeCompare(bStart);
         }
         
         // 片方だけ時間指定がある場合は、時間指定ありを後にする
-        if (a.startTime && !b.startTime) return 1;
-        if (!a.startTime && b.startTime) return -1;
+        if (aStart && !bStart) return 1;
+        if (!aStart && bStart) return -1;
 
         return ((a as any).createdAt || 0) - ((b as any).createdAt || 0);
       }
@@ -149,7 +163,7 @@ export default function DailyAgendaModal({
       myItems: me.sort(sortFn),
       partnerItems: partner.sort(sortFn),
     };
-  }, [events, todos, currentUserId]);
+  }, [events, todos, currentUserId, activeDateStr]);
 
   // タイムライン用のデータを抽出・ソート・グリッド行割り当て
   const timetableData = useMemo(() => {
@@ -177,9 +191,9 @@ export default function DailyAgendaModal({
 
     // 時間指定のある予定の抽出
     const timeEvents = [
-      ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
-      ...myItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime),
-      ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && e.startTime)
+      ...coupleItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime),
+      ...myItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime),
+      ...partnerItems.filter(e => !e.isTodo && !e.effIsAllDay && e.effStartTime)
     ];
 
     // 特殊予定の抽出
@@ -192,9 +206,9 @@ export default function DailyAgendaModal({
         type: 'couple'
       })),
       allDay: [
-        ...coupleItems.filter(e => !e.isTodo && e.isAllDay),
-        ...myItems.filter(e => !e.isTodo && e.isAllDay),
-        ...partnerItems.filter(e => !e.isTodo && e.isAllDay)
+        ...coupleItems.filter(e => !e.isTodo && e.effIsAllDay),
+        ...myItems.filter(e => !e.isTodo && e.effIsAllDay),
+        ...partnerItems.filter(e => !e.isTodo && e.effIsAllDay)
       ],
       todo: [
         ...coupleItems.filter(e => e.isTodo),
@@ -202,9 +216,9 @@ export default function DailyAgendaModal({
         ...partnerItems.filter(e => e.isTodo)
       ],
       noTime: [
-        ...coupleItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
-        ...myItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime),
-        ...partnerItems.filter(e => !e.isTodo && !e.isAllDay && !e.startTime)
+        ...coupleItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime),
+        ...myItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime),
+        ...partnerItems.filter(e => !e.isTodo && !e.effIsAllDay && !e.effStartTime)
       ]
     };
 
@@ -215,14 +229,15 @@ export default function DailyAgendaModal({
       return `${nextH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
     const getNormalizedEndTime = (item: any) => {
-      if (item.endTime) return item.endTime;
-      return addOneHour(item.startTime);
+      if (item.effEndTime) return item.effEndTime;
+      if (item.endTime && !item.startDate) return item.endTime;
+      return addOneHour(item.effStartTime || item.startTime);
     };
 
     // 時間の全境界値を取得
     const timePointsSet = new Set<string>();
     timeEvents.forEach(item => {
-      timePointsSet.add(item.startTime);
+      timePointsSet.add(item.effStartTime || item.startTime);
       timePointsSet.add(getNormalizedEndTime(item));
     });
     const timePoints = Array.from(timePointsSet).sort((a, b) => a.localeCompare(b));
@@ -622,7 +637,7 @@ export default function DailyAgendaModal({
 
                 {/* 時間指定予定カード */}
                 {timeEvents.map(item => {
-                  const startIdx = rowMap.slotsStart! + timePoints.indexOf(item.startTime);
+                  const startIdx = rowMap.slotsStart! + timePoints.indexOf(item.effStartTime || item.startTime);
                   const endIdx = rowMap.slotsStart! + timePoints.indexOf(getNormalizedEndTime(item));
                   
                   let col = 2;
@@ -661,19 +676,19 @@ export default function DailyAgendaModal({
                   
                   const hasCoupleInSlot = timeEvents.some(item => 
                     item.type === 'couple' && 
-                    item.startTime < slot.end && 
+                    (item.effStartTime || item.startTime) < slot.end && 
                     getNormalizedEndTime(item) > slot.start
                   );
                   const hasMeInSlot = timeEvents.some(item => 
                     item.uid === currentUserId && 
                     item.type !== 'couple' && 
-                    item.startTime < slot.end && 
+                    (item.effStartTime || item.startTime) < slot.end && 
                     getNormalizedEndTime(item) > slot.start
                   );
                   const hasPartnerInSlot = timeEvents.some(item => 
                     item.uid !== currentUserId && 
                     item.type !== 'couple' && 
-                    item.startTime < slot.end && 
+                    (item.effStartTime || item.startTime) < slot.end && 
                     getNormalizedEndTime(item) > slot.start
                   );
 
