@@ -29,8 +29,7 @@ service cloud.firestore {
 
     match /events/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if isSignedIn();
     }
 
     match /daily_statuses/{id} {
@@ -47,8 +46,7 @@ service cloud.firestore {
 
     match /todos/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if isSignedIn();
     }
 
     match /wishlist/{id} {

@@ -7,11 +7,16 @@ interface TodoModalProps {
   todo: Todo | null; // null if creating new
   groups: Group[];
   defaultDate?: string;
+  currentUserId: string;
+  partnerUid?: string;
+  myNickname?: string;
+  partnerNickname?: string;
   onClose: () => void;
   onSave: (data: {
     title: string;
     groupId: string;
     type: "personal" | "couple";
+    uid: string;
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
@@ -27,10 +32,24 @@ interface DateSetting {
   dateMode: "due" | "on";
 }
 
-export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
+export default function TodoModal({
+  isOpen,
+  todo,
+  groups,
+  defaultDate,
+  currentUserId,
+  partnerUid,
+  myNickname = "自分",
+  partnerNickname = "パートナー",
+  onClose,
+  onSave,
+  isSubmitting,
+  onAddGroup
+}: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
+  const [uid, setUid] = useState("");
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [steps, setSteps] = useState<TodoStep[]>([]);
 
@@ -40,6 +59,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setTitle(todo.title);
         setGroupId(todo.groupId || "");
         setType(todo.type);
+        setUid(todo.uid || currentUserId);
         setDateSettings([
           { id: Math.random().toString(), date: todo.date || "", dateMode: todo.dateMode || "due" }
         ]);
@@ -48,6 +68,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
         setType("personal");
+        setUid(currentUserId);
         setDateSettings([
           { id: Math.random().toString(), date: defaultDate || "", dateMode: "due" }
         ]);
@@ -124,6 +145,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         title,
         groupId,
         type,
+        uid: uid || currentUserId,
         date: firstSetting.date,
         dateMode: firstSetting.dateMode as "due" | "on",
         steps: cleanSteps
@@ -133,6 +155,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         title,
         groupId,
         type,
+        uid: uid || currentUserId,
         dates: dateSettings.map((s) => ({
           date: s.date,
           dateMode: s.dateMode as "due" | "on"
@@ -190,21 +213,40 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
                 <input
                   type="radio"
                   name="todoType"
-                  value="personal"
-                  checked={type === "personal"}
-                  onChange={() => setType("personal")}
-                  disabled={todo !== null} // 既存のTODOのタイプ変更は防ぐ（権限周りが複雑になるため）
+                  value="personal_me"
+                  checked={type === "personal" && uid === currentUserId}
+                  onChange={() => {
+                    setType("personal");
+                    setUid(currentUserId);
+                  }}
                 />
-                自分のTODO
+                {myNickname}のTODO
               </label>
+              {partnerUid && (
+                <label className={styles.radioLabel}>
+                  <input
+                    type="radio"
+                    name="todoType"
+                    value="personal_partner"
+                    checked={type === "personal" && uid === partnerUid}
+                    onChange={() => {
+                      setType("personal");
+                      setUid(partnerUid);
+                    }}
+                  />
+                  {partnerNickname}のTODO
+                </label>
+              )}
               <label className={styles.radioLabel}>
                 <input
                   type="radio"
                   name="todoType"
                   value="couple"
                   checked={type === "couple"}
-                  onChange={() => setType("couple")}
-                  disabled={todo !== null}
+                  onChange={() => {
+                    setType("couple");
+                    setUid(todo?.uid || currentUserId);
+                  }}
                 />
                 2人のTODO
               </label>

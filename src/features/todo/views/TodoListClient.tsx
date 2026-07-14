@@ -83,6 +83,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     title: string;
     groupId: string;
     type: "personal" | "couple";
+    uid: string;
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
@@ -96,6 +97,8 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
+          type: data.type,
+          uid: data.uid,
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
@@ -107,6 +110,8 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                   ...t,
                   title: data.title,
                   groupId: data.groupId,
+                  type: data.type,
+                  uid: data.uid,
                   date: data.date || "",
                   dateMode: data.dateMode || "due",
                   steps: data.steps || [],
@@ -121,7 +126,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           const docRef = await addTodo({
             title: data.title,
             type: data.type,
-            uid: user.uid,
+            uid: data.uid,
             groupId: data.groupId,
             dateMode: d.dateMode,
             date: d.date,
@@ -131,7 +136,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
             id: docRef.id,
             title: data.title,
             type: data.type,
-            uid: user.uid,
+            uid: data.uid,
             groupId: data.groupId,
             dateMode: d.dateMode,
             date: d.date,
@@ -297,7 +302,6 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
             className={styles.todoCheckbox}
             checked={todo.isCompleted}
             onChange={() => handleToggleComplete(todo)}
-            disabled={todo.uid !== user?.uid}
           />
           <div className={styles.todoInfo}>
             <div className={styles.todoTitle}>
@@ -325,27 +329,25 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
               )}
             </div>
           </div>
-          {todo.uid === user?.uid && (
-            <div className={styles.todoActions}>
-              <button
-                className={styles.editTodoBtn}
-                onClick={() => {
-                  setEditingTodo(todo);
-                  setIsModalOpen(true);
-                }}
-                title="TODOを編集"
-              >
-                <i className="fa-solid fa-pen"></i>
-              </button>
-              <button
-                className={styles.deleteTodoBtn}
-                onClick={() => handleDeleteTodo(todo.id)}
-                title="TODOを削除"
-              >
-                <i className="fa-solid fa-trash-can"></i>
-              </button>
-            </div>
-          )}
+          <div className={styles.todoActions}>
+            <button
+              className={styles.editTodoBtn}
+              onClick={() => {
+                setEditingTodo(todo);
+                setIsModalOpen(true);
+              }}
+              title="TODOを編集"
+            >
+              <i className="fa-solid fa-pen"></i>
+            </button>
+            <button
+              className={styles.deleteTodoBtn}
+              onClick={() => handleDeleteTodo(todo.id)}
+              title="TODOを削除"
+            >
+              <i className="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
         </div>
 
         <div className={styles.steps}>
@@ -358,37 +360,33 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                     className={styles.stepCheckbox}
                     checked={step.isCompleted}
                     onChange={() => handleToggleStep(todo.id, step)}
-                    disabled={todo.uid !== user?.uid}
                   />
                   <span className={`${styles.stepTitle} ${step.isCompleted ? styles.stepTitleCompleted : ""}`}>{step.title}</span>
-                  {todo.uid === user?.uid && (
-                    <button
-                      className={styles.deleteStepBtn}
-                      onClick={() => handleDeleteStep(todo.id, step.id)}
-                      title="ステップを削除"
-                    >
-                      <i className="fa-solid fa-xmark"></i>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={styles.deleteStepBtn}
+                    onClick={() => handleDeleteStep(todo.id, step.id)}
+                    title="ステップを削除"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
                 </div>
               ))}
             </div>
           )}
 
-          {todo.uid === user?.uid && (
-            <div className={styles.stepAdd}>
-              <input
-                type="text"
-                className={styles.stepInput}
-                placeholder="例: お店に電話する"
-                value={stepInputs[todo.id] || ""}
-                onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
-              />
-              <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
-                + ステップ追加
-              </button>
-            </div>
-          )}
+          <div className={styles.stepAdd}>
+            <input
+              type="text"
+              className={styles.stepInput}
+              placeholder="例: お店に電話する"
+              value={stepInputs[todo.id] || ""}
+              onChange={(e) => setStepInputs((prev) => ({ ...prev, [todo.id]: e.target.value }))}
+            />
+            <button className={styles.stepAddBtn} onClick={() => handleAddStep(todo.id)}>
+              + ステップ追加
+            </button>
+          </div>
         </div>
       </div>
     ));
@@ -511,6 +509,10 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         todo={editingTodo}
         groups={groups}
         defaultDate={defaultDate}
+        currentUserId={user?.uid || ""}
+        partnerUid={partnerData?.id}
+        myNickname={myLabel}
+        partnerNickname={partnerLabel}
         onClose={() => {
           setIsModalOpen(false);
           setEditingTodo(null);

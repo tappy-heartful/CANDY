@@ -259,6 +259,7 @@ export default function HomeClient() {
     title: string;
     groupId: string;
     type: "personal" | "couple";
+    uid: string;
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
@@ -271,6 +272,8 @@ export default function HomeClient() {
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
+          type: data.type,
+          uid: data.uid,
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
@@ -1013,6 +1016,10 @@ export default function HomeClient() {
             isOpen={isTodoModalOpen}
             todo={editingTodo}
             groups={todoGroups}
+            currentUserId={user?.uid || ""}
+            partnerUid={userData?.partnerUid}
+            myNickname={userData?.nickname || "自分"}
+            partnerNickname={partnerData?.nickname || "パートナー"}
             onClose={() => {
               setIsTodoModalOpen(false);
               setEditingTodo(null);
