@@ -39,7 +39,7 @@ service cloud.firestore {
         // 自分が作成したドキュメントの場合
         resource.data.uid == request.auth.uid ||
         // パートナーがコメントやリアクションを書き込む場合
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'commentReactions', 'partnerCommentReactions', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'commentReactions', 'partnerCommentReactions', 'commentReactionOrder', 'partnerCommentReactionOrder', 'updatedAt'])
       );
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }

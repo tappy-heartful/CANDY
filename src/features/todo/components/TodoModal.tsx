@@ -53,6 +53,9 @@ export default function TodoModal({
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [steps, setSteps] = useState<TodoStep[]>([]);
 
+  const prevGroupsLength = useRef(groups.length);
+  const isInitialized = useRef(false);
+
   useEffect(() => {
     if (isOpen) {
       if (todo) {
@@ -74,6 +77,10 @@ export default function TodoModal({
         ]);
         setSteps([]);
       }
+      prevGroupsLength.current = groups.length;
+      isInitialized.current = groups.length > 0;
+    } else {
+      isInitialized.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, todo, defaultDate]);
@@ -120,20 +127,29 @@ export default function TodoModal({
     );
   };
 
-  const prevGroupsLength = useRef(groups.length);
   useEffect(() => {
-    if (isOpen) {
-      if (groups.length > 0 && !groupId) {
+    if (!isOpen) return;
+
+    // 開いた時点で groups がまだ未ロードだった場合、ロード完了時に初期デフォルトグループをセット
+    if (!isInitialized.current && groups.length > 0) {
+      if (!todo) {
         setGroupId(groups[0].id);
-      } else if (groups.length > prevGroupsLength.current) {
-        const newGroup = groups[groups.length - 1];
-        if (newGroup) {
-          setGroupId(newGroup.id);
-        }
+      }
+      prevGroupsLength.current = groups.length;
+      isInitialized.current = true;
+      return;
+    }
+
+    // モーダルが開いている間に新しくグループが追加された場合のみ、そのグループを選択状態にする
+    if (isInitialized.current && groups.length > prevGroupsLength.current) {
+      const newGroup = groups[groups.length - 1];
+      if (newGroup) {
+        setGroupId(newGroup.id);
       }
     }
+    
     prevGroupsLength.current = groups.length;
-  }, [groups, groupId, isOpen]);
+  }, [groups, isOpen, todo]);
 
   if (!isOpen) return null;
 

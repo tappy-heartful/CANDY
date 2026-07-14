@@ -928,6 +928,7 @@ export default function CalendarView({
   };
 
   const handleAddNewTodo = (dateStr: string) => {
+    setIsDailyAgendaOpen(false);
     setActiveTodoDate(dateStr);
     setIsTodoModalOpen(true);
   };
