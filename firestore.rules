@@ -29,8 +29,7 @@ service cloud.firestore {
 
     match /events/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if isSignedIn();
     }
 
     match /daily_statuses/{id} {
@@ -40,15 +39,14 @@ service cloud.firestore {
         // 自分が作成したドキュメントの場合
         resource.data.uid == request.auth.uid ||
         // パートナーがコメントやリアクションを書き込む場合
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'commentReactions', 'partnerCommentReactions', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerComment', 'commentReactions', 'partnerCommentReactions', 'commentReactionOrder', 'partnerCommentReactionOrder', 'updatedAt'])
       );
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /todos/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if isSignedIn();
     }
 
     match /wishlist/{id} {

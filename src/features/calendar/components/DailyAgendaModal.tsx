@@ -316,7 +316,7 @@ export default function DailyAgendaModal({
       );
     }
 
-    const isEditable = item.type === "couple" || item.uid === currentUserId;
+    const isEditable = true;
     
     if (item.isTodo) {
       const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
@@ -734,7 +734,7 @@ export default function DailyAgendaModal({
                   ));
 
                   if (item.isTodo) {
-                    const isEditable = item.type === "couple" || item.uid === currentUserId;
+                    const isEditable = true;
                     return (
                       <div
                         key={`todo-${item.id}`}

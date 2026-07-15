@@ -10,6 +10,7 @@ interface EventModalProps {
   currentUserId: string;
   myNickname?: string;
   partnerNickname?: string;
+  partnerUid?: string;
   onClose: () => void;
   onSave: (eventData: Partial<CalendarEvent>, targetRange?: "only" | "all") => Promise<void>;
   onDelete?: (id: string, targetRange?: "only" | "all") => Promise<void>;
@@ -36,15 +37,18 @@ export default function EventModal({
   currentUserId,
   myNickname = "自分",
   partnerNickname = "パートナー",
+  partnerUid,
   onClose,
   onSave,
   onDelete,
 }: EventModalProps) {
   const isEdit = !!event?.id;
-  const isEditable = !isEdit || event?.uid === currentUserId;
+  const isEditable = true;
+  const isOwnEvent = !isEdit || event?.uid === currentUserId;
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"personal" | "couple">("couple");
+  const [uid, setUid] = useState("");
   const [isAllDay, setIsAllDay] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("10:00");
@@ -69,6 +73,7 @@ export default function EventModal({
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     setTitle(event?.title || "");
     setType(event?.type || "couple");
+    setUid(event?.uid || currentUserId);
     setIsAllDay(event?.isAllDay ?? true);
     setStartDate(event?.startDate || todayStr);
     setStartTime(event?.startTime || "10:00");
@@ -108,7 +113,7 @@ export default function EventModal({
       endDate,
       note: note.trim(),
       link: link.trim(),
-      uid: event?.uid || currentUserId,
+      uid: uid || currentUserId,
       ...(isAllDay ? {} : { startTime, endTime }),
     };
 
@@ -269,14 +274,27 @@ export default function EventModal({
             <select
               id="event-type"
               className={styles.selectField}
-              value={type}
-              onChange={(e) => setType(e.target.value as "personal" | "couple")}
+              value={type === "couple" ? "couple" : (uid === currentUserId ? "me" : "partner")}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "couple") {
+                  setType("couple");
+                  setUid(event?.uid || currentUserId);
+                } else if (val === "me") {
+                  setType("personal");
+                  setUid(currentUserId);
+                } else if (val === "partner") {
+                  setType("personal");
+                  setUid(partnerUid || "");
+                }
+              }}
               disabled={!isEditable}
             >
               <option value="couple">2人の予定</option>
-              <option value="personal">
-                {isEditable ? myNickname : partnerNickname}の予定
-              </option>
+              <option value="me">{myNickname}の予定</option>
+              {partnerUid && (
+                <option value="partner">{partnerNickname}の予定</option>
+              )}
             </select>
           </div>
 

@@ -7,11 +7,16 @@ interface TodoModalProps {
   todo: Todo | null; // null if creating new
   groups: Group[];
   defaultDate?: string;
+  currentUserId: string;
+  partnerUid?: string;
+  myNickname?: string;
+  partnerNickname?: string;
   onClose: () => void;
   onSave: (data: {
     title: string;
     groupId: string;
     type: "personal" | "couple";
+    uid: string;
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
@@ -27,12 +32,29 @@ interface DateSetting {
   dateMode: "due" | "on";
 }
 
-export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, onSave, isSubmitting, onAddGroup }: TodoModalProps) {
+export default function TodoModal({
+  isOpen,
+  todo,
+  groups,
+  defaultDate,
+  currentUserId,
+  partnerUid,
+  myNickname = "自分",
+  partnerNickname = "パートナー",
+  onClose,
+  onSave,
+  isSubmitting,
+  onAddGroup
+}: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
+  const [uid, setUid] = useState("");
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [steps, setSteps] = useState<TodoStep[]>([]);
+
+  const prevGroupsLength = useRef(groups.length);
+  const isInitialized = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,6 +62,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setTitle(todo.title);
         setGroupId(todo.groupId || "");
         setType(todo.type);
+        setUid(todo.uid || currentUserId);
         setDateSettings([
           { id: Math.random().toString(), date: todo.date || "", dateMode: todo.dateMode || "due" }
         ]);
@@ -48,11 +71,16 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
         setType("personal");
+        setUid(currentUserId);
         setDateSettings([
           { id: Math.random().toString(), date: defaultDate || "", dateMode: "due" }
         ]);
         setSteps([]);
       }
+      prevGroupsLength.current = groups.length;
+      isInitialized.current = groups.length > 0;
+    } else {
+      isInitialized.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, todo, defaultDate]);
@@ -99,20 +127,29 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
     );
   };
 
-  const prevGroupsLength = useRef(groups.length);
   useEffect(() => {
-    if (isOpen) {
-      if (groups.length > 0 && !groupId) {
+    if (!isOpen) return;
+
+    // 開いた時点で groups がまだ未ロードだった場合、ロード完了時に初期デフォルトグループをセット
+    if (!isInitialized.current && groups.length > 0) {
+      if (!todo) {
         setGroupId(groups[0].id);
-      } else if (groups.length > prevGroupsLength.current) {
-        const newGroup = groups[groups.length - 1];
-        if (newGroup) {
-          setGroupId(newGroup.id);
-        }
+      }
+      prevGroupsLength.current = groups.length;
+      isInitialized.current = true;
+      return;
+    }
+
+    // モーダルが開いている間に新しくグループが追加された場合のみ、そのグループを選択状態にする
+    if (isInitialized.current && groups.length > prevGroupsLength.current) {
+      const newGroup = groups[groups.length - 1];
+      if (newGroup) {
+        setGroupId(newGroup.id);
       }
     }
+    
     prevGroupsLength.current = groups.length;
-  }, [groups, groupId, isOpen]);
+  }, [groups, isOpen, todo]);
 
   if (!isOpen) return null;
 
@@ -124,6 +161,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         title,
         groupId,
         type,
+        uid: uid || currentUserId,
         date: firstSetting.date,
         dateMode: firstSetting.dateMode as "due" | "on",
         steps: cleanSteps
@@ -133,6 +171,7 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
         title,
         groupId,
         type,
+        uid: uid || currentUserId,
         dates: dateSettings.map((s) => ({
           date: s.date,
           dateMode: s.dateMode as "due" | "on"
@@ -190,21 +229,40 @@ export default function TodoModal({ isOpen, todo, groups, defaultDate, onClose, 
                 <input
                   type="radio"
                   name="todoType"
-                  value="personal"
-                  checked={type === "personal"}
-                  onChange={() => setType("personal")}
-                  disabled={todo !== null} // 既存のTODOのタイプ変更は防ぐ（権限周りが複雑になるため）
+                  value="personal_me"
+                  checked={type === "personal" && uid === currentUserId}
+                  onChange={() => {
+                    setType("personal");
+                    setUid(currentUserId);
+                  }}
                 />
-                自分のTODO
+                {myNickname}のTODO
               </label>
+              {partnerUid && (
+                <label className={styles.radioLabel}>
+                  <input
+                    type="radio"
+                    name="todoType"
+                    value="personal_partner"
+                    checked={type === "personal" && uid === partnerUid}
+                    onChange={() => {
+                      setType("personal");
+                      setUid(partnerUid);
+                    }}
+                  />
+                  {partnerNickname}のTODO
+                </label>
+              )}
               <label className={styles.radioLabel}>
                 <input
                   type="radio"
                   name="todoType"
                   value="couple"
                   checked={type === "couple"}
-                  onChange={() => setType("couple")}
-                  disabled={todo !== null}
+                  onChange={() => {
+                    setType("couple");
+                    setUid(todo?.uid || currentUserId);
+                  }}
                 />
                 2人のTODO
               </label>

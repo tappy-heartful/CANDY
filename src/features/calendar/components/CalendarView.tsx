@@ -432,7 +432,7 @@ export default function CalendarView({
     ));
 
     if (item.isTodo) {
-      const isEditable = item.type === "couple" || item.uid === currentUserId;
+      const isEditable = true;
       return (
         <div
           key={`todo-${item.id}`}
@@ -928,6 +928,7 @@ export default function CalendarView({
   };
 
   const handleAddNewTodo = (dateStr: string) => {
+    setIsDailyAgendaOpen(false);
     setActiveTodoDate(dateStr);
     setIsTodoModalOpen(true);
   };
@@ -942,6 +943,7 @@ export default function CalendarView({
     title: string;
     groupId: string;
     type: "personal" | "couple";
+    uid: string;
     date?: string;
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
@@ -953,6 +955,8 @@ export default function CalendarView({
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
+          type: data.type,
+          uid: data.uid,
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
@@ -964,6 +968,8 @@ export default function CalendarView({
                   ...t,
                   title: data.title,
                   groupId: data.groupId,
+                  type: data.type,
+                  uid: data.uid,
                   date: data.date || "",
                   dateMode: data.dateMode || "due",
                   steps: data.steps || [],
@@ -978,7 +984,7 @@ export default function CalendarView({
           const docRef = await addTodo({
             title: data.title,
             type: data.type,
-            uid: currentUserId,
+            uid: data.uid,
             groupId: data.groupId,
             dateMode: d.dateMode,
             date: d.date,
@@ -988,7 +994,7 @@ export default function CalendarView({
             id: docRef.id,
             title: data.title,
             type: data.type,
-            uid: currentUserId,
+            uid: data.uid,
             groupId: data.groupId,
             dateMode: d.dateMode,
             date: d.date,
@@ -1481,7 +1487,7 @@ export default function CalendarView({
                 );
               }
 
-              const isEditable = item.type === "couple" || item.uid === currentUserId;
+              const isEditable = true;
               if (item.isTodo) {
                 const color = item.type === "couple" ? "#9B7CC3" : (item.uid === currentUserId ? "#F7A8C4" : "#A0E7D2");
                 return (
@@ -1921,6 +1927,7 @@ export default function CalendarView({
           currentUserId={currentUserId}
           myNickname={myNickname}
           partnerNickname={partnerNickname}
+          partnerUid={userData?.partnerUid}
           onClose={() => {
             setIsModalOpen(false);
             setActiveModalEvent(null);
@@ -1936,6 +1943,10 @@ export default function CalendarView({
           todo={editingTodo}
           groups={todoGroups}
           defaultDate={activeTodoDate}
+          currentUserId={currentUserId}
+          partnerUid={userData?.partnerUid}
+          myNickname={myNickname}
+          partnerNickname={partnerNickname}
           onClose={() => {
             setIsTodoModalOpen(false);
             setEditingTodo(null);
