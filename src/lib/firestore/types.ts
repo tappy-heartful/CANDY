@@ -66,6 +66,7 @@ export interface Wishlist {
   createdAt: number;
   updatedAt: number;
   urgency?: number;
+  season?: "spring" | "summer" | "autumn" | "winter" | "";
 }
 
 export interface Group {
