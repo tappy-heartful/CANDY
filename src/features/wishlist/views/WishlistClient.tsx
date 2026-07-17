@@ -55,7 +55,14 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
     }
   };
 
-  const handleSaveWishlist = async (data: { title: string; groupId: string; type: "personal" | "couple"; urgency: number; isAchieved: boolean }) => {
+  const handleSaveWishlist = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    urgency: number;
+    isAchieved: boolean;
+    season?: "spring" | "summer" | "autumn" | "winter";
+  }) => {
     if (!data.title || !user) return;
     setIsSubmitting(true);
     showSpinner();
@@ -67,6 +74,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           groupId: data.groupId,
           urgency: data.urgency,
           isAchieved: data.isAchieved,
+          season: data.season || "",
         });
         setItems((prev) =>
           prev.map((i) => (i.id === editingItem.id ? { ...i, ...data } : i))
@@ -79,6 +87,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           uid: user.uid,
           groupId: data.groupId,
           urgency: data.urgency,
+          season: data.season || "",
         });
         const newItem: Wishlist = {
           id: docRef.id,
@@ -88,6 +97,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           groupId: data.groupId,
           isAchieved: false,
           urgency: data.urgency,
+          season: data.season || "",
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -226,6 +236,14 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
               <span className={styles.groupBadge}>
                 {groupNameById.get(item.groupId) || "未分類"}
               </span>
+              {item.season && (
+                <span className={`${styles.badge} ${styles.badgeSeason} ${styles[item.season]}`}>
+                  {item.season === "spring" && "🌸 春"}
+                  {item.season === "summer" && "☀️ 夏"}
+                  {item.season === "autumn" && "🍁 秋"}
+                  {item.season === "winter" && "❄️ 冬"}
+                </span>
+              )}
             </div>
             <div className={styles.urgencyBadge}>
               <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>

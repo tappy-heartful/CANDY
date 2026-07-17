@@ -14,6 +14,7 @@ interface WishlistModalProps {
     type: "personal" | "couple";
     urgency: number;
     isAchieved: boolean;
+    season?: "spring" | "summer" | "autumn" | "winter";
   }) => Promise<void>;
   isSubmitting?: boolean;
   onAddGroup?: () => void;
@@ -32,6 +33,7 @@ export default function WishlistModal({
   const [type, setType] = useState<"personal" | "couple">("personal");
   const [urgency, setUrgency] = useState(50);
   const [isAchieved, setIsAchieved] = useState(false);
+  const [season, setSeason] = useState<"spring" | "summer" | "autumn" | "winter" | "">("");
 
   useEffect(() => {
     if (wishlist) {
@@ -40,12 +42,14 @@ export default function WishlistModal({
       setType(wishlist.type);
       setUrgency(wishlist.urgency ?? 50);
       setIsAchieved(wishlist.isAchieved);
+      setSeason(wishlist.season || "");
     } else {
       setTitle("");
       setGroupId(groups.length > 0 ? groups[0].id : "");
       setType("personal");
       setUrgency(50);
       setIsAchieved(false);
+      setSeason("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wishlist]);
@@ -72,6 +76,7 @@ export default function WishlistModal({
       type,
       urgency,
       isAchieved,
+      season: season || undefined,
     });
   };
 
@@ -133,6 +138,24 @@ export default function WishlistModal({
                 </button>
               )}
             </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel} htmlFor="edit-season">
+              シーズン
+            </label>
+            <select
+              id="edit-season"
+              className={styles.groupSelect}
+              value={season}
+              onChange={(e) => setSeason(e.target.value as any)}
+            >
+              <option value="">指定なし</option>
+              <option value="spring">春🌸</option>
+              <option value="summer">夏☀️</option>
+              <option value="autumn">秋🍁</option>
+              <option value="winter">冬❄️</option>
+            </select>
           </div>
 
           <div className={styles.formGroup}>
