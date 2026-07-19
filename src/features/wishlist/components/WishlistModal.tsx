@@ -56,16 +56,14 @@ export default function WishlistModal({
 
   const prevGroupsLength = useRef(groups.length);
   useEffect(() => {
-    if (groups.length > 0 && !groupId) {
-      setGroupId(groups[0].id);
-    } else if (groups.length > prevGroupsLength.current) {
+    if (groups.length > prevGroupsLength.current) {
       const newGroup = groups[groups.length - 1];
       if (newGroup) {
         setGroupId(newGroup.id);
       }
     }
     prevGroupsLength.current = groups.length;
-  }, [groups, groupId]);
+  }, [groups]);
 
   const handleSeasonChange = (name: "spring" | "summer" | "autumn" | "winter", checked: boolean) => {
     setSeasons(prev => {
