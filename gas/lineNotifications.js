@@ -291,50 +291,60 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
 
       // 設定の取得
       const setting = settingsMap[user.id] || {};
-      const eventReminderMinutes = setting.eventReminderMinutes !== undefined ? setting.eventReminderMinutes : 10; // デフォルト 10分
-
-      // 前回チェック時と今回チェック時のリマインダー対象期間を算出する (トリガ遅延・スキップ対策)
-      const currentTargetTime = new Date(now.getTime() + eventReminderMinutes * 60 * 1000);
-      const lastTargetTime = new Date(lastCheck.getTime() + eventReminderMinutes * 60 * 1000);
-
-      // 対象時間内に開始されるイベントをフィルタリング (終日イベントは除外)
-      const userReminders = events.filter(e => {
-        if (e.isAllDay || !e.startTime) return false;
-        
-        const isRelated = e.type === 'couple' || e.uid === user.id;
-        if (!isRelated) return false;
-
-        // イベント開始時刻を Date オブジェクトにパース (JST基準)
-        const eventTime = parseJSTDateTime(e.startDate, e.startTime);
-        if (!eventTime) return false;
-
-        const eventTimeMs = eventTime.getTime();
-        // 前回のターゲット時刻より後、かつ今回のターゲット時刻までに開始されるものを抽出
-        return eventTimeMs > lastTargetTime.getTime() && eventTimeMs <= currentTargetTime.getTime();
-      });
-
-      if (userReminders.length > 0) {
-        const hour = Number(Utilities.formatDate(now, "Asia/Tokyo", "H"));
-        let greeting = "こんにちは！☀️";
-        if (hour >= 5 && hour < 11) {
-          greeting = "おはよう！☀️";
-        } else if (hour >= 18 || hour < 5) {
-          greeting = "こんばんは！🌙";
+      let minutesList = [10]; // デフォルト 10分
+      if (setting.eventReminderMinutes !== undefined) {
+        if (Array.isArray(setting.eventReminderMinutes)) {
+          minutesList = setting.eventReminderMinutes;
+        } else {
+          minutesList = [Number(setting.eventReminderMinutes)];
         }
-
-        userReminders.forEach(e => {
-          let message = `${greeting}\n`;
-          message += `${nickname}ちゃん、${eventReminderMinutes}分後に以下の予定があるよ！準備はできたかな？🍬\n\n`;
-          message += `⏰ ${e.startTime}〜\n`;
-          message += `📝 ${e.title}\n`;
-          if (e.note) {
-            message += `💡 メモ: ${e.note}\n`;
-          }
-          message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
-
-          sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
-        });
       }
+
+      minutesList.forEach(minutes => {
+        // 前回チェック時と今回チェック時のリマインダー対象期間を算出する (トリガ遅延・スキップ対策)
+        const currentTargetTime = new Date(now.getTime() + minutes * 60 * 1000);
+        const lastTargetTime = new Date(lastCheck.getTime() + minutes * 60 * 1000);
+
+        // 対象時間内に開始されるイベントをフィルタリング (終日イベントは除外)
+        const userReminders = events.filter(e => {
+          if (e.isAllDay || !e.startTime) return false;
+          
+          const isRelated = e.type === 'couple' || e.uid === user.id;
+          if (!isRelated) return false;
+
+          // イベント開始時刻を Date オブジェクトにパース (JST基準)
+          const eventTime = parseJSTDateTime(e.startDate, e.startTime);
+          if (!eventTime) return false;
+
+          const eventTimeMs = eventTime.getTime();
+          // 前回のターゲット時刻より後、かつ今回のターゲット時刻までに開始されるものを抽出
+          return eventTimeMs > lastTargetTime.getTime() && eventTimeMs <= currentTargetTime.getTime();
+        });
+
+        if (userReminders.length > 0) {
+          const hour = Number(Utilities.formatDate(now, "Asia/Tokyo", "H"));
+          let greeting = "こんにちは！☀️";
+          if (hour >= 5 && hour < 11) {
+            greeting = "おはよう！☀️";
+          } else if (hour >= 18 || hour < 5) {
+            greeting = "こんばんは！🌙";
+          }
+
+          userReminders.forEach(e => {
+            let message = `${greeting}\n`;
+            const timeText = minutes === 0 ? "まもなく" : `${minutes}分後に`;
+            message += `${nickname}ちゃん、${timeText}以下の予定があるよ！準備はできたかな？🍬\n\n`;
+            message += `⏰ ${e.startTime}〜\n`;
+            message += `📝 ${e.title}\n`;
+            if (e.note) {
+              message += `💡 メモ: ${e.note}\n`;
+            }
+            message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
+
+            sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+          });
+        }
+      });
     });
 
   } catch (e) {

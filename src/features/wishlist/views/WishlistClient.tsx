@@ -61,7 +61,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
     type: "personal" | "couple";
     urgency: number;
     isAchieved: boolean;
-    season?: "spring" | "summer" | "autumn" | "winter";
+    season?: ("spring" | "summer" | "autumn" | "winter")[];
   }) => {
     if (!data.title || !user) return;
     setIsSubmitting(true);
@@ -74,7 +74,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           groupId: data.groupId,
           urgency: data.urgency,
           isAchieved: data.isAchieved,
-          season: data.season || "",
+          season: data.season || [],
         });
         setItems((prev) =>
           prev.map((i) => (i.id === editingItem.id ? { ...i, ...data } : i))
@@ -87,7 +87,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           uid: user.uid,
           groupId: data.groupId,
           urgency: data.urgency,
-          season: data.season || "",
+          season: data.season || [],
         });
         const newItem: Wishlist = {
           id: docRef.id,
@@ -97,7 +97,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           groupId: data.groupId,
           isAchieved: false,
           urgency: data.urgency,
-          season: data.season || "",
+          season: data.season || [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -236,14 +236,14 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
               <span className={styles.groupBadge}>
                 {groupNameById.get(item.groupId) || "未分類"}
               </span>
-              {item.season && (
-                <span className={`${styles.badge} ${styles.badgeSeason} ${styles[item.season]}`}>
-                  {item.season === "spring" && "🌸 春"}
-                  {item.season === "summer" && "☀️ 夏"}
-                  {item.season === "autumn" && "🍁 秋"}
-                  {item.season === "winter" && "❄️ 冬"}
+              {item.season && Array.isArray(item.season) && item.season.map((s) => (
+                <span key={s} className={`${styles.badge} ${styles.badgeSeason} ${styles[s]}`}>
+                  {s === "spring" && "🌸 春"}
+                  {s === "summer" && "☀️ 夏"}
+                  {s === "autumn" && "🍁 秋"}
+                  {s === "winter" && "❄️ 冬"}
                 </span>
-              )}
+              ))}
             </div>
             <div className={styles.urgencyBadge}>
               <i className="fa-solid fa-fire" style={{ color: "#F7A8C4", marginRight: "4px" }}></i>

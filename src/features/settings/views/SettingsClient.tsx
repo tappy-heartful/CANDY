@@ -16,11 +16,18 @@ export default function SettingsClient() {
   const router = useRouter();
 
   const [partnerNickname, setPartnerNickname] = useState("パートナー");
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    morningEnabled: boolean;
+    morningTime: string;
+    eventReminderEnabled: boolean;
+    eventReminderMinutes: number[];
+    dailyStatusEnabled: boolean;
+    dailyStatusCommentEnabled: boolean;
+  }>({
     morningEnabled: true,
     morningTime: "08:00",
     eventReminderEnabled: true,
-    eventReminderMinutes: 10,
+    eventReminderMinutes: [10],
     dailyStatusEnabled: true,
     dailyStatusCommentEnabled: true,
   });
@@ -43,11 +50,19 @@ export default function SettingsClient() {
         if (partner?.nickname) {
           setPartnerNickname(partner.nickname);
         }
+        let minutes: number[] = [10];
+        if (settings.eventReminderMinutes !== undefined) {
+          if (Array.isArray(settings.eventReminderMinutes)) {
+            minutes = settings.eventReminderMinutes;
+          } else {
+            minutes = [Number(settings.eventReminderMinutes)];
+          }
+        }
         setFormData({
           morningEnabled: settings.morningEnabled,
           morningTime: settings.morningTime,
           eventReminderEnabled: settings.eventReminderEnabled,
-          eventReminderMinutes: settings.eventReminderMinutes,
+          eventReminderMinutes: minutes,
           dailyStatusEnabled: settings.dailyStatusEnabled !== false,
           dailyStatusCommentEnabled: settings.dailyStatusCommentEnabled !== false,
         });
@@ -68,12 +83,30 @@ export default function SettingsClient() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "eventReminderMinutes") {
-      const num = parseInt(value, 10);
-      setFormData(prev => ({ ...prev, [name]: isNaN(num) ? 0 : num }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleReminderChange = (index: number, value: string) => {
+    const num = parseInt(value, 10);
+    setFormData(prev => {
+      const newList = [...prev.eventReminderMinutes];
+      newList[index] = isNaN(num) ? 0 : num;
+      return { ...prev, eventReminderMinutes: newList };
+    });
+  };
+
+  const handleAddReminder = () => {
+    setFormData(prev => ({
+      ...prev,
+      eventReminderMinutes: [...prev.eventReminderMinutes, 10]
+    }));
+  };
+
+  const handleRemoveReminder = (index: number) => {
+    setFormData(prev => {
+      const newList = prev.eventReminderMinutes.filter((_, i) => i !== index);
+      return { ...prev, eventReminderMinutes: newList };
+    });
   };
 
   const handleSave = async () => {
@@ -86,9 +119,15 @@ export default function SettingsClient() {
     }
 
     if (formData.eventReminderEnabled) {
-      if (formData.eventReminderMinutes < 1 || formData.eventReminderMinutes > 60) {
-        showDialog("イベント前通知は1分から60分の間で指定してください。", true);
+      if (formData.eventReminderMinutes.length === 0) {
+        showDialog("イベント前通知のリマインダーを少なくとも1つ設定してください。", true);
         return;
+      }
+      for (const m of formData.eventReminderMinutes) {
+        if (m < 0 || m > 60) {
+          showDialog("イベント前通知は0分から60分の間で指定してください。", true);
+          return;
+        }
       }
     }
 
@@ -164,18 +203,42 @@ export default function SettingsClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>何分前に通知するか (1〜60分)</label>
-          <input
-            type="number"
-            name="eventReminderMinutes"
-            className={styles.appInput}
-            min="1"
-            max="60"
-            placeholder="例: 10"
-            value={formData.eventReminderMinutes || ""}
-            onChange={handleInputChange}
+          <label className={styles.inputLabel}>リマインダー (0〜60分前)</label>
+          <div className={styles.reminderList}>
+            {formData.eventReminderMinutes.map((minutes, index) => (
+              <div key={index} className={styles.reminderItem}>
+                <input
+                  type="number"
+                  className={styles.appInput}
+                  min="0"
+                  max="60"
+                  placeholder="例: 10"
+                  value={minutes ?? ""}
+                  onChange={(e) => handleReminderChange(index, e.target.value)}
+                  disabled={!formData.eventReminderEnabled}
+                  style={{ flex: 1 }}
+                />
+                <span className={styles.reminderSuffix}>分前</span>
+                <button
+                  type="button"
+                  className={styles.removeReminderBtn}
+                  onClick={() => handleRemoveReminder(index)}
+                  disabled={!formData.eventReminderEnabled}
+                  title="削除"
+                >
+                  <i className="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={styles.addReminderBtn}
+            onClick={handleAddReminder}
             disabled={!formData.eventReminderEnabled}
-          />
+          >
+            <i className="fa-solid fa-plus"></i> リマインダーを追加
+          </button>
         </div>
 
         {/* 今日のひとこと通知セクション */}

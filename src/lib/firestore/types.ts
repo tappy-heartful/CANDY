@@ -66,7 +66,7 @@ export interface Wishlist {
   createdAt: number;
   updatedAt: number;
   urgency?: number;
-  season?: "spring" | "summer" | "autumn" | "winter" | "";
+  season?: ("spring" | "summer" | "autumn" | "winter")[];
 }
 
 export interface Group {
@@ -175,7 +175,7 @@ export interface NotificationSetting {
   morningEnabled: boolean; // 朝の通知メッセージ有効フラグ
   morningTime: string; // 朝の通知時間 (例: "08:00")
   eventReminderEnabled: boolean; // イベント前通知有効フラグ
-  eventReminderMinutes: number; // 何分前か (1〜60)
+  eventReminderMinutes: number[]; // 何分前か (0〜60) の配列
   dailyStatusEnabled?: boolean; // パートナーの今日のひとこと通知を受け取るか
   dailyStatusCommentEnabled?: boolean; // 自分のひとことへのパートナーのコメント通知を受け取るか
   createdAt: number;

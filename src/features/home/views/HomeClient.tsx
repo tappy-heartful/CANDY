@@ -937,14 +937,14 @@ export default function HomeClient() {
                           <div style={{ display: 'flex', gap: '6px', fontSize: '11px', color: '#999', alignItems: 'center' }}>
                             <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
                             <span style={{ fontWeight: 'bold' }}>{groupName}</span>
-                            {item.season && (
-                              <span className={`${styles.badge} ${styles.badgeSeason} ${styles[item.season]}`}>
-                                {item.season === "spring" && "🌸 春"}
-                                {item.season === "summer" && "☀️ 夏"}
-                                {item.season === "autumn" && "🍁 秋"}
-                                {item.season === "winter" && "❄️ 冬"}
+                            {item.season && Array.isArray(item.season) && item.season.map((s) => (
+                              <span key={s} className={`${styles.badge} ${styles.badgeSeason} ${styles[s]}`}>
+                                {s === "spring" && "🌸 春"}
+                                {s === "summer" && "☀️ 夏"}
+                                {s === "autumn" && "🍁 秋"}
+                                {s === "winter" && "❄️ 冬"}
                               </span>
-                            )}
+                            ))}
                           </div>
                           <span className={styles.notificationTitle}>{item.title}</span>
                         </Link>
