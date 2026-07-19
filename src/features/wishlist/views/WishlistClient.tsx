@@ -28,8 +28,8 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const searchParams = useSearchParams();
-  const initialSort = (searchParams.get("sort") as "group" | "urgency" | "createdAt_desc" | "createdAt_asc") || "group";
-  const [sortMode, setSortMode] = useState<"group" | "urgency" | "createdAt_desc" | "createdAt_asc">(initialSort);
+  const initialSort = (searchParams.get("sort") as "group" | "season" | "urgency" | "createdAt_desc" | "createdAt_asc") || "group";
+  const [sortMode, setSortMode] = useState<"group" | "season" | "urgency" | "createdAt_desc" | "createdAt_asc">(initialSort);
 
   const initialFilterAll = searchParams.get("filter") === "all";
 
@@ -298,6 +298,62 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           })}
         </div>
       );
+    } else if (sortMode === "season") {
+      const bySeason: Record<string, Wishlist[]> = {
+        spring: [],
+        summer: [],
+        autumn: [],
+        winter: [],
+        none: [],
+      };
+
+      list.forEach((w) => {
+        if (w.season && Array.isArray(w.season) && w.season.length > 0) {
+          w.season.forEach((s) => {
+            if (bySeason[s] !== undefined) {
+              bySeason[s].push(w);
+            }
+          });
+        } else {
+          bySeason.none.push(w);
+        }
+      });
+
+      const seasonOrder = [
+        { id: "spring", name: "春 🌸" },
+        { id: "summer", name: "夏 ☀️" },
+        { id: "autumn", name: "秋 🍁" },
+        { id: "winter", name: "冬 ❄️" },
+        { id: "none", name: "指定なし" },
+      ];
+
+      seasonOrder.forEach((so) => {
+        bySeason[so.id].sort((a, b) => {
+          const urgencyA = a.urgency ?? 50;
+          const urgencyB = b.urgency ?? 50;
+          if (urgencyB !== urgencyA) {
+            return urgencyB - urgencyA;
+          }
+          return b.createdAt - a.createdAt;
+        });
+      });
+
+      return (
+        <div className="grouped-list">
+          {seasonOrder.map((so) => {
+            const seasonItems = bySeason[so.id];
+            if (seasonItems.length === 0) return null;
+            return (
+              <div key={so.id} className={styles.groupBlock}>
+                <div className={styles.groupTitle}>{so.name}</div>
+                <div className={styles.wishList}>
+                  {renderWishlistItems(seasonItems)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
     } else {
       const sortedList = [...list].sort((a, b) => {
         if (sortMode === "urgency") {
@@ -358,6 +414,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
           onChange={(e) => setSortMode(e.target.value as any)}
         >
           <option value="group">グループごと</option>
+          <option value="season">シーズンごと</option>
           <option value="urgency">早くやりたい度</option>
           <option value="createdAt_desc">新しい順</option>
           <option value="createdAt_asc">古い順</option>
