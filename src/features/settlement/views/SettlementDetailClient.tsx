@@ -20,6 +20,8 @@ import {
   updateSettlementItem,
   deleteSettlementItem,
   uploadReceipt,
+  uploadSettlementProof,
+  removeSettlementProof,
 } from "../api/settlement-client-service";
 import type {
   SettlementEvent,
@@ -45,6 +47,9 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SettlementItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const proofInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [isProofModalOpen, setIsProofModalOpen] = useState(false);
 
   const myNickname = userData?.nickname || userData?.displayName || "自分";
   const myPictureUrl = userData?.pictureUrl || "/icon.png";
@@ -122,6 +127,77 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       console.error("Failed to update event:", e);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 送金証明画像 (PayPay等) のアップロード処理
+  const handleProofFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !event) return;
+
+    showSpinner();
+    try {
+      const uploaded = await uploadSettlementProof(
+        eventId,
+        file,
+        activeResultTab,
+        settlement.ratioForMe
+      );
+      setEvent((prev) =>
+        prev
+          ? {
+            ...prev,
+            isSettled: true,
+            proofUrl: uploaded.proofUrl,
+            proofFileName: uploaded.proofFileName,
+            proofUploadedAt: Date.now(),
+            settlementMode: activeResultTab,
+            settledRatio: settlement.ratioForMe,
+          }
+          : null
+      );
+      await showDialog("送金完了画面（PayPay等）の画像を保存し、清算完了としました！🎉", true);
+    } catch (err) {
+      console.error("Failed to upload proof image:", err);
+      await showDialog("画像のアップロードに失敗しました", true);
+    } finally {
+      hideSpinner();
+      if (proofInputRef.current) proofInputRef.current.value = "";
+    }
+  };
+
+  // 送金証明画像の削除 (未清算に戻す)
+  const handleRemoveProof = async () => {
+    if (!event) return;
+    const confirm = await showDialog(
+      "送金証明画像を削除して、未清算状態に戻しますか？",
+      false
+    );
+    if (!confirm) return;
+
+    showSpinner();
+    try {
+      await removeSettlementProof(eventId);
+      setEvent((prev) =>
+        prev
+          ? {
+            ...prev,
+            isSettled: false,
+            proofUrl: undefined,
+            proofFileName: undefined,
+            proofUploadedAt: undefined,
+            settlementMode: undefined,
+            settledRatio: undefined,
+          }
+          : null
+      );
+      setIsProofModalOpen(false);
+      await showDialog("未清算状態に戻しました", true);
+    } catch (err) {
+      console.error("Failed to remove proof image:", err);
+      await showDialog("削除に失敗しました", true);
+    } finally {
+      hideSpinner();
     }
   };
 
@@ -402,16 +478,32 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
             </div>
           </div>
 
+          {/* 送金画面アップロード用隠しファイルインプット */}
+          <input
+            type="file"
+            ref={proofInputRef}
+            accept="image/*"
+            onChange={handleProofFileSelect}
+            style={{ display: "none" }}
+          />
+
           <div className={styles.headerActions}>
-            <label className={styles.settleCheckboxLabel}>
-              <input
-                type="checkbox"
-                checked={!!event?.isSettled}
-                onChange={handleToggleSettled}
-                className={styles.settleCheckbox}
-              />
-              <span>清算済み</span>
-            </label>
+            <span
+              className={styles.proofBadgeBtn}
+              onClick={() => event?.isSettled && setIsProofModalOpen(true)}
+              style={{
+                background: event?.isSettled ? "#e8f5e9" : "#f8f9fa",
+                color: event?.isSettled ? "#2e7d32" : "#666",
+                borderColor: event?.isSettled ? "#a5d6a7" : "#e0e0e0",
+                cursor: event?.isSettled ? "pointer" : "default",
+              }}
+            >
+              <i
+                className={event?.isSettled ? "fa-solid fa-circle-check" : "fa-solid fa-clock"}
+                style={{ color: event?.isSettled ? "#2e7d32" : "#888" }}
+              ></i>
+              <span>{event?.isSettled ? "清算完了" : "未清算"}</span>
+            </span>
           </div>
         </div>
 
@@ -604,6 +696,59 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 <div style={{ fontSize: "14px", color: "#e91e63", fontWeight: "bold", marginTop: "6px" }}>
                   {partnerNickname} から {myNickname} へ {settlement.diff.toLocaleString()}円 送金しましょう
                 </div>
+              </div>
+            )}
+
+            {/* アップロードされた送金証明画像 (PayPay等) のプレビュー表示 */}
+            {event?.proofUrl && (
+              <div className={styles.proofPreviewCard}>
+                <div className={styles.proofThumbContainer}>
+                  <img
+                    src={event.proofUrl}
+                    alt="送金完了画面"
+                    className={styles.proofThumb}
+                    onClick={() => setIsProofModalOpen(true)}
+                  />
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: "bold", color: "#166534" }}>
+                      📸 送金完了証明画像あり
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#666" }}>
+                      {event.proofFileName || "PayPay送金完了画面"}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsProofModalOpen(true)}
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #86efac",
+                    color: "#166534",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    padding: "4px 10px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  画像を拡大表示
+                </button>
+              </div>
+            )}
+
+            {/* 未清算時の送金完了画面アップロードボタン (resultBox下部) */}
+            {!event?.isSettled && (
+              <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1.5px dashed #ffd1dc", textAlign: "center" }}>
+                <button
+                  type="button"
+                  className={styles.uploadProofBtn}
+                  onClick={() => proofInputRef.current?.click()}
+                  style={{ width: "100%", justifyContent: "center", padding: "10px 16px", fontSize: "14px" }}
+                >
+                  <i className="fa-solid fa-camera"></i>
+                  <span>送金完了画面 (PayPay等) をアップロードして清算</span>
+                </button>
               </div>
             )}
           </div>
@@ -957,7 +1102,126 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
             </div>
           </div>
         )}
+
+        {/* 送金画面 (PayPay等) 拡大閲覧＆管理モーダル */}
+        {isProofModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(0,0,0,0.85)",
+              backdropFilter: "blur(4px)",
+              zIndex: 10000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+        padding: "20px",
+        boxSizing: "border-box",
+            }}
+        onClick={() => setIsProofModalOpen(false)}
+          >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: "20px",
+            padding: "20px",
+            maxWidth: "450px",
+            width: "100%",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            boxSizing: "border-box",
+            position: "relative",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <h3 style={{ margin: 0, fontSize: "16px", color: "#333", display: "flex", alignItems: "center", gap: "6px" }}>
+              <i className="fa-solid fa-circle-check" style={{ color: "#4caf50" }}></i>
+              送金完了証明画像 (PayPay等)
+            </h3>
+            <button
+              onClick={() => setIsProofModalOpen(false)}
+              style={{ background: "none", border: "none", fontSize: "20px", color: "#888", cursor: "pointer" }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {event?.proofUrl ? (
+            <div style={{ textAlign: "center" }}>
+              <img
+                src={event.proofUrl}
+                alt="送金完了証明画像"
+                style={{
+                  width: "100%",
+                  maxHeight: "380px",
+                  objectFit: "contain",
+                  borderRadius: "12px",
+                  border: "1px solid #eee",
+                  marginBottom: "16px",
+                }}
+              />
+              <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProofModalOpen(false);
+                    proofInputRef.current?.click();
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    border: "1px solid #ff758c",
+                    background: "#fff0f3",
+                    color: "#ff5e7e",
+                    fontWeight: "bold",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                  }}
+                >
+                  画像を差し替える
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveProof}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    border: "1px solid #e53935",
+                    background: "#ffebee",
+                    color: "#e53935",
+                    fontWeight: "bold",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                  }}
+                >
+                  画像を削除して未清算に戻す
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <p style={{ color: "#666", marginBottom: "16px" }}>まだ送金証明画像が登録されていません。</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProofModalOpen(false);
+                  proofInputRef.current?.click();
+                }}
+                className={styles.uploadProofBtn}
+              >
+                <i className="fa-solid fa-camera"></i>
+                <span>送金画面をアップロード</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </AuthGuard>
+        )}
+    </div>
+    </AuthGuard >
   );
 }

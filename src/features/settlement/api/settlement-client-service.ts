@@ -12,6 +12,7 @@ import {
   where,
   orderBy,
   writeBatch,
+  deleteField,
 } from "firebase/firestore";
 import { toPlainObject } from "@/src/lib/firestore/utils";
 import type { SettlementEvent, SettlementItem } from "@/src/lib/firestore/types";
@@ -24,8 +25,8 @@ export async function uploadReceipt(
   const fileType = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
   const storagePath = `settlements/${eventId}/${Date.now()}_${file.name}`;
   const storageRef = ref(storage, storagePath);
-  const snapshot = await uploadBytes(storageRef, file);
-  const receiptUrl = await getDownloadURL(snapshot.ref);
+  await uploadBytes(storageRef, file);
+  const receiptUrl = await getDownloadURL(storageRef);
 
   return {
     receiptUrl,
@@ -119,6 +120,46 @@ export async function toggleSettlementEventSettled(
     isSettled,
     settlementMode: isSettled ? (settlementMode || "even") : null,
     settledRatio: isSettled ? (settledRatio ?? 50) : null,
+    updatedAt: Date.now(),
+  });
+}
+
+// 清算証明画像 (PayPay等の送金完了画面) をアップロードして清算完了にする
+export async function uploadSettlementProof(
+  eventId: string,
+  file: File,
+  settlementMode?: "even" | "my" | "partner",
+  settledRatio?: number
+): Promise<{ proofUrl: string; proofFileName: string }> {
+  const fileName = `${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, `settlements/${eventId}/proofs/${fileName}`);
+  await uploadBytes(storageRef, file);
+  const proofUrl = await getDownloadURL(storageRef);
+
+  const docRef = doc(db, "settlementEvents", eventId);
+  await updateDoc(docRef, {
+    isSettled: true,
+    proofUrl,
+    proofFileName: file.name,
+    proofUploadedAt: Date.now(),
+    settlementMode: settlementMode || "even",
+    settledRatio: settledRatio ?? 50,
+    updatedAt: Date.now(),
+  });
+
+  return { proofUrl, proofFileName: file.name };
+}
+
+// 清算証明画像を削除して未清算に戻す
+export async function removeSettlementProof(eventId: string): Promise<void> {
+  const docRef = doc(db, "settlementEvents", eventId);
+  await updateDoc(docRef, {
+    isSettled: false,
+    proofUrl: deleteField(),
+    proofFileName: deleteField(),
+    proofUploadedAt: deleteField(),
+    settlementMode: deleteField(),
+    settledRatio: deleteField(),
     updatedAt: Date.now(),
   });
 }
