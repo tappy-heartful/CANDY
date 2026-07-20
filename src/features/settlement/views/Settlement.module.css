@@ -647,6 +647,76 @@
   margin-left: auto;
 }
 
+/* 送金画面アップロードボタン・バッジ */
+.uploadProofBtn {
+  background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 117, 140, 0.35);
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.uploadProofBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 117, 140, 0.45);
+}
+
+.proofBadgeBtn {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1.5px solid #a5d6a7;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.proofBadgeBtn:hover {
+  background: #c8e6c9;
+}
+
+/* 証明画像プレビューカード */
+.proofPreviewCard {
+  margin-top: 14px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.proofThumbContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.proofThumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #86efac;
+  cursor: pointer;
+}
+
 /* 清算済みチェックボックス */
 .settleCheckboxLabel {
   display: inline-flex;

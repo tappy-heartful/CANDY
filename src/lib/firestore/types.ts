@@ -191,6 +191,9 @@ export interface SettlementEvent {
   isSettled: boolean; // 清算完了フラグ
   settlementMode?: "even" | "my" | "partner"; // 清算方式モード (均等, 自分の希望, 相手の希望)
   settledRatio?: number; // 清算時の自分の負担割合 (%)
+  proofUrl?: string; // 清算証明画像 (PayPay送金画面等) のURL
+  proofFileName?: string; // 証明画像ファイル名
+  proofUploadedAt?: number; // 証明画像アップロード日時
   uid: string; // 作成者
   createdAt: number;
   updatedAt: number;

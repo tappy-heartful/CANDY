@@ -7,8 +7,8 @@ service firebase.storage {
       allow read, write: if request.auth != null;
     }
 
-    // ログイン済みユーザーのみ、ワリカン領収書ファイルの読み書きを許可
-    match /settlements/{eventId}/{fileName} {
+    // ログイン済みユーザーのみ、ワリカン関連ファイル（領収書・送金証明画像等）の読み書きを許可
+    match /settlements/{eventId}/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
   }
