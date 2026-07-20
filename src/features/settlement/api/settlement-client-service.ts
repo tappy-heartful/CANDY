@@ -107,11 +107,18 @@ export async function updateSettlementEvent(
   });
 }
 
-// 清算完了フラグの切り替え
-export async function toggleSettlementEventSettled(eventId: string, isSettled: boolean): Promise<void> {
+// 清算完了フラグおよび精算モードの切り替え
+export async function toggleSettlementEventSettled(
+  eventId: string,
+  isSettled: boolean,
+  settlementMode?: "even" | "my" | "partner",
+  settledRatio?: number
+): Promise<void> {
   const ref = doc(db, "settlementEvents", eventId);
   await updateDoc(ref, {
     isSettled,
+    settlementMode: isSettled ? (settlementMode || "even") : null,
+    settledRatio: isSettled ? (settledRatio ?? 50) : null,
     updatedAt: Date.now(),
   });
 }

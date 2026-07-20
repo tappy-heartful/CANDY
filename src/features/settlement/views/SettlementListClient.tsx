@@ -153,7 +153,15 @@ export default function SettlementListClient() {
                           evt.isSettled ? styles.badgeSettled : styles.badgeUnsettled
                         }`}
                       >
-                        {evt.isSettled ? "✓ 清算完了" : "未清算"}
+                        {evt.isSettled
+                          ? `✓ 清算完了${
+                              evt.settlementMode === "even"
+                                ? " (均等割)"
+                                : evt.settlementMode
+                                ? " (希望割合)"
+                                : ""
+                            }`
+                          : "未清算"}
                       </span>
                     </div>
 
