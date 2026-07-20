@@ -353,8 +353,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     activeResultTab === "my"
       ? mySettlement
       : activeResultTab === "partner"
-      ? partnerSettlement
-      : evenSettlement;
+        ? partnerSettlement
+        : evenSettlement;
 
   return (
     <AuthGuard>
@@ -490,8 +490,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {event.settlementMode === "even"
                   ? "均等割 (50:50)"
                   : event.settlementMode === "partner"
-                  ? `${partnerNickname}の希望`
-                  : `${myNickname}の希望`}
+                    ? `${partnerNickname}の希望`
+                    : `${myNickname}の希望`}
                 」で清算完了済
               </span>
             )}
@@ -501,9 +501,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.resultTabContainer}>
             {/* 1行目: 均等割 */}
             <button
-              className={`${styles.resultTabBtn} ${styles.resultTabBtnFull} ${
-                activeResultTab === "even" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${styles.resultTabBtnFull} ${activeResultTab === "even" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("even")}
             >
               ⚖️ 均等割 (50:50)
@@ -511,9 +510,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
             {/* 2行目左: 自分の希望 */}
             <button
-              className={`${styles.resultTabBtn} ${
-                activeResultTab === "my" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${activeResultTab === "my" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("my")}
             >
               🙋‍♂️ {myNickname}の希望 ({myRatio}:{100 - myRatio})
@@ -521,9 +519,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
             {/* 2行目右: 相手の希望 */}
             <button
-              className={`${styles.resultTabBtn} ${
-                activeResultTab === "partner" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${activeResultTab === "partner" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("partner")}
             >
               🙋‍♀️ {partnerNickname}の希望 ({100 - partnerSelfRatio}:{partnerSelfRatio})
@@ -531,13 +528,12 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           </div>
 
           <div
-            className={`${styles.resultBox} ${
-              event?.isSettled ? styles.settledResultBox : ""
-            }`}
+            className={`${styles.resultBox} ${event?.isSettled ? styles.settledResultBox : ""
+              }`}
           >
             {settlement.diff === 0 ? (
               <div className={styles.evenState}>
-                ⚖️ ちょうど半分ずつ支払っています！（精算なし）
+                ⚖️ 精算なし
               </div>
             ) : settlement.diff < 0 ? (
               // 自分が払う
@@ -626,8 +622,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {mySettlement.diff === 0
                   ? "精算なし (0円)"
                   : mySettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${mySettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(mySettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${mySettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(mySettlement.diff).toLocaleString()}円`}
               </span>
             </div>
 
@@ -641,8 +637,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {evenSettlement.diff === 0
                   ? "精算なし (0円)"
                   : evenSettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${evenSettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(evenSettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${evenSettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(evenSettlement.diff).toLocaleString()}円`}
               </span>
             </div>
 
@@ -656,8 +652,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {partnerSettlement.diff === 0
                   ? "精算なし (0円)"
                   : partnerSettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${partnerSettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(partnerSettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${partnerSettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(partnerSettlement.diff).toLocaleString()}円`}
               </span>
             </div>
           </div>
@@ -747,7 +743,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                                 ? "fa-solid fa-file-pdf"
                                 : "fa-solid fa-receipt"
                             }></i>
-                            <span>領収書{ (item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : "" }</span>
+                            <span>領収書{(item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : ""}</span>
                           </button>
                         )}
                       </div>
@@ -756,9 +752,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
                   <div className={styles.itemRight}>
                     <span
-                      className={`${styles.itemAmount} ${
-                        item.type === "expense" ? styles.amountExpense : styles.amountIncome
-                      }`}
+                      className={`${styles.itemAmount} ${item.type === "expense" ? styles.amountExpense : styles.amountIncome
+                        }`}
                     >
                       {item.type === "expense" ? "-" : "+"}
                       {item.amount.toLocaleString()}円
