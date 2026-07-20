@@ -125,14 +125,24 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     }
   };
 
-  // 清算完了フラグ切替
+  // 清算完了フラグ切替 (現在のモード・希望割合もデータ保持)
   const handleToggleSettled = async () => {
     if (!event) return;
     const nextState = !event.isSettled;
     showSpinner();
     try {
-      await toggleSettlementEventSettled(eventId, nextState);
-      setEvent({ ...event, isSettled: nextState });
+      await toggleSettlementEventSettled(
+        eventId,
+        nextState,
+        nextState ? activeResultTab : undefined,
+        nextState ? settlement.ratioForMe : undefined
+      );
+      setEvent({
+        ...event,
+        isSettled: nextState,
+        settlementMode: nextState ? activeResultTab : undefined,
+        settledRatio: nextState ? settlement.ratioForMe : undefined,
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -279,39 +289,59 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     }
   };
 
+  // 各ユーザーの支払い・収入小計の算出
+  const myExpenses = items
+    .filter((i) => i.payerUid === user?.uid && i.type === "expense")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const myIncomes = items
+    .filter((i) => i.payerUid === user?.uid && i.type === "income")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const myNetPaid = myExpenses - myIncomes;
+
+  const partnerExpenses = items
+    .filter((i) => i.payerUid !== user?.uid && i.type === "expense")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const partnerIncomes = items
+    .filter((i) => i.payerUid !== user?.uid && i.type === "income")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const partnerNetPaid = partnerExpenses - partnerIncomes;
+
+  const totalExpenses = myExpenses + partnerExpenses;
+  const totalIncomes = myIncomes + partnerIncomes;
+  const totalNetPaid = myNetPaid + partnerNetPaid;
+
   const partnerSelfRatio = partnerData?.splitRatio !== undefined ? partnerData.splitRatio : 50;
   const partnerPreferredMyRatio = 100 - partnerSelfRatio;
 
   const [activeResultTab, setActiveResultTab] = useState<"my" | "even" | "partner">("my");
 
+  useEffect(() => {
+    if (event?.isSettled && event.settlementMode) {
+      setActiveResultTab(event.settlementMode);
+    }
+  }, [event?.isSettled, event?.settlementMode]);
+
   // 精算計算ヘルパー関数
   const calcSettlementForRatio = (ratioForMe: number) => {
-    let myNet = 0;
-    let partnerNet = 0;
+    const ratioForPartner = 100 - ratioForMe;
 
-    items.forEach((item) => {
-      const val = item.type === "expense" ? item.amount : -item.amount;
-      if (item.payerUid === user?.uid) {
-        myNet += val;
-      } else {
-        partnerNet += val;
-      }
-    });
-
-    const totalNet = myNet + partnerNet;
-    const myShare = totalNet * (ratioForMe / 100);
-    const partnerShare = totalNet - myShare;
-    const diff = myNet - myShare;
+    const myTargetShare = Math.round(totalNetPaid * (ratioForMe / 100));
+    const partnerTargetShare = totalNetPaid - myTargetShare;
+    const diff = Math.round(myNetPaid - myTargetShare);
 
     return {
       ratioForMe,
-      ratioForPartner: 100 - ratioForMe,
-      myNet,
-      partnerNet,
-      totalNet,
-      myShare: Math.round(myShare),
-      partnerShare: Math.round(partnerShare),
-      diff: Math.round(diff),
+      ratioForPartner,
+      myNetPaid,
+      partnerNetPaid,
+      totalNetPaid,
+      myTargetShare,
+      partnerTargetShare,
+      diff,
     };
   };
 
@@ -323,8 +353,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     activeResultTab === "my"
       ? mySettlement
       : activeResultTab === "partner"
-      ? partnerSettlement
-      : evenSettlement;
+        ? partnerSettlement
+        : evenSettlement;
 
   return (
     <AuthGuard>
@@ -390,7 +420,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.sliderHeader}>
             <div className={styles.sliderTitle}>
               <i className="fa-solid fa-sliders" style={{ color: "#ff758c" }}></i>
-              <span>{myNickname}の現在の調整希望比率</span>
+              <span>{myNickname}の希望調整比率</span>
             </div>
           </div>
 
@@ -442,7 +472,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.partnerSettingBox}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <img src={partnerPictureUrl} alt={partnerNickname} style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }} />
-              <span>{partnerNickname}の標準希望設定:</span>
+              <span>{partnerNickname}の希望調整比率:</span>
             </div>
             <span>
               {partnerNickname} {partnerSelfRatio}% : {myNickname} {100 - partnerSelfRatio}%
@@ -456,7 +486,13 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
             <span>💰 精算結果</span>
             {event?.isSettled && (
               <span style={{ fontSize: "13px", color: "#4caf50", fontWeight: "bold" }}>
-                🎉 このイベントは清算済みです
+                🎉「
+                {event.settlementMode === "even"
+                  ? "均等割 (50:50)"
+                  : event.settlementMode === "partner"
+                    ? `${partnerNickname}の希望`
+                    : `${myNickname}の希望`}
+                」で清算完了済
               </span>
             )}
           </div>
@@ -465,9 +501,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.resultTabContainer}>
             {/* 1行目: 均等割 */}
             <button
-              className={`${styles.resultTabBtn} ${styles.resultTabBtnFull} ${
-                activeResultTab === "even" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${styles.resultTabBtnFull} ${activeResultTab === "even" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("even")}
             >
               ⚖️ 均等割 (50:50)
@@ -475,9 +510,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
             {/* 2行目左: 自分の希望 */}
             <button
-              className={`${styles.resultTabBtn} ${
-                activeResultTab === "my" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${activeResultTab === "my" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("my")}
             >
               🙋‍♂️ {myNickname}の希望 ({myRatio}:{100 - myRatio})
@@ -485,9 +519,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
             {/* 2行目右: 相手の希望 */}
             <button
-              className={`${styles.resultTabBtn} ${
-                activeResultTab === "partner" ? styles.activeResultTab : ""
-              }`}
+              className={`${styles.resultTabBtn} ${activeResultTab === "partner" ? styles.activeResultTab : ""
+                }`}
               onClick={() => setActiveResultTab("partner")}
             >
               🙋‍♀️ {partnerNickname}の希望 ({100 - partnerSelfRatio}:{partnerSelfRatio})
@@ -495,13 +528,12 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           </div>
 
           <div
-            className={`${styles.resultBox} ${
-              event?.isSettled ? styles.settledResultBox : ""
-            }`}
+            className={`${styles.resultBox} ${event?.isSettled ? styles.settledResultBox : ""
+              }`}
           >
             {settlement.diff === 0 ? (
               <div className={styles.evenState}>
-                ⚖️ ちょうど半分ずつ支払っています！（精算なし）
+                ⚖️ 精算なし
               </div>
             ) : settlement.diff < 0 ? (
               // 自分が払う
@@ -590,8 +622,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {mySettlement.diff === 0
                   ? "精算なし (0円)"
                   : mySettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${mySettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(mySettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${mySettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(mySettlement.diff).toLocaleString()}円`}
               </span>
             </div>
 
@@ -605,8 +637,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {evenSettlement.diff === 0
                   ? "精算なし (0円)"
                   : evenSettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${evenSettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(evenSettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${evenSettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(evenSettlement.diff).toLocaleString()}円`}
               </span>
             </div>
 
@@ -620,8 +652,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                 {partnerSettlement.diff === 0
                   ? "精算なし (0円)"
                   : partnerSettlement.diff > 0
-                  ? `${partnerNickname} ➔ ${myNickname}へ ${partnerSettlement.diff.toLocaleString()}円`
-                  : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(partnerSettlement.diff).toLocaleString()}円`}
+                    ? `${partnerNickname} ➔ ${myNickname}へ ${partnerSettlement.diff.toLocaleString()}円`
+                    : `${myNickname} ➔ ${partnerNickname}へ ${Math.abs(partnerSettlement.diff).toLocaleString()}円`}
               </span>
             </div>
           </div>
@@ -711,7 +743,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                                 ? "fa-solid fa-file-pdf"
                                 : "fa-solid fa-receipt"
                             }></i>
-                            <span>領収書{ (item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : "" }</span>
+                            <span>領収書{(item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : ""}</span>
                           </button>
                         )}
                       </div>
@@ -720,9 +752,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
                   <div className={styles.itemRight}>
                     <span
-                      className={`${styles.itemAmount} ${
-                        item.type === "expense" ? styles.amountExpense : styles.amountIncome
-                      }`}
+                      className={`${styles.itemAmount} ${item.type === "expense" ? styles.amountExpense : styles.amountIncome
+                        }`}
                     >
                       {item.type === "expense" ? "-" : "+"}
                       {item.amount.toLocaleString()}円
@@ -761,6 +792,90 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
             })}
           </div>
         )}
+
+        {/* 明細集計サマリー (ユーザーごとの小計・合計 & 計算式) */}
+        <div className={styles.subtotalSummaryCard}>
+          <div className={styles.subtotalGrid}>
+            {/* 自分の集計 */}
+            <div className={styles.userSubtotalBox}>
+              <div className={styles.subtotalUserHeader}>
+                <img src={myPictureUrl} alt={myNickname} className={styles.subtotalAvatar} />
+                <span>{myNickname} の小計</span>
+              </div>
+              <div className={styles.subtotalRow}>
+                <span>支払い小計:</span>
+                <span className={styles.expenseText}>{myExpenses.toLocaleString()}円</span>
+              </div>
+              {myIncomes > 0 && (
+                <div className={styles.subtotalRow}>
+                  <span>収入小計:</span>
+                  <span className={styles.incomeText}>-{myIncomes.toLocaleString()}円</span>
+                </div>
+              )}
+              <div className={`${styles.subtotalRow} ${styles.subtotalTotalRow}`}>
+                <span>純支払額 (合計):</span>
+                <span>{myNetPaid.toLocaleString()}円</span>
+              </div>
+            </div>
+
+            {/* パートナーの集計 */}
+            <div className={styles.userSubtotalBox}>
+              <div className={styles.subtotalUserHeader}>
+                <img src={partnerPictureUrl} alt={partnerNickname} className={styles.subtotalAvatar} />
+                <span>{partnerNickname} の小計</span>
+              </div>
+              <div className={styles.subtotalRow}>
+                <span>支払い小計:</span>
+                <span className={styles.expenseText}>{partnerExpenses.toLocaleString()}円</span>
+              </div>
+              {partnerIncomes > 0 && (
+                <div className={styles.subtotalRow}>
+                  <span>収入小計:</span>
+                  <span className={styles.incomeText}>-{partnerIncomes.toLocaleString()}円</span>
+                </div>
+              )}
+              <div className={`${styles.subtotalRow} ${styles.subtotalTotalRow}`}>
+                <span>純支払額 (合計):</span>
+                <span>{partnerNetPaid.toLocaleString()}円</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 全体合計額 */}
+          <div className={styles.grandTotalBox}>
+            <span>全体の純支払合計額:</span>
+            <span className={styles.grandTotalAmount}>{totalNetPaid.toLocaleString()}円</span>
+          </div>
+
+          {/* 精算額の計算プロセス (計算式) */}
+          <div className={styles.formulaBox}>
+            <div className={styles.formulaTitle}>
+              <i className="fa-solid fa-calculator"></i>
+              <span>精算額の計算プロセス ({settlement.ratioForMe}% : {settlement.ratioForPartner}%)</span>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>1</span>
+              <span>全体の純支払合計額 = <strong>{totalNetPaid.toLocaleString()}円</strong></span>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>2</span>
+              <span>
+                {myNickname}の理想負担額 ({settlement.ratioForMe}%):{" "}
+                <strong>{totalNetPaid.toLocaleString()}円 × {settlement.ratioForMe}% = {settlement.myTargetShare.toLocaleString()}円</strong>
+              </span>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>3</span>
+              <span>
+                {myNickname}の過不足:{" "}
+                <strong>
+                  {myNetPaid.toLocaleString()}円 (実支払) - {settlement.myTargetShare.toLocaleString()}円 (目標) ={" "}
+                  {settlement.diff > 0 ? `+${settlement.diff.toLocaleString()}` : settlement.diff.toLocaleString()}円
+                </strong>
+              </span>
+            </div>
+          </div>
+        </div>
 
         <EventModal
           isOpen={isEventModalOpen}
