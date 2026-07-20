@@ -24,6 +24,9 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import GoalModal from "../components/GoalModal";
 import PhotoSlideshow from "../components/PhotoSlideshow";
 import TodoModal from "@/src/features/todo/components/TodoModal";
+import BirthdayCelebration from "../components/BirthdayCelebration";
+import FireworksCanvas from "../components/FireworksCanvas";
+import { isTodayBirthday } from "../utils/birthday";
 
 const CLOCK_THEMES = [
   "themePinkyRibbon",
@@ -95,6 +98,29 @@ export default function HomeClient() {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [todoGroups, setTodoGroups] = useState<Group[]>([]);
   const [isTodoSubmitting, setIsTodoSubmitting] = useState(false);
+
+  const [isMyBirthday, setIsMyBirthday] = useState(false);
+  const [isPartnerBirthday, setIsPartnerBirthday] = useState(false);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [isFireworksActive, setIsFireworksActive] = useState(false);
+
+  useEffect(() => {
+    if (userData || partnerData) {
+      const myBday = isTodayBirthday(userData?.birthday);
+      const partnerBday = isTodayBirthday(partnerData?.birthday);
+      setIsMyBirthday(myBday);
+      setIsPartnerBirthday(partnerBday);
+
+      if (myBday || partnerBday) {
+        setIsFireworksActive(true);
+        const hasBirthdayWelcomed = sessionStorage.getItem('candy.birthdayWelcomed');
+        if (!hasBirthdayWelcomed) {
+          setShowBirthdayModal(true);
+          sessionStorage.setItem('candy.birthdayWelcomed', 'true');
+        }
+      }
+    }
+  }, [userData, partnerData]);
 
   const refreshTodos = async (userId: string) => {
     try {
@@ -446,6 +472,57 @@ export default function HomeClient() {
           </div>
         )}
 
+        {isFireworksActive && <FireworksCanvas />}
+
+        {showBirthdayModal && (
+          <BirthdayCelebration
+            isMyBirthday={isMyBirthday}
+            isPartnerBirthday={isPartnerBirthday}
+            myNickname={userData?.nickname || userData?.displayName || "自分"}
+            partnerNickname={partnerData?.nickname || "パートナー"}
+            onClose={() => setShowBirthdayModal(false)}
+          />
+        )}
+
+        {(isMyBirthday || isPartnerBirthday) && (
+          <div
+            className={styles.birthdayBanner}
+            onClick={() => setShowBirthdayModal(true)}
+          >
+            <div className={styles.birthdayBannerContent}>
+              <span className={styles.birthdayBannerIcon}>🎆</span>
+              <div>
+                <div className={styles.birthdayBannerTitle}>
+                  {isMyBirthday && isPartnerBirthday
+                    ? `HAPPY BIRTHDAY ${userData?.nickname || "自分"} & ${partnerData?.nickname || "パートナー"}!`
+                    : isMyBirthday
+                    ? `HAPPY BIRTHDAY ${userData?.nickname || "自分"}!`
+                    : `HAPPY BIRTHDAY ${partnerData?.nickname || "パートナー"}!`}
+                </div>
+                <div className={styles.birthdayBannerSub}>
+                  本日は特別なお誕生日です！タップして演出を見る 🎆🥂
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <button
+                className={styles.birthdayBannerAction}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFireworksActive(!isFireworksActive);
+                }}
+                title="花火打ち上げのON/OFF切替"
+              >
+                <span>{isFireworksActive ? "🎆 花火OFF" : "🎆 花火ON"}</span>
+              </button>
+              <div className={styles.birthdayBannerAction}>
+                <span>お祝い</span>
+                <i className="fa-solid fa-chevron-right"></i>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={`${styles.cuteClockContainer} ${styles[currentTheme]} candy-float-animation`}>
           <div className={styles.clockControls}>
             <button className={styles.cycleThemeBtn} onClick={handleCycleTheme} title="テーマを変更">
@@ -504,7 +581,8 @@ export default function HomeClient() {
         <div className={styles.welcomeSection}>
           <div className={styles.profileRow}>
             {/* My profile */}
-            <div className={styles.profileImgContainer}>
+            <div className={`${styles.profileImgContainer} ${isMyBirthday ? styles.birthdayProfileContainer : ''}`}>
+              {isMyBirthday && <span className={styles.birthdayCrownBadge}>👑</span>}
               <img src={userData?.pictureUrl || "/icon.png"} alt="Profile" className={styles.profileImg} />
               <Link href="/user/edit" className={styles.editBadge}>
                 <i className="fa-solid fa-pen"></i>
@@ -517,7 +595,8 @@ export default function HomeClient() {
             </div>
 
             {/* Partner profile */}
-            <div className={styles.profileImgContainer}>
+            <div className={`${styles.profileImgContainer} ${isPartnerBirthday ? styles.birthdayProfileContainer : ''}`}>
+              {isPartnerBirthday && <span className={styles.birthdayCrownBadge}>👑</span>}
               <img src={partnerData?.pictureUrl || "/icon.png"} alt="Partner Profile" className={`${styles.profileImg} ${styles.partnerImg}`} />
             </div>
           </div>
