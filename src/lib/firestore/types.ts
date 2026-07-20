@@ -143,6 +143,12 @@ export interface Photo {
   uid: string;
   createdAt: number;
   takenAt?: number;
+  latitude?: number;
+  longitude?: number;
+  prefectureCode?: string;
+  prefectureName?: string;
+  municipalityCode?: string;
+  municipalityName?: string;
 }
 
 export interface Prefecture {
