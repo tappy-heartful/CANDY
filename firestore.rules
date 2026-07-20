@@ -99,6 +99,19 @@ service cloud.firestore {
       allow read, write: if isOwner(uid);
     }
 
+    // ワリカン（イベント＆明細）
+    match /settlementEvents/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn();
+    }
+
+    match /settlementItems/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
 
     // ============================
 
