@@ -188,66 +188,6 @@ export function getExifLocation(file: File): Promise<{ latitude: number; longitu
   });
 }
 
-interface GeoLocationInfo {
-  prefectureCode?: string;
-  prefectureName?: string;
-  municipalityCode?: string;
-  municipalityName?: string;
-}
-
-// 逆ジオコーディング用の内部キャッシュ (同一座標キー -> GeoLocationInfo)
-const geoCache = new Map<string, GeoLocationInfo>();
-let cachedPrefectures: Prefecture[] | null = null;
-const cachedMunicipalitiesMap = new Map<string, Municipality[]>();
-
-export async function reverseGeocode(lat: number, lon: number): Promise<GeoLocationInfo | null> {
-  const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
-  if (geoCache.has(cacheKey)) {
-    return geoCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LONLAT?lat=${lat}&lon=${lon}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-
-    const muniCd = data?.results?.muniCd;
-    if (!muniCd || typeof muniCd !== "string" || muniCd.length < 5) {
-      return null;
-    }
-
-    const prefCode = muniCd.substring(0, 2);
-    const muniCode = muniCd;
-
-    if (!cachedPrefectures) {
-      cachedPrefectures = await getPrefectures();
-    }
-    const prefObj = cachedPrefectures.find((p) => String(p.code).padStart(2, "0") === prefCode);
-    const prefectureName = prefObj?.name;
-
-    if (!cachedMunicipalitiesMap.has(prefCode)) {
-      const munis = await getMunicipalities(prefCode);
-      cachedMunicipalitiesMap.set(prefCode, munis);
-    }
-    const munis = cachedMunicipalitiesMap.get(prefCode) || [];
-    const muniObj = munis.find((m) => m.code === muniCode);
-    const municipalityName = muniObj?.name;
-
-    const result: GeoLocationInfo = {
-      prefectureCode: prefCode,
-      prefectureName,
-      municipalityCode: muniCode,
-      municipalityName,
-    };
-
-    geoCache.set(cacheKey, result);
-    return result;
-  } catch (e) {
-    console.error("Reverse geocoding failed:", e);
-    return null;
-  }
-}
-
 // 写真をアップロードしてDBに追加
 export async function uploadPhoto(albumId: string, file: File, uid: string): Promise<Photo> {
   // Exifから撮影日時および位置情報を抽出
@@ -256,16 +196,6 @@ export async function uploadPhoto(albumId: string, file: File, uid: string): Pro
     takenAt = file.lastModified || Date.now();
   }
   const location = await getExifLocation(file);
-
-  // 緯度経度から都道府県・市区町村を自動判定
-  let geoInfo: GeoLocationInfo | null = null;
-  if (location) {
-    try {
-      geoInfo = await reverseGeocode(location.latitude, location.longitude);
-    } catch (e) {
-      console.error("Failed to reverse geocode photo location:", e);
-    }
-  }
 
   // 画像ファイルをアップロード前に圧縮 (最大1200px, 品質0.75)
   const compressedFile = await compressImage(file, 1200, 0.75);
@@ -287,10 +217,6 @@ export async function uploadPhoto(albumId: string, file: File, uid: string): Pro
     photoData.latitude = location.latitude;
     photoData.longitude = location.longitude;
   }
-  if (geoInfo?.prefectureCode) photoData.prefectureCode = geoInfo.prefectureCode;
-  if (geoInfo?.prefectureName) photoData.prefectureName = geoInfo.prefectureName;
-  if (geoInfo?.municipalityCode) photoData.municipalityCode = geoInfo.municipalityCode;
-  if (geoInfo?.municipalityName) photoData.municipalityName = geoInfo.municipalityName;
 
   const refPhotos = collection(db, "photos");
   const docRef = await addDoc(refPhotos, photoData);
@@ -303,10 +229,6 @@ export async function uploadPhoto(albumId: string, file: File, uid: string): Pro
     createdAt: Date.now(),
     takenAt,
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
-    ...(geoInfo?.prefectureCode ? { prefectureCode: geoInfo.prefectureCode } : {}),
-    ...(geoInfo?.prefectureName ? { prefectureName: geoInfo.prefectureName } : {}),
-    ...(geoInfo?.municipalityCode ? { municipalityCode: geoInfo.municipalityCode } : {}),
-    ...(geoInfo?.municipalityName ? { municipalityName: geoInfo.municipalityName } : {}),
   };
 }
 

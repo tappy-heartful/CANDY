@@ -145,10 +145,6 @@ export interface Photo {
   takenAt?: number;
   latitude?: number;
   longitude?: number;
-  prefectureCode?: string;
-  prefectureName?: string;
-  municipalityCode?: string;
-  municipalityName?: string;
 }
 
 export interface Prefecture {
