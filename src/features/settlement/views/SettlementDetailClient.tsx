@@ -472,7 +472,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.partnerSettingBox}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <img src={partnerPictureUrl} alt={partnerNickname} style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }} />
-              <span>{partnerNickname}希望調整比率:</span>
+              <span>{partnerNickname}の希望調整比率:</span>
             </div>
             <span>
               {partnerNickname} {partnerSelfRatio}% : {myNickname} {100 - partnerSelfRatio}%
