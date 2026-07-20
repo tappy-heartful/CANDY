@@ -420,7 +420,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.sliderHeader}>
             <div className={styles.sliderTitle}>
               <i className="fa-solid fa-sliders" style={{ color: "#ff758c" }}></i>
-              <span>{myNickname}の現在の調整希望比率</span>
+              <span>{myNickname}の希望調整比率</span>
             </div>
           </div>
 
@@ -472,7 +472,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           <div className={styles.partnerSettingBox}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <img src={partnerPictureUrl} alt={partnerNickname} style={{ width: "20px", height: "20px", borderRadius: "50%", objectFit: "cover" }} />
-              <span>{partnerNickname}の標準希望設定:</span>
+              <span>{partnerNickname}希望調整比率:</span>
             </div>
             <span>
               {partnerNickname} {partnerSelfRatio}% : {myNickname} {100 - partnerSelfRatio}%
