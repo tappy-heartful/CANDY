@@ -968,4 +968,107 @@
   border-color: #dbeafe !important;
 }
 
+/* Birthday Decoration Styles */
+.birthdayBanner {
+  background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 50%, #ffac81 100%);
+  border-radius: 20px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(255, 117, 140, 0.35);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: pulseBirthdayBanner 2s ease-in-out infinite alternate;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.birthdayBanner:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 30px rgba(255, 117, 140, 0.45);
+}
+
+@keyframes pulseBirthdayBanner {
+  0% {
+    box-shadow: 0 6px 18px rgba(255, 117, 140, 0.3);
+  }
+  100% {
+    box-shadow: 0 12px 28px rgba(255, 117, 140, 0.55);
+  }
+}
+
+.birthdayBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.birthdayBannerIcon {
+  font-size: 28px;
+  animation: bounceCake 2s ease-in-out infinite;
+}
+
+.birthdayBannerTitle {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+
+.birthdayBannerSub {
+  font-size: 11px;
+  opacity: 0.95;
+  font-weight: 600;
+}
+
+.birthdayBannerAction {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.birthdayProfileContainer {
+  position: relative;
+}
+
+.birthdayProfileContainer::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff007f, #ffaa00, #00f0ff, #ff007f);
+  background-size: 300% 300%;
+  z-index: 0;
+  animation: rainbowFlow 4s linear infinite;
+  box-shadow: 0 0 12px rgba(255, 117, 140, 0.6);
+}
+
+.birthdayProfileContainer .profileImg {
+  position: relative;
+  z-index: 1;
+}
+
+.birthdayCrownBadge {
+  position: absolute;
+  top: -12px;
+  right: -6px;
+  font-size: 22px;
+  z-index: 2;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  animation: crownWiggle 1.5s ease-in-out infinite alternate;
+}
+
+
 
