@@ -29,6 +29,7 @@ export interface User {
   calendarMode?: "grid" | "timeline";
   timelineMode?: "list" | "columns";
   dailyAgendaMode?: "list" | "timeline";
+  splitRatio?: number; // 希望ワリカン率 (0〜100, デフォルト 50)
   [key: string]: any;
 }
 
@@ -143,6 +144,8 @@ export interface Photo {
   uid: string;
   createdAt: number;
   takenAt?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Prefecture {
@@ -181,5 +184,37 @@ export interface NotificationSetting {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface SettlementEvent {
+  id: string;
+  name: string; // イベント名
+  isSettled: boolean; // 清算完了フラグ
+  uid: string; // 作成者
+  createdAt: number;
+  updatedAt: number;
+  prefectureCode?: string;
+  prefectureName?: string;
+  municipalityCode?: string;
+  municipalityName?: string;
+  dateMode?: "single" | "range";
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface SettlementItem {
+  id: string;
+  eventId: string; // 属するイベントID
+  title: string; // 項目名
+  amount: number; // 金額
+  type: "expense" | "income"; // 支払 | 収入
+  payerUid: string; // 支払った/収入を得たユーザー
+  uid: string; // 登録者
+  receiptUrl?: string; // 領収書ダウンロードURL
+  receiptFileName?: string; // 領収書ファイル名
+  receiptFileType?: string; // 領収書ファイル種別 ("image/*" | "application/pdf")
+  createdAt: number;
+  updatedAt: number;
+}
+
 
 
