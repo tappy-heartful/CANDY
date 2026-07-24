@@ -286,6 +286,31 @@
 .itemList {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.dateGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.dateHeader {
+  font-size: 14px;
+  font-weight: 800;
+  color: #4a3e56;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1.5px solid #ffe4ed;
+  border-left: 3px solid #ff758c;
+  width: fit-content;
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 

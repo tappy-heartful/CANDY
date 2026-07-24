@@ -15,6 +15,8 @@ interface ExpenseItemModalProps {
     amount: number;
     type: "expense" | "income";
     payerUid: string;
+    date: string;
+    time: string;
     receiptFile?: File | null;
     clearReceipt?: boolean;
   }) => Promise<void>;
@@ -35,6 +37,8 @@ export default function ExpenseItemModal({
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<"expense" | "income">("expense");
   const [payerUid, setPayerUid] = useState(currentUserId);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -59,6 +63,8 @@ export default function ExpenseItemModal({
       setExistingReceiptUrl(item.receiptUrl || null);
       setExistingReceiptName(item.receiptFileName || null);
       setExistingReceiptType(item.receiptFileType || null);
+      setDate(item.date || "");
+      setTime(item.time || "");
     } else {
       setTitle("");
       setAmount("");
@@ -67,6 +73,15 @@ export default function ExpenseItemModal({
       setExistingReceiptUrl(null);
       setExistingReceiptName(null);
       setExistingReceiptType(null);
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      setDate(`${yyyy}-${mm}-${dd}`);
+      setTime(`${hh}:${min}`);
     }
     setReceiptFile(null);
     setPreviewUrl(null);
@@ -103,13 +118,15 @@ export default function ExpenseItemModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseInt(amount, 10);
-    if (!title.trim() || isNaN(numAmount) || numAmount < 0) return;
+    if (!title.trim() || isNaN(numAmount) || numAmount < 0 || !date || !time) return;
 
     await onSave({
       title: title.trim(),
       amount: numAmount,
       type,
       payerUid,
+      date,
+      time,
       receiptFile,
       clearReceipt,
     });
@@ -218,6 +235,50 @@ export default function ExpenseItemModal({
                 outline: "none",
               }}
             />
+          </div>
+
+          {/* 日付と時間 */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+            <div style={{ flex: 1.5 }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "bold", color: "#555", marginBottom: "6px" }}>
+                日付 <span style={{ color: "#e91e63" }}>*</span>
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: "12px",
+                  border: "1.5px solid #ddd",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "bold", color: "#555", marginBottom: "6px" }}>
+                時間 <span style={{ color: "#e91e63" }}>*</span>
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: "12px",
+                  border: "1.5px solid #ddd",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
 
           {/* 区分 */}

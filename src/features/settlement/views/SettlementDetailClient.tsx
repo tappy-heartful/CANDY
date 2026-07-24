@@ -34,7 +34,7 @@ interface SettlementDetailClientProps {
 }
 
 export default function SettlementDetailClient({ eventId }: SettlementDetailClientProps) {
-  const { user, userData } = useAuth();
+  const { user, userData, refreshUserData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
   const router = useRouter();
 
@@ -253,6 +253,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     amount: number;
     type: "expense" | "income";
     payerUid: string;
+    date: string;
+    time: string;
     receiptFile?: File | null;
     clearReceipt?: boolean;
   }) => {
@@ -288,6 +290,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           data.amount,
           data.type,
           data.payerUid,
+          data.date,
+          data.time,
           receiptUrl,
           receiptFileName,
           receiptFileType
@@ -300,6 +304,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           data.type,
           data.payerUid,
           user.uid,
+          data.date,
+          data.time,
           receiptUrl,
           receiptFileName,
           receiptFileType
@@ -351,6 +357,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     showSpinner();
     try {
       await updateProfile(user.uid, { splitRatio: myRatio });
+      await refreshUserData();
       hideSpinner();
       await showDialog(
         `希望ワリカン率 (${myRatio}% : ${100 - myRatio}%) を自分の標準設定として保存しました！`,
@@ -431,6 +438,53 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       : activeResultTab === "partner"
         ? partnerSettlement
         : evenSettlement;
+
+  // 日付フォーマットヘルパー
+  const getFormattedDate = (item: SettlementItem) => {
+    if (item.date) return item.date;
+    const d = new Date(item.createdAt);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // 時間フォーマットヘルパー
+  const getFormattedTime = (item: SettlementItem) => {
+    if (item.time) return item.time;
+    const d = new Date(item.createdAt);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${min}`;
+  };
+
+  // dateとtimeでソート
+  const sortedItems = [...items].sort((a, b) => {
+    const dateA = getFormattedDate(a);
+    const dateB = getFormattedDate(b);
+    if (dateA !== dateB) {
+      return dateA.localeCompare(dateB);
+    }
+    const timeA = getFormattedTime(a);
+    const timeB = getFormattedTime(b);
+    if (timeA !== timeB) {
+      return timeA.localeCompare(timeB);
+    }
+    return a.createdAt - b.createdAt; // 同一時間なら作成順
+  });
+
+  // 日付ごとにグループ化
+  const groupedItems: { [date: string]: SettlementItem[] } = {};
+  sortedItems.forEach((item) => {
+    const dateKey = getFormattedDate(item);
+    if (!groupedItems[dateKey]) {
+      groupedItems[dateKey] = [];
+    }
+    groupedItems[dateKey].push(item);
+  });
+
+  // 日付キーをソート
+  const sortedDateKeys = Object.keys(groupedItems).sort();
 
   return (
     <AuthGuard>
@@ -535,8 +589,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
               min={0}
               max={100}
               step={5}
-              value={myRatio}
-              onChange={(e) => setMyRatio(Number(e.target.value))}
+              value={100 - myRatio}
+              onChange={(e) => setMyRatio(100 - Number(e.target.value))}
               className={styles.rangeInput}
             />
           </div>
@@ -834,107 +888,123 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
           </div>
         ) : (
           <div className={styles.itemList}>
-            {items.map((item) => {
-              const isPayerMe = item.payerUid === user?.uid;
-              const payerName = isPayerMe ? myNickname : partnerNickname;
-              const payerPic = isPayerMe ? myPictureUrl : partnerPictureUrl;
-              const isMyItem = item.uid === user?.uid;
+            {sortedDateKeys.map((dateKey) => (
+              <div key={dateKey} className={styles.dateGroup}>
+                <div className={styles.dateHeader}>
+                  <i className="fa-regular fa-calendar" style={{ marginRight: "6px", color: "#ff758c" }}></i>
+                  {dateKey.replace(/-/g, "/")}
+                </div>
+                <div className={styles.groupItems}>
+                  {groupedItems[dateKey].map((item) => {
+                    const isPayerMe = item.payerUid === user?.uid;
+                    const payerName = isPayerMe ? myNickname : partnerNickname;
+                    const payerPic = isPayerMe ? myPictureUrl : partnerPictureUrl;
+                    const isMyItem = item.uid === user?.uid;
 
-              return (
-                <div key={item.id} className={styles.itemCard}>
-                  <div className={styles.itemLeft}>
-                    {/* LINEアイコン + ニックネーム */}
-                    <img src={payerPic} alt={payerName} className={styles.payerAvatar} />
-                    <div className={styles.itemInfo}>
-                      <span className={styles.itemTitle}>{item.title}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <span className={styles.itemMeta}>
-                          <span>{payerName}が{item.type === "expense" ? "支払" : "受取"}</span>
-                          {!isMyItem && (
-                            <span className={styles.lockBadge} title="相手が登録した明細のため編集不可">
-                              <i className="fa-solid fa-lock"></i> 相手の登録
+                    return (
+                      <div key={item.id} className={styles.itemCard}>
+                        <div className={styles.itemLeft}>
+                          {/* LINEアイコン + ニックネーム */}
+                          <img src={payerPic} alt={payerName} className={styles.payerAvatar} />
+                          <div className={styles.itemInfo}>
+                            <span className={styles.itemTitle}>{item.title}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              <span className={styles.itemMeta}>
+                                {item.time && (
+                                  <span style={{ marginRight: "6px", display: "inline-flex", alignItems: "center", gap: "4px", color: "#666" }}>
+                                    <i className="fa-regular fa-clock" style={{ color: "#ff758c" }}></i>
+                                    {item.time}
+                                  </span>
+                                )}
+                                <span>{payerName}が{item.type === "expense" ? "支払" : "受取"}</span>
+                                {!isMyItem && (
+                                  <span className={styles.lockBadge} title="相手が登録した明細のため編集不可">
+                                    <i className="fa-solid fa-lock"></i> 相手の登録
+                                  </span>
+                                )}
+                              </span>
+                              {item.receiptUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const isPdf =
+                                      item.receiptFileType === "application/pdf" ||
+                                      (item.receiptFileName && item.receiptFileName.toLowerCase().endsWith(".pdf"));
+                                    if (isPdf) {
+                                      window.open(item.receiptUrl, "_blank");
+                                    } else {
+                                      setPreviewModalUrl(item.receiptUrl || null);
+                                    }
+                                  }}
+                                  style={{
+                                    background: "#fff0f3",
+                                    color: "#ff5e7e",
+                                    border: "1px solid #ffccd5",
+                                    borderRadius: "12px",
+                                    padding: "2px 8px",
+                                    fontSize: "11px",
+                                    fontWeight: "bold",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <i className={
+                                    (item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf"))
+                                      ? "fa-solid fa-file-pdf"
+                                      : "fa-solid fa-receipt"
+                                  }></i>
+                                  <span>領収書{(item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : ""}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={styles.itemRight}>
+                          <span
+                            className={`${styles.itemAmount} ${item.type === "expense" ? styles.amountExpense : styles.amountIncome
+                              }`}
+                          >
+                            {item.type === "expense" ? "-" : "+"}
+                            {item.amount.toLocaleString()}円
+                          </span>
+
+                          {/* 自分が登録したデータのみ編集・削除ボタンを表示 */}
+                          {isMyItem ? (
+                            <div className={styles.actionBtns}>
+                              <button
+                                className={styles.iconBtn}
+                                onClick={() => {
+                                  setEditingItem(item);
+                                  setIsItemModalOpen(true);
+                                }}
+                                title="編集"
+                              >
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <button
+                                className={styles.iconBtn}
+                                onClick={() => handleDeleteItem(item)}
+                                title="削除"
+                                style={{ color: "#e53935" }}
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "#ccc" }}>
+                              <i className="fa-solid fa-lock" title="登録者のみ編集可能"></i>
                             </span>
                           )}
-                        </span>
-                        {item.receiptUrl && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const isPdf =
-                                item.receiptFileType === "application/pdf" ||
-                                (item.receiptFileName && item.receiptFileName.toLowerCase().endsWith(".pdf"));
-                              if (isPdf) {
-                                window.open(item.receiptUrl, "_blank");
-                              } else {
-                                setPreviewModalUrl(item.receiptUrl || null);
-                              }
-                            }}
-                            style={{
-                              background: "#fff0f3",
-                              color: "#ff5e7e",
-                              border: "1px solid #ffccd5",
-                              borderRadius: "12px",
-                              padding: "2px 8px",
-                              fontSize: "11px",
-                              fontWeight: "bold",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                            }}
-                          >
-                            <i className={
-                              (item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf"))
-                                ? "fa-solid fa-file-pdf"
-                                : "fa-solid fa-receipt"
-                            }></i>
-                            <span>領収書{(item.receiptFileType === "application/pdf" || item.receiptFileName?.toLowerCase().endsWith(".pdf")) ? " (PDF)" : ""}</span>
-                          </button>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.itemRight}>
-                    <span
-                      className={`${styles.itemAmount} ${item.type === "expense" ? styles.amountExpense : styles.amountIncome
-                        }`}
-                    >
-                      {item.type === "expense" ? "-" : "+"}
-                      {item.amount.toLocaleString()}円
-                    </span>
-
-                    {/* 自分が登録したデータのみ編集・削除ボタンを表示 */}
-                    {isMyItem ? (
-                      <div className={styles.actionBtns}>
-                        <button
-                          className={styles.iconBtn}
-                          onClick={() => {
-                            setEditingItem(item);
-                            setIsItemModalOpen(true);
-                          }}
-                          title="編集"
-                        >
-                          <i className="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button
-                          className={styles.iconBtn}
-                          onClick={() => handleDeleteItem(item)}
-                          title="削除"
-                          style={{ color: "#e53935" }}
-                        >
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: "12px", color: "#ccc" }}>
-                        <i className="fa-solid fa-lock" title="登録者のみ編集可能"></i>
-                      </span>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1000,24 +1070,49 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
             </div>
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>1</span>
-              <span>全体の純支払合計額 = <strong>{totalNetPaid.toLocaleString()}円</strong></span>
+              <div>
+                <span>全体の純支払合計額 = <strong>{totalNetPaid.toLocaleString()}円</strong></span>
+                <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+                  (内訳：{myNickname}の実支払 {myNetPaid.toLocaleString()}円 / {partnerNickname}の実支払 {partnerNetPaid.toLocaleString()}円)
+                </div>
+              </div>
             </div>
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>2</span>
-              <span>
-                {myNickname}の理想負担額 ({settlement.ratioForMe}%):{" "}
-                <strong>{totalNetPaid.toLocaleString()}円 × {settlement.ratioForMe}% = {settlement.myTargetShare.toLocaleString()}円</strong>
-              </span>
+              <div>
+                <span>本来支払うべき金額 (目標負担額):</span>
+                <div style={{ paddingLeft: "12px", marginTop: "4px", fontSize: "11px", color: "#666" }}>
+                  • {myNickname} ({settlement.ratioForMe}%): <strong>{totalNetPaid.toLocaleString()}円 × {settlement.ratioForMe}% = {settlement.myTargetShare.toLocaleString()}円</strong>
+                  <br />
+                  • {partnerNickname} ({settlement.ratioForPartner}%): <strong>{totalNetPaid.toLocaleString()}円 × {settlement.ratioForPartner}% = {settlement.partnerTargetShare.toLocaleString()}円</strong>
+                </div>
+              </div>
             </div>
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>3</span>
-              <span>
-                {myNickname}の過不足:{" "}
-                <strong>
-                  {myNetPaid.toLocaleString()}円 (実支払) - {settlement.myTargetShare.toLocaleString()}円 (目標) ={" "}
-                  {settlement.diff > 0 ? `+${settlement.diff.toLocaleString()}` : settlement.diff.toLocaleString()}円
-                </strong>
-              </span>
+              <div>
+                <span>実支払額との差額 (過不足):</span>
+                <div style={{ paddingLeft: "12px", marginTop: "4px", fontSize: "11px", color: "#666" }}>
+                  • {myNickname}: {myNetPaid.toLocaleString()}円 (実支払) - {settlement.myTargetShare.toLocaleString()}円 (目標) = <strong>{settlement.diff > 0 ? `+${settlement.diff.toLocaleString()}` : settlement.diff.toLocaleString()}円</strong>
+                  <br />
+                  • {partnerNickname}: {partnerNetPaid.toLocaleString()}円 (実支払) - {settlement.partnerTargetShare.toLocaleString()}円 (目標) = <strong>{-settlement.diff > 0 ? `+${(-settlement.diff).toLocaleString()}` : (-settlement.diff).toLocaleString()}円</strong>
+                </div>
+              </div>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>4</span>
+              <div>
+                <span><strong>精算のアクション:</strong></span>
+                <div style={{ paddingLeft: "12px", marginTop: "4px", fontSize: "11px", color: "#e91e63", fontWeight: "bold" }}>
+                  {settlement.diff === 0 ? (
+                    <span>ちょうど目標通りに支払われているため、送金は不要です。⚖️</span>
+                  ) : settlement.diff < 0 ? (
+                    <span>目標の負担額に合わせるため、{myNickname} から {partnerNickname} へ <strong>{Math.abs(settlement.diff).toLocaleString()}円</strong> を送って調整します。💸</span>
+                  ) : (
+                    <span>目標の負担額に合わせるため、{partnerNickname} から {myNickname} へ <strong>{settlement.diff.toLocaleString()}円</strong> を送って調整します。💰</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

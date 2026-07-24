@@ -214,6 +214,8 @@ export interface SettlementItem {
   type: "expense" | "income"; // 支払 | 収入
   payerUid: string; // 支払った/収入を得たユーザー
   uid: string; // 登録者
+  date: string; // 支払日 ("YYYY-MM-DD")
+  time: string; // 支払時間 ("HH:MM")
   receiptUrl?: string; // 領収書ダウンロードURL
   receiptFileName?: string; // 領収書ファイル名
   receiptFileType?: string; // 領収書ファイル種別 ("image/*" | "application/pdf")
