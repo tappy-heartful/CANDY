@@ -3,6 +3,7 @@ export interface User {
   displayName?: string;
   pictureUrl?: string;
   nickname?: string;
+  paypayId?: string;
   mbti?: string;
   birthday?: string;
   phone?: string;

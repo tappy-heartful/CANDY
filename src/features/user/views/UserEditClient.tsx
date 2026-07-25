@@ -16,6 +16,7 @@ export default function UserEditClient() {
 
   const [formData, setFormData] = useState({
     nickname: "",
+    paypayId: "",
     mbti: "",
     birthday: "",
     phone: "",
@@ -41,6 +42,7 @@ export default function UserEditClient() {
     if (userData) {
       setFormData({
         nickname: userData.nickname || "",
+        paypayId: userData.paypayId || "",
         mbti: userData.mbti || "",
         birthday: userData.birthday || "",
         phone: userData.phone || "",
@@ -62,13 +64,17 @@ export default function UserEditClient() {
 
   const handleSave = async () => {
     const {
-      nickname, mbti, birthday, phone, emergencyContact,
+      nickname, paypayId, mbti, birthday, phone, emergencyContact,
       allergies, medications, medicalHistory, dislikedFoods,
       favoriteFoods, happyThings, dislikedThings
     } = formData;
 
     if (!nickname.trim()) {
       showDialog("ニックネームを入力してください", true);
+      return;
+    }
+    if (!paypayId.trim()) {
+      showDialog("PayPay IDを入力してください", true);
       return;
     }
     if (!mbti) {
@@ -206,6 +212,18 @@ export default function UserEditClient() {
             className={styles.appInput}
             placeholder="例: 090-0000-0000"
             value={formData.phone}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>PayPay ID</label>
+          <input
+            type="text"
+            name="paypayId"
+            className={styles.appInput}
+            placeholder="例: paypay_id_123"
+            value={formData.paypayId}
             onChange={handleChange}
           />
         </div>

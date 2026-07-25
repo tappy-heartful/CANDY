@@ -1010,56 +1010,49 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
 
         {/* 明細集計サマリー (ユーザーごとの小計・合計 & 計算式) */}
         <div className={styles.subtotalSummaryCard}>
-          <div className={styles.subtotalGrid}>
-            {/* 自分の集計 */}
-            <div className={styles.userSubtotalBox}>
-              <div className={styles.subtotalUserHeader}>
-                <img src={myPictureUrl} alt={myNickname} className={styles.subtotalAvatar} />
-                <span>{myNickname} の小計</span>
-              </div>
-              <div className={styles.subtotalRow}>
-                <span>支払い小計:</span>
-                <span className={styles.expenseText}>{myExpenses.toLocaleString()}円</span>
-              </div>
-              {myIncomes > 0 && (
-                <div className={styles.subtotalRow}>
-                  <span>収入小計:</span>
-                  <span className={styles.incomeText}>-{myIncomes.toLocaleString()}円</span>
-                </div>
-              )}
-              <div className={`${styles.subtotalRow} ${styles.subtotalTotalRow}`}>
-                <span>純支払額 (合計):</span>
-                <span>{myNetPaid.toLocaleString()}円</span>
-              </div>
-            </div>
-
-            {/* パートナーの集計 */}
-            <div className={styles.userSubtotalBox}>
-              <div className={styles.subtotalUserHeader}>
-                <img src={partnerPictureUrl} alt={partnerNickname} className={styles.subtotalAvatar} />
-                <span>{partnerNickname} の小計</span>
-              </div>
-              <div className={styles.subtotalRow}>
-                <span>支払い小計:</span>
-                <span className={styles.expenseText}>{partnerExpenses.toLocaleString()}円</span>
-              </div>
-              {partnerIncomes > 0 && (
-                <div className={styles.subtotalRow}>
-                  <span>収入小計:</span>
-                  <span className={styles.incomeText}>-{partnerIncomes.toLocaleString()}円</span>
-                </div>
-              )}
-              <div className={`${styles.subtotalRow} ${styles.subtotalTotalRow}`}>
-                <span>純支払額 (合計):</span>
-                <span>{partnerNetPaid.toLocaleString()}円</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 全体合計額 */}
-          <div className={styles.grandTotalBox}>
-            <span>全体の純支払合計額:</span>
-            <span className={styles.grandTotalAmount}>{totalNetPaid.toLocaleString()}円</span>
+          <div style={{ overflowX: "auto", width: "100%", marginBottom: "16px" }}>
+            <table className={styles.subtotalTable}>
+              <thead>
+                <tr>
+                  <th>項目</th>
+                  <th>
+                    <div className={styles.avatarCell}>
+                      <img src={myPictureUrl} alt={myNickname} className={styles.subtotalAvatar} />
+                      <span>{myNickname}</span>
+                    </div>
+                  </th>
+                  <th>
+                    <div className={styles.avatarCell}>
+                      <img src={partnerPictureUrl} alt={partnerNickname} className={styles.subtotalAvatar} />
+                      <span>{partnerNickname}</span>
+                    </div>
+                  </th>
+                  <th>全体合計</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>支払い小計</td>
+                  <td className={styles.expenseText}>{myExpenses.toLocaleString()}円</td>
+                  <td className={styles.expenseText}>{partnerExpenses.toLocaleString()}円</td>
+                  <td className={styles.expenseText}>{totalExpenses.toLocaleString()}円</td>
+                </tr>
+                {(myIncomes > 0 || partnerIncomes > 0) && (
+                  <tr>
+                    <td>収入・返金小計</td>
+                    <td className={styles.incomeText}>-{myIncomes.toLocaleString()}円</td>
+                    <td className={styles.incomeText}>-{partnerIncomes.toLocaleString()}円</td>
+                    <td className={styles.incomeText}>-{totalIncomes.toLocaleString()}円</td>
+                  </tr>
+                )}
+                <tr className={styles.totalRow}>
+                  <td>純支払額</td>
+                  <td>{myNetPaid.toLocaleString()}円</td>
+                  <td>{partnerNetPaid.toLocaleString()}円</td>
+                  <td>{totalNetPaid.toLocaleString()}円</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* 精算額の計算プロセス (計算式) */}
@@ -1107,9 +1100,21 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
                   {settlement.diff === 0 ? (
                     <span>ちょうど目標通りに支払われているため、送金は不要です。⚖️</span>
                   ) : settlement.diff < 0 ? (
-                    <span>目標の負担額に合わせるため、{myNickname} から {partnerNickname} へ <strong>{Math.abs(settlement.diff).toLocaleString()}円</strong> を送って調整します。💸</span>
+                    <span>
+                      目標の負担額に合わせるため、{myNickname} から {partnerNickname} へ <strong>{Math.abs(settlement.diff).toLocaleString()}円</strong> を送って調整します。💸
+                      <br />
+                      <span style={{ fontSize: "10px", color: "#666", fontWeight: "normal" }}>
+                        👉 送金先 ({partnerNickname}) の PayPay ID: <strong>{partnerData?.paypayId || "（未設定）"}</strong>
+                      </span>
+                    </span>
                   ) : (
-                    <span>目標の負担額に合わせるため、{partnerNickname} から {myNickname} へ <strong>{settlement.diff.toLocaleString()}円</strong> を送って調整します。💰</span>
+                    <span>
+                      目標の負担額に合わせるため、{partnerNickname} から {myNickname} へ <strong>{settlement.diff.toLocaleString()}円</strong> を送って調整します。💰
+                      <br />
+                      <span style={{ fontSize: "10px", color: "#666", fontWeight: "normal" }}>
+                        👉 送金先 ({myNickname}) の PayPay ID: <strong>{userData?.paypayId || "（未設定）"}</strong>
+                      </span>
+                    </span>
                   )}
                 </div>
               </div>
