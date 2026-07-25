@@ -18,6 +18,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         // 必須項目チェック
         const isMissingRequired =
           !userData.nickname ||
+          !userData.paypayId ||
           !userData.mbti ||
           !userData.birthday ||
           !userData.phone ||
@@ -48,6 +49,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // 必須項目チェック
   const isMissingRequired =
     !userData?.nickname ||
+    !userData?.paypayId ||
     !userData?.mbti ||
     !userData?.birthday ||
     !userData?.phone ||

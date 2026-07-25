@@ -359,9 +359,8 @@
   font-size: 15px;
   font-weight: 700;
   color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .itemMeta {
@@ -773,66 +772,69 @@
 
 /* 明細集計サマリー (小計・合計) */
 .subtotalSummaryCard {
-  background: #fff;
-  border-radius: 20px;
-  padding: 16px 18px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
   margin-bottom: 20px;
-  border: 1.5px solid #e0f2fe;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.08);
+  border: none;
+  box-shadow: none;
 }
 
-.subtotalGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
+.subtotalTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid #ffe4ed;
+  min-width: 320px;
 }
 
-@media (max-width: 480px) {
-  .subtotalGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.userSubtotalBox {
-  background: #f8fafc;
-  border-radius: 14px;
+.subtotalTable th, .subtotalTable td {
   padding: 12px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid #ffe4ed;
+  text-align: right;
+  font-size: 13px;
 }
 
-.subtotalUserHeader {
-  display: flex;
+.subtotalTable th {
+  background: #fff5f8;
+  color: #4a3e56;
+  font-weight: 800;
+  text-align: center;
+}
+
+.subtotalTable td:first-child, .subtotalTable th:first-child {
+  text-align: left;
+  font-weight: 700;
+  color: #555;
+  background: #fafafa;
+}
+
+.avatarCell {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
   font-weight: 800;
-  font-size: 13px;
-  color: #334155;
+  justify-content: center;
 }
 
 .subtotalAvatar {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.subtotalRow {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
+.totalRow {
+  background: #fffafb;
+  font-weight: 800;
+  color: #ff5e7e;
 }
 
-.subtotalTotalRow {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed #cbd5e1;
+.totalRow td {
   font-weight: 800;
-  color: #0f172a;
-  font-size: 13px;
 }
 
 .expenseText {
@@ -841,24 +843,6 @@
 
 .incomeText {
   color: #10b981;
-}
-
-.grandTotalBox {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 12px;
-  padding: 10px 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: #0369a1;
-}
-
-.grandTotalAmount {
-  font-size: 16px;
-  color: #0284c7;
 }
 
 /* 計算プロセス (計算式) */
