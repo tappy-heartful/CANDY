@@ -1,19 +1,23 @@
 .mapOuterContainer {
   position: relative;
   width: 100%;
-  height: 550px;
+  max-width: 100%;
+  height: 450px; /* スマホでのスクロール性を上げるため 550px から 450px に調整 */
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(247, 168, 196, 0.2);
   background-color: #fcf8fa;
   margin-top: 15px;
+  box-sizing: border-box;
 }
 
 .mapElement {
   width: 100%;
   height: 100%;
+  max-width: 100%;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 .loadingOverlay {
@@ -56,12 +60,12 @@
 
 .markerImageWrapper {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 48px;  /* スマホのタッチターゲット拡張のため 44px から 48px に変更 */
+  height: 48px; /* スマホのタッチターゲット拡張のため 44px から 48px に変更 */
   border-radius: 50%;
   border: 3px solid #ffffff;
   box-shadow: 0 4px 10px rgba(247, 168, 196, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow: visible; /* バッジがはみ出せるように visible にする */
   background-color: #ffffff;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -70,6 +74,13 @@
   transform: scale(1.15) translateY(-5px);
   box-shadow: 0 8px 20px rgba(247, 168, 196, 0.6), 0 4px 8px rgba(0, 0, 0, 0.15);
   z-index: 999;
+}
+
+.markerImageContainer {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 /* マーカーの下のポインタ */
@@ -94,62 +105,162 @@
   object-fit: cover;
 }
 
-/* ポップアップ */
+/* 枚数カウントバッジ */
+.markerBadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #ff6b81;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1.5px solid white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* GPS現在地取得ボタン */
+.gpsBtn {
+  position: absolute;
+  bottom: 20px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 1px solid rgba(155, 124, 195, 0.2);
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.25);
+  color: #9B7CC3;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+.gpsBtn:hover {
+  background-color: #faf6ff;
+  transform: scale(1.05);
+}
+
+.gpsBtn:active {
+  transform: scale(0.95);
+}
+
+/* Leaflet標準ポップアップの上書き（グローバル） */
+:global(.leaflet-popup-content-wrapper) {
+  padding: 10px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(155, 124, 195, 0.15) !important;
+  overflow: hidden !important; /* はみ出し防止 */
+}
+
+:global(.leaflet-popup-content) {
+  margin: 0 !important;
+  line-height: inherit !important;
+  width: auto !important;
+}
+
+:global(.leaflet-popup-close-button) {
+  top: 6px !important;
+  right: 6px !important;
+  color: #9B7CC3 !important;
+  font-size: 16px !important;
+}
+
+/* ポップアップコンテナ */
 .popupContainer {
-  width: 180px;
+  width: 230px; /* スマホ画面用に少し幅を狭める */
   font-family: inherit;
+  box-sizing: border-box;
+}
+
+.popupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #9B7CC3;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f3e5f5;
+  padding-bottom: 6px;
+}
+
+.popupScrollContainer {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  width: 100%;
+  min-width: 0; /* フレックスコンテナ内の縮小を可能にする */
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch; /* iOSでの滑らかなスクロール */
+  box-sizing: border-box;
+}
+
+.popupScrollContainer::-webkit-scrollbar {
+  height: 4px;
+}
+
+.popupScrollContainer::-webkit-scrollbar-thumb {
+  background-color: #f1dae2;
+  border-radius: 10px;
+}
+
+.popupPhotoItem {
+  flex: 0 0 100px;
+  min-width: 0; /* 縦長写真による幅の引きずられを防止 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .popupImageWrapper {
-  width: 100%;
-  height: 110px;
-  border-radius: 8px;
+  width: 100px;
+  height: 75px;
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .popupImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.popupContent {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: block; /* 余分なインラインスペースを排除 */
 }
 
 .popupDate {
   margin: 0;
-  font-size: 11px;
-  color: #777;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 9px;
+  color: #888;
+  white-space: nowrap;
 }
 
 .popupButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  display: inline-block;
   background: linear-gradient(135deg, #F7A8C4 0%, #E895B3 100%);
-  color: #ffffff !important;
+  color: white !important;
   text-decoration: none !important;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(247, 168, 196, 0.2);
   text-align: center;
-  box-shadow: 0 3px 8px rgba(247, 168, 196, 0.3);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .popupButton:hover {
   opacity: 0.9;
-  transform: translateY(-1px);
 }
 
 /* 空の状態 */
@@ -191,3 +302,5 @@
   margin: 0;
   line-height: 1.6;
 }
+
+
