@@ -14,6 +14,7 @@ import {
   updateAlbum,
   getPrefectures,
   getMunicipalities,
+  togglePhotoFavorite,
   Album,
   Photo,
   Prefecture,
@@ -237,6 +238,52 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     }
   };
 
+  // 写真のお気に入り状態をトグル
+  const handleToggleFavorite = async (photo: Photo, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    const isFav = photo.favoriteUids?.includes(user.uid) || false;
+    const nextFavs = isFav
+      ? (photo.favoriteUids || []).filter((id) => id !== user.uid)
+      : [...(photo.favoriteUids || []), user.uid];
+
+    // 楽観的アップデート
+    const updatedPhotos = photos.map((p) =>
+      p.id === photo.id ? { ...p, favoriteUids: nextFavs } : p
+    );
+    setPhotos(updatedPhotos);
+    if (activePhoto?.id === photo.id) {
+      setActivePhoto({ ...activePhoto, favoriteUids: nextFavs });
+    }
+
+    try {
+      await togglePhotoFavorite(photo.id, user.uid, !isFav);
+    } catch (err) {
+      console.error(err);
+      // 元に戻す
+      setPhotos(photos);
+      if (activePhoto?.id === photo.id) {
+        setActivePhoto(photo);
+      }
+      showDialog("お気に入りの更新に失敗しました");
+    }
+  };
+
+  const getFavoritesText = (photo: Photo) => {
+    const uids = photo.favoriteUids || [];
+    if (uids.length === 0) return null;
+    const names: string[] = [];
+    if (user?.uid && uids.includes(user.uid)) {
+      names.push(userData?.nickname || "自分");
+    }
+    if (partnerData?.id && uids.includes(partnerData.id)) {
+      names.push(partnerData.nickname || "パートナー");
+    }
+    if (names.length === 0) return null;
+    return `${names.join("、")} がお気に入りしています🍭`;
+  };
+
   // アルバムの削除
   const handleDeleteAlbum = async () => {
     if (!album) return;
@@ -251,6 +298,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
       router.push("/albums");
     } catch (e) {
       console.error(e);
+      hideSpinner();
+    } finally {
       hideSpinner();
     }
   };
@@ -600,6 +649,44 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                 >
                   <img src={photo.url} alt="Photo" className={styles.photoImg} />
 
+                  {/* お気に入り表示およびボタン（左下） */}
+                  <div className={styles.gridFavoriteWrapper}>
+                    {/* お気に入りトグルボタン */}
+                    {!isSelectMode && (
+                      <button 
+                        className={`${styles.gridFavoriteBtn} ${
+                          user && photo.favoriteUids?.includes(user.uid) ? styles.gridFavoriteBtnActive : ""
+                        }`}
+                        onClick={(e) => handleToggleFavorite(photo, e)}
+                        title="お気に入り"
+                      >
+                        <i className={user && photo.favoriteUids?.includes(user.uid) ? "fa-solid fa-heart" : "fa-regular fa-heart"}></i>
+                      </button>
+                    )}
+
+                    {/* お気に入りしているユーザーのアイコン表示 */}
+                    {photo.favoriteUids && photo.favoriteUids.length > 0 && (
+                      <div className={styles.gridFavoriteUsers}>
+                        {user && photo.favoriteUids.includes(user.uid) && (
+                          <img 
+                            src={userData?.pictureUrl || "/icon.png"} 
+                            alt={userData?.nickname || "自分"} 
+                            className={styles.gridFavoriteUserAvatar} 
+                            title={userData?.nickname || "自分"}
+                          />
+                        )}
+                        {partnerData && photo.favoriteUids.includes(partnerData.id) && (
+                          <img 
+                            src={partnerData.pictureUrl || "/icon.png"} 
+                            alt={partnerData.nickname || "パートナー"} 
+                            className={styles.gridFavoriteUserAvatar} 
+                            title={partnerData.nickname || "パートナー"}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {isSelectMode && (
                     <div className={styles.selectOverlay}>
                       {isSelected && (
@@ -761,7 +848,21 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               </button>
             )}
 
-            {/* 下部アクションバー (ダウンロード・削除) */}
+            {/* お気に入りした人の表示 */}
+            {getFavoritesText(activePhoto) && (
+              <div 
+                className={styles.lightboxFavoriteText}
+                style={{
+                  opacity: 1 - Math.min(0.8, Math.max(Math.abs(swipeX) / 300, swipeY / 300)),
+                  transition: isDragging ? "none" : "opacity 0.2s ease"
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {getFavoritesText(activePhoto)}
+              </div>
+            )}
+
+            {/* 下部アクションバー (お気に入り・ダウンロード・削除) */}
             <div
               className={styles.lightboxActionBar}
               style={{
@@ -770,6 +871,15 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               }}
               onClick={(e) => e.stopPropagation()}
             >
+              <button
+                className={`${styles.lightboxActionBtn} ${
+                  user && activePhoto.favoriteUids?.includes(user.uid) ? styles.lightboxActionBtnActive : ""
+                }`}
+                onClick={(e) => handleToggleFavorite(activePhoto, e)}
+                title="お気に入り"
+              >
+                <i className={user && activePhoto.favoriteUids?.includes(user.uid) ? "fa-solid fa-heart" : "fa-regular fa-heart"}></i>
+              </button>
               <button
                 className={styles.lightboxActionBtn}
                 onClick={(e) => handleDownloadSingle(activePhoto, e)}

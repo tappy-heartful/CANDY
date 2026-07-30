@@ -147,6 +147,7 @@ export interface Photo {
   takenAt?: number;
   latitude?: number;
   longitude?: number;
+  favoriteUids?: string[];
 }
 
 export interface Prefecture {

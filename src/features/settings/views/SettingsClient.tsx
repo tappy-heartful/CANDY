@@ -142,6 +142,8 @@ export default function SettingsClient() {
       console.error("Failed to save settings:", e);
       hideSpinner();
       showDialog("設定の保存に失敗しました。");
+    } finally {
+      hideSpinner();
     }
   };
 

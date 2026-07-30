@@ -142,6 +142,8 @@ export default function UserEditClient() {
       console.error(e);
       hideSpinner();
       showDialog("更新に失敗しました");
+    } finally {
+      hideSpinner();
     }
   };
 
@@ -167,7 +169,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>ニックネーム</label>
+          <label className={styles.inputLabel}>
+            ニックネーム
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <input
             type="text"
             name="nickname"
@@ -179,7 +184,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>MBTI</label>
+          <label className={styles.inputLabel}>
+            MBTI
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <select
             name="mbti"
             className={styles.appSelect}
@@ -194,7 +202,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>誕生日</label>
+          <label className={styles.inputLabel}>
+            誕生日
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <input
             type="date"
             name="birthday"
@@ -205,7 +216,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>電話番号</label>
+          <label className={styles.inputLabel}>
+            電話番号
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <input
             type="tel"
             name="phone"
@@ -217,7 +231,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>PayPay ID</label>
+          <label className={styles.inputLabel}>
+            PayPay ID
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <input
             type="text"
             name="paypayId"
@@ -229,7 +246,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>緊急連絡先 (氏名・続柄・電話番号)</label>
+          <label className={styles.inputLabel}>
+            緊急連絡先 (氏名・続柄・電話番号)
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="emergencyContact"
             className={styles.appTextarea}
@@ -240,7 +260,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>アレルギーの有無 (食品、薬、花粉など)</label>
+          <label className={styles.inputLabel}>
+            アレルギーの有無 (食品、薬、花粉など)
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="allergies"
             className={styles.appTextarea}
@@ -251,7 +274,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>服用中の薬</label>
+          <label className={styles.inputLabel}>
+            服用中の薬
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="medications"
             className={styles.appTextarea}
@@ -262,7 +288,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>既往歴・持病</label>
+          <label className={styles.inputLabel}>
+            既往歴・持病
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="medicalHistory"
             className={styles.appTextarea}
@@ -273,7 +302,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>好きな食べ物</label>
+          <label className={styles.inputLabel}>
+            好きな食べ物
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="favoriteFoods"
             className={styles.appTextarea}
@@ -284,7 +316,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>苦手な食べ物</label>
+          <label className={styles.inputLabel}>
+            苦手な食べ物
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="dislikedFoods"
             className={styles.appTextarea}
@@ -295,7 +330,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>されてうれしいこと</label>
+          <label className={styles.inputLabel}>
+            されてうれしいこと
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="happyThings"
             className={styles.appTextarea}
@@ -306,7 +344,10 @@ export default function UserEditClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>されて嫌なこと</label>
+          <label className={styles.inputLabel}>
+            されて嫌なこと
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
           <textarea
             name="dislikedThings"
             className={styles.appTextarea}

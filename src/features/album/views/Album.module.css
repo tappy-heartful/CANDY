@@ -897,3 +897,92 @@
     opacity: 1;
   }
 }
+
+/* 左下のお気に入りまとめラッパー */
+.gridFavoriteWrapper {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+/* お気に入りボタン (グリッド) */
+.gridFavoriteBtn {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff6b81;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.gridFavoriteBtn:hover {
+  transform: scale(1.1);
+  background: white;
+}
+
+.gridFavoriteBtnActive {
+  background: #ff6b81 !important;
+  color: white !important;
+}
+
+/* お気に入りしているユーザーのアイコン表示 (グリッド) */
+.gridFavoriteUsers {
+  display: flex;
+}
+
+.gridFavoriteUserAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid white;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  background: white;
+}
+
+.gridFavoriteUserAvatar:not(:first-child) {
+  margin-left: -8px; /* アバターを重ねる */
+}
+
+/* ライトボックス内のお気に入りテキスト */
+.lightboxFavoriteText {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffd6e0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  z-index: 3100;
+  white-space: nowrap;
+  pointer-events: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ライトボックス内のお気に入りボタン (アクティブ) */
+.lightboxActionBtnActive {
+  background-color: rgba(255, 107, 129, 0.8) !important;
+  color: white !important;
+  border-color: rgba(255, 107, 129, 0.4) !important;
+}
