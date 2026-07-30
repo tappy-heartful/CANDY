@@ -44,6 +44,44 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const [partnerData, setPartnerData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // フィルター用の状態
+  const [filterFavorite, setFilterFavorite] = useState<"all" | "mine" | "partner">("all");
+  const [filterDate, setFilterDate] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // 撮影日時のユニークリスト
+  const availableDates = Array.from(
+    new Set(
+      photos.map((p) =>
+        new Date(p.takenAt || p.createdAt).toLocaleDateString("ja-JP")
+      )
+    )
+  ).sort();
+
+  // フィルター＆ソート適用後の写真リスト
+  const displayedPhotos = photos
+    .filter((photo) => {
+      if (filterFavorite === "mine") {
+        return photo.favoriteUids?.includes(user?.uid || "") || false;
+      }
+      if (filterFavorite === "partner") {
+        return partnerData?.id ? photo.favoriteUids?.includes(partnerData.id) || false : false;
+      }
+      return true;
+    })
+    .filter((photo) => {
+      if (filterDate && filterDate !== "all") {
+        const dateStr = new Date(photo.takenAt || photo.createdAt).toLocaleDateString("ja-JP");
+        return dateStr === filterDate;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const timeA = a.takenAt ?? a.createdAt;
+      const timeB = b.takenAt ?? b.createdAt;
+      return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
+    });
+
   // メニュー・編集等の状態
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -129,18 +167,18 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!activePhoto) return;
-      const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+      const activeIndex = displayedPhotos.findIndex((p) => p.id === activePhoto.id);
       if (activeIndex === -1) return;
 
       if (e.key === "ArrowLeft") {
         if (activeIndex > 0) {
           setSlideDirection("left");
-          setActivePhoto(photos[activeIndex - 1]);
+          setActivePhoto(displayedPhotos[activeIndex - 1]);
         }
       } else if (e.key === "ArrowRight") {
-        if (activeIndex < photos.length - 1) {
+        if (activeIndex < displayedPhotos.length - 1) {
           setSlideDirection("right");
-          setActivePhoto(photos[activeIndex + 1]);
+          setActivePhoto(displayedPhotos[activeIndex + 1]);
         }
       } else if (e.key === "Escape") {
         setActivePhoto(null);
@@ -149,7 +187,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activePhoto, photos]);
+  }, [activePhoto, displayedPhotos]);
 
   // メニュー外部クリックで閉じる処理
   useEffect(() => {
@@ -400,20 +438,20 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const handlePrevPhoto = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!activePhoto) return;
-    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+    const activeIndex = displayedPhotos.findIndex((p) => p.id === activePhoto.id);
     if (activeIndex > 0) {
       setSlideDirection("left");
-      setActivePhoto(photos[activeIndex - 1]);
+      setActivePhoto(displayedPhotos[activeIndex - 1]);
     }
   };
 
   const handleNextPhoto = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!activePhoto) return;
-    const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
-    if (activeIndex < photos.length - 1) {
+    const activeIndex = displayedPhotos.findIndex((p) => p.id === activePhoto.id);
+    if (activeIndex < displayedPhotos.length - 1) {
       setSlideDirection("right");
-      setActivePhoto(photos[activeIndex + 1]);
+      setActivePhoto(displayedPhotos[activeIndex + 1]);
     }
   };
 
@@ -480,16 +518,16 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
       }
     } else {
       // 横スワイプの処理
-      const activeIndex = photos.findIndex((p) => p.id === activePhoto.id);
+      const activeIndex = displayedPhotos.findIndex((p) => p.id === activePhoto.id);
       if (activeIndex !== -1) {
-        if (diffX > minSwipeDistance && activeIndex < photos.length - 1) {
+        if (diffX > minSwipeDistance && activeIndex < displayedPhotos.length - 1) {
           // 左スワイプ（次の画像へ）
           setSlideDirection("right");
-          setActivePhoto(photos[activeIndex + 1]);
+          setActivePhoto(displayedPhotos[activeIndex + 1]);
         } else if (diffX < -minSwipeDistance && activeIndex > 0) {
           // 右スワイプ（前の画像へ）
           setSlideDirection("left");
-          setActivePhoto(photos[activeIndex - 1]);
+          setActivePhoto(displayedPhotos[activeIndex - 1]);
         }
       }
     }
@@ -524,14 +562,15 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     try {
       await deletePhotos([photo]);
 
-      const activeIndex = photos.findIndex((p) => p.id === photo.id);
+      const activeIndex = displayedPhotos.findIndex((p) => p.id === photo.id);
       const newPhotos = photos.filter((p) => p.id !== photo.id);
       setPhotos(newPhotos);
 
-      if (newPhotos.length > 0) {
+      const newDisplayedPhotos = displayedPhotos.filter((p) => p.id !== photo.id);
+      if (newDisplayedPhotos.length > 0) {
         // 次の写真を表示する（最後の場合は1つ前）
-        const nextIndex = activeIndex < newPhotos.length ? activeIndex : newPhotos.length - 1;
-        setActivePhoto(newPhotos[nextIndex]);
+        const nextIndex = activeIndex < newDisplayedPhotos.length ? activeIndex : newDisplayedPhotos.length - 1;
+        setActivePhoto(newDisplayedPhotos[nextIndex]);
       } else {
         setActivePhoto(null);
       }
@@ -552,7 +591,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
     return start;
   };
 
-  const activeIndex = activePhoto ? photos.findIndex((p) => p.id === activePhoto.id) : -1;
+  const activeIndex = activePhoto ? displayedPhotos.findIndex((p) => p.id === activePhoto.id) : -1;
 
   if (loading || !album) {
     return (
@@ -634,10 +673,74 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
           )}
         </div>
 
+        {/* フィルターコントロールエリア (選択モード中は非表示) */}
+        {!isSelectMode && photos.length > 0 && (
+          <div className={styles.filterContainer}>
+            <div className={styles.filterSection}>
+              <span className={styles.filterLabel}>お気に入り</span>
+              <div className={styles.tabContainer}>
+                <button
+                  className={`${styles.tabBtn} ${filterFavorite === "all" ? styles.tabBtnActive : ""}`}
+                  onClick={() => setFilterFavorite("all")}
+                >
+                  すべて
+                </button>
+                <button
+                  className={`${styles.tabBtn} ${filterFavorite === "mine" ? styles.tabBtnActive : ""}`}
+                  onClick={() => setFilterFavorite("mine")}
+                >
+                  自分
+                </button>
+                <button
+                  className={`${styles.tabBtn} ${filterFavorite === "partner" ? styles.tabBtnActive : ""}`}
+                  onClick={() => setFilterFavorite("partner")}
+                >
+                  相手
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.filterSection}>
+              <span className={styles.filterLabel}>日付</span>
+              <div className={styles.selectWrapper}>
+                <select
+                  className={styles.filterSelect}
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                >
+                  <option value="all">すべての日付</option>
+                  {availableDates.map((date) => (
+                    <option key={date} value={date}>
+                      {date}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <button
+                className={styles.sortBtn}
+                onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                title={sortOrder === "asc" ? "古い順" : "新しい順"}
+              >
+                <i className={`fa-solid ${sortOrder === "asc" ? "fa-sort-up" : "fa-sort-down"}`}></i>
+                <span>{sortOrder === "asc" ? "古い順" : "新しい順"}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 写真のグリッド（3カラム表示） */}
         <div className={styles.photoGrid}>
-          {photos.length > 0 ? (
-            photos.map((photo) => {
+          {photos.length === 0 ? (
+            <div className={styles.emptyGrid}>
+              <i className={`fa-solid fa-images ${styles.emptyIcon}`}></i>
+              <span className={styles.emptyText}>
+                このアルバムにはまだ写真がありません。<br />
+                右下の＋ボタンから追加しましょう！🍭
+              </span>
+            </div>
+          ) : displayedPhotos.length > 0 ? (
+            displayedPhotos.map((photo) => {
               const isSelected = selectedPhotos.some((p) => p.id === photo.id);
               const selectionIndex = selectedPhotos.findIndex((p) => p.id === photo.id);
 
@@ -654,7 +757,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                     {/* お気に入りトグルボタン */}
                     {!isSelectMode && (
                       <button 
-                        className={`${styles.gridFavoriteBtn} ${
+                         className={`${styles.gridFavoriteBtn} ${
                           user && photo.favoriteUids?.includes(user.uid) ? styles.gridFavoriteBtnActive : ""
                         }`}
                         onClick={(e) => handleToggleFavorite(photo, e)}
@@ -700,11 +803,11 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
               );
             })
           ) : (
-            <div className={styles.emptyGrid}>
-              <i className={`fa-solid fa-images ${styles.emptyIcon}`}></i>
+            <div className={styles.emptyGrid} style={{ gridColumn: "span 3" }}>
+              <i className="fa-solid fa-magnifying-glass" style={{ fontSize: "40px", color: "#eee", marginBottom: "12px" }}></i>
               <span className={styles.emptyText}>
-                このアルバムにはまだ写真がありません。<br />
-                右下の＋ボタンから追加しましょう！🍭
+                選択したフィルターに一致する写真が見つかりませんでした。<br />
+                設定を変更してみてください。🍭
               </span>
             </div>
           )}
@@ -790,7 +893,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             >
               <div className={styles.lightboxHeaderInfo}>
                 <h2 className={styles.lightboxAlbumName}>
-                  {album.name} ({activeIndex !== -1 ? activeIndex + 1 : 0} / {photos.length})
+                  {album.name} ({activeIndex !== -1 ? activeIndex + 1 : 0} / {displayedPhotos.length})
                 </h2>
                 <div className={styles.lightboxUploader}>
                   {getUploaderName(activePhoto)} • {activePhoto.takenAt ? "撮影" : "アップロード"}: {formatUploadDate(activePhoto.takenAt ?? activePhoto.createdAt)}
@@ -835,7 +938,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
             </div>
 
             {/* 右矢印ナビゲーション */}
-            {activeIndex < photos.length - 1 && (
+            {activeIndex < displayedPhotos.length - 1 && (
               <button
                 className={styles.lightboxNext}
                 style={{
