@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { Photo } from "../api/album-client-service";
 import styles from "./AlbumMap.module.css";
 
@@ -38,6 +37,11 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
       scrollWheelZoom: true,
     }).setView(initialCenter, 12);
     leafletMap.current = map;
+
+    // Safariなどでのタイル読み込みレイアウト崩れを防ぐためのサイズ再計算
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
     // OpenStreetMapタイルを設定
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -89,6 +93,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
     }
 
     return () => {
+      clearTimeout(timer);
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
