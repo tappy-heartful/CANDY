@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
@@ -17,8 +18,17 @@ import {
   Prefecture,
   Municipality
 } from "../api/album-client-service";
-import AlbumMap from "../components/AlbumMap";
 import styles from "./Album.module.css";
+
+const AlbumMap = dynamic(() => import("../components/AlbumMap"), {
+  ssr: false,
+  loading: () => (
+    <div className={styles.emptyGrid} style={{ minHeight: "400px" }}>
+      <div className={styles.spinner}></div>
+      <span className={styles.emptyText}>地図を読み込み中...</span>
+    </div>
+  ),
+});
 
 // アルバム個別カードコンポーネント（件数とカバー画像を非同期で取得・ズームスライドショー表示）
 function AlbumCard({ album }: { album: Album }) {

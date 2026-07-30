@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import type { Photo } from "../api/album-client-service";
 import styles from "./AlbumMap.module.css";
-
-// window に L (Leaflet) が定義されていると想定
-declare global {
-  interface Window {
-    L: any;
-  }
-}
 
 interface AlbumMapProps {
   photos: Photo[];
@@ -17,8 +12,7 @@ interface AlbumMapProps {
 
 export default function AlbumMap({ photos }: AlbumMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const leafletMap = useRef<any>(null);
-  const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
+  const leafletMap = useRef<L.Map | null>(null);
 
   // 位置情報のある写真のみを抽出
   const validPhotos = photos.filter(
@@ -26,39 +20,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
   );
 
   useEffect(() => {
-    if (window.L) {
-      setIsLeafletLoaded(true);
-      return;
-    }
-
-    // CSSの動的ロード
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    link.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
-    link.crossOrigin = "";
-    document.head.appendChild(link);
-
-    // JSの動的ロード
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
-    script.crossOrigin = "";
-    script.onload = () => {
-      setIsLeafletLoaded(true);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      document.head.removeChild(link);
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isLeafletLoaded || !mapRef.current || !window.L || validPhotos.length === 0) return;
-
-    const L = window.L;
+    if (!mapRef.current || validPhotos.length === 0) return;
 
     // 既に地図インスタンスが存在する場合は一度破棄する
     if (leafletMap.current) {
@@ -66,7 +28,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
     }
 
     // 初期中心点は最初の写真の位置情報、なければ東京
-    const initialCenter = [
+    const initialCenter: L.LatLngExpression = [
       validPhotos[0].latitude!,
       validPhotos[0].longitude!
     ];
@@ -82,7 +44,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
-    const markers: any[] = [];
+    const markers: L.Marker[] = [];
 
     validPhotos.forEach((photo) => {
       // 写真をマーカーのアイコンとして表示
@@ -122,7 +84,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
 
     // 複数ピンがある場合は自動的にすべてのピンが収まる範囲にする
     if (markers.length > 0) {
-      const group = new L.featureGroup(markers);
+      const group = L.featureGroup(markers);
       map.fitBounds(group.getBounds().pad(0.15));
     }
 
@@ -132,7 +94,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
         leafletMap.current = null;
       }
     };
-  }, [isLeafletLoaded, photos, validPhotos.length]);
+  }, [photos, validPhotos.length]);
 
   if (validPhotos.length === 0) {
     return (
@@ -152,12 +114,6 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
 
   return (
     <div className={styles.mapOuterContainer}>
-      {!isLeafletLoaded && (
-        <div className={styles.loadingOverlay}>
-          <div className={styles.spinner}></div>
-          <span>地図データを準備しています...</span>
-        </div>
-      )}
       <div ref={mapRef} className={styles.mapElement} />
     </div>
   );
