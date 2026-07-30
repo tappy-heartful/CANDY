@@ -3,6 +3,7 @@
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { showDialog } from "@/src/lib/functions";
 import styles from "./AuthGuard.module.css";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         // 必須項目チェック
         const isMissingRequired =
           !userData.nickname ||
-          !userData.paypayId ||
           !userData.mbti ||
           !userData.birthday ||
           !userData.phone ||
@@ -32,7 +32,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           !userData.dislikedThings;
 
         if (isMissingRequired) {
-          router.push("/user/edit");
+          showDialog("より快適にCANDYをご利用いただくため、プロフィール設定の入力をお願いいたします🍭", true).then(() => {
+            router.push("/user/edit");
+          });
         }
       }
     }

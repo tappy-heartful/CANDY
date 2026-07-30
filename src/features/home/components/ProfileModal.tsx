@@ -26,6 +26,7 @@ export default function ProfileModal({ userData, title, isMe, onClose }: Profile
           <InfoItem label="MBTI" value={userData?.mbti} />
           <InfoItem label="誕生日" value={userData?.birthday} />
           <InfoItem label="電話番号" value={userData?.phone} />
+          <InfoItem label="PayPay ID" value={userData?.paypayId} />
           <InfoItem label="緊急連絡先" value={userData?.emergencyContact} />
           <InfoItem label="アレルギー" value={userData?.allergies} />
           <InfoItem label="服用中の薬" value={userData?.medications} />

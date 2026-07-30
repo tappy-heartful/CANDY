@@ -242,6 +242,8 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
     } catch (e) {
       console.error(e);
       hideSpinner();
+    } finally {
+      hideSpinner();
     }
   };
 

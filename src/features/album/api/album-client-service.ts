@@ -11,7 +11,9 @@ import {
   where,
   orderBy,
   writeBatch,
-  limit
+  limit,
+  arrayUnion,
+  arrayRemove
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { toPlainObject } from "@/src/lib/firestore/utils";
@@ -273,3 +275,19 @@ export async function getRecentPhotos(limitCount: number = 10): Promise<Photo[]>
   const snap = await getDocs(q);
   return snap.docs.map((d) => toPlainObject(d) as Photo);
 }
+
+// 写真のお気に入り状態をトグルする
+export async function togglePhotoFavorite(photoId: string, uid: string, isFavorite: boolean) {
+  const photoRef = doc(db, "photos", photoId);
+  return await updateDoc(photoRef, {
+    favoriteUids: isFavorite ? arrayUnion(uid) : arrayRemove(uid),
+  });
+}
+
+// すべての写真を取得する
+export async function getAllPhotos(): Promise<Photo[]> {
+  const ref = collection(db, "photos");
+  const snap = await getDocs(ref);
+  return snap.docs.map((d) => toPlainObject(d) as Photo);
+}
+
