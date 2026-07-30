@@ -47,10 +47,18 @@ export default function AlbumTimeline({ photos }: AlbumTimelineProps) {
           day: "numeric",
           weekday: "short"
         });
+
+        // 撮影した日時の昇順（古い順）にソートする
+        const sortedPhotos = [...groupPhotos].sort((a, b) => {
+          const timeA = a.takenAt || a.createdAt;
+          const timeB = b.takenAt || b.createdAt;
+          return timeA - timeB;
+        });
+
         return {
           dateStr,
           rawDate,
-          photos: groupPhotos,
+          photos: sortedPhotos,
         };
       })
       .sort((a, b) => b.rawDate.localeCompare(a.rawDate));
@@ -177,19 +185,30 @@ function TimelineCard({ group, onClick }: { group: TimelineGroup; onClick: () =>
     setCollagePhotos(shuffled.slice(0, 4));
   }, [group.photos]);
 
+  const totalCount = group.photos.length;
+
   return (
     <div className={styles.timelineCard} onClick={onClick}>
       <div className={styles.cardHeader}>
         <span className={styles.dateText}>{group.dateStr}</span>
-        <span className={styles.photoCount}>{group.photos.length}枚の思い出</span>
+        <span className={styles.photoCount}>{totalCount}枚の思い出</span>
       </div>
 
       <div className={`${styles.collageGrid} ${styles[`grid-${collagePhotos.length}`]}`}>
-        {collagePhotos.map((photo) => (
-          <div key={photo.id} className={styles.collageItem}>
-            <img src={photo.url} alt="collage preview" className={styles.collageImg} />
-          </div>
-        ))}
+        {collagePhotos.map((photo, index) => {
+          const showRemainingBadge = index === 3 && totalCount > 4;
+
+          return (
+            <div key={photo.id} className={styles.collageItem}>
+              <img src={photo.url} alt="collage preview" className={styles.collageImg} />
+              {showRemainingBadge && (
+                <div className={styles.remainingOverlay}>
+                  <span>+{totalCount - 3}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
