@@ -11,11 +11,13 @@ import {
   getPhotos,
   getPrefectures,
   getMunicipalities,
+  getAllPhotos,
   Album,
   Photo,
   Prefecture,
   Municipality
 } from "../api/album-client-service";
+import AlbumMap from "../components/AlbumMap";
 import styles from "./Album.module.css";
 
 // アルバム個別カードコンポーネント（件数とカバー画像を非同期で取得・ズームスライドショー表示）
@@ -119,6 +121,27 @@ export default function AlbumListClient() {
   const { setBreadcrumbs } = useBreadcrumb();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 表示モードおよび全写真の管理用
+  const [viewMode, setViewMode] = useState<"album" | "location">("album");
+  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+
+  // 地図表示が選択され、写真が未取得の場合に全写真を取得する
+  useEffect(() => {
+    if (viewMode === "location" && allPhotos.length === 0 && !photosLoading) {
+      setPhotosLoading(true);
+      getAllPhotos()
+        .then((data) => {
+          setAllPhotos(data);
+          setPhotosLoading(false);
+        })
+        .catch((e) => {
+          console.error("Failed to fetch all photos:", e);
+          setPhotosLoading(false);
+        });
+    }
+  }, [viewMode, allPhotos.length, photosLoading]);
   
   // モーダル用状態
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -226,24 +249,54 @@ export default function AlbumListClient() {
           </button>
         </div>
 
-        {loading ? (
-          <div className={styles.emptyGrid}>
-            <span className={styles.emptyText}>読み込み中...</span>
+        <div className={styles.filterRow}>
+          <div className={styles.tabContainer}>
+            <button
+              className={`${styles.tabBtn} ${viewMode === "album" ? styles.tabBtnActive : ""}`}
+              onClick={() => setViewMode("album")}
+            >
+              <i className="fa-solid fa-folder-open"></i>
+              アルバムごとに表示
+            </button>
+            <button
+              className={`${styles.tabBtn} ${viewMode === "location" ? styles.tabBtnActive : ""}`}
+              onClick={() => setViewMode("location")}
+            >
+              <i className="fa-solid fa-map-location-dot"></i>
+              場所ごとに表示
+            </button>
           </div>
-        ) : albums.length > 0 ? (
-          <div className={styles.albumGrid}>
-            {albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </div>
+        </div>
+
+        {viewMode === "album" ? (
+          loading ? (
+            <div className={styles.emptyGrid}>
+              <span className={styles.emptyText}>読み込み中...</span>
+            </div>
+          ) : albums.length > 0 ? (
+            <div className={styles.albumGrid}>
+              {albums.map((album) => (
+                <AlbumCard key={album.id} album={album} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyGrid}>
+              <i className={`fa-solid fa-images ${styles.emptyIcon}`}></i>
+              <span className={styles.emptyText}>
+                アルバムがまだありません。<br />
+                右上のボタンから作成しましょう！🍬
+              </span>
+            </div>
+          )
         ) : (
-          <div className={styles.emptyGrid}>
-            <i className={`fa-solid fa-images ${styles.emptyIcon}`}></i>
-            <span className={styles.emptyText}>
-              アルバムがまだありません。<br />
-              右上のボタンから作成しましょう！🍬
-            </span>
-          </div>
+          photosLoading ? (
+            <div className={styles.emptyGrid} style={{ minHeight: "400px" }}>
+              <div className={styles.spinner}></div>
+              <span className={styles.emptyText}>写真データを読み込み中...</span>
+            </div>
+          ) : (
+            <AlbumMap photos={allPhotos} />
+          )
         )}
 
         {/* アルバム作成モーダル */}

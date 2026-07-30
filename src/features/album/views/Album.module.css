@@ -986,3 +986,73 @@
   color: white !important;
   border-color: rgba(255, 107, 129, 0.4) !important;
 }
+
+/* Filter Options & Tabs */
+.filterRow {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.tabContainer {
+  display: flex;
+  background-color: #f3ebf7;
+  padding: 4px;
+  border-radius: 30px;
+  gap: 4px;
+  box-shadow: inset 0 2px 4px rgba(155, 124, 195, 0.08);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tabContainer::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.tabBtn {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 26px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #8874a3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.tabBtn:hover {
+  color: #9B7CC3;
+}
+
+.tabBtnActive {
+  background-color: white;
+  color: #9B7CC3;
+  box-shadow: 0 4px 10px rgba(155, 124, 195, 0.15);
+}
+
+.tabBtn i {
+  font-size: 14px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(247, 168, 196, 0.2);
+  border-top-color: #F7A8C4;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+

@@ -283,3 +283,11 @@ export async function togglePhotoFavorite(photoId: string, uid: string, isFavori
     favoriteUids: isFavorite ? arrayUnion(uid) : arrayRemove(uid),
   });
 }
+
+// すべての写真を取得する
+export async function getAllPhotos(): Promise<Photo[]> {
+  const ref = collection(db, "photos");
+  const snap = await getDocs(ref);
+  return snap.docs.map((d) => toPlainObject(d) as Photo);
+}
+
