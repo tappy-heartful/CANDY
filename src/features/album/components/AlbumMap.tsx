@@ -106,9 +106,7 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
       const icon = L.divIcon({
         className: styles.customMarker,
         html: `<div class="${styles.markerImageWrapper}">
-                 <div class="${styles.markerImageContainer}">
-                   <img src="${latestPhoto.url}" class="${styles.markerImage}" alt="photo" />
-                 </div>
+                 <div class="${styles.markerImageContainer}" style="background-image: url('${latestPhoto.url}');"></div>
                  ${group.photos.length > 1 ? `<span class="${styles.markerBadge}">${group.photos.length}</span>` : ""}
                </div>`,
         iconSize: [48, 48],
