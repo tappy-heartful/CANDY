@@ -78,7 +78,11 @@ service cloud.firestore {
     match /photos/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteUids'])
+      );
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /prefectures/{id} {
