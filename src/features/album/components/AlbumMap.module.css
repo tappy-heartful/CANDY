@@ -180,7 +180,7 @@
 
 /* ポップアップコンテナ */
 .popupContainer {
-  width: 172px; /* カルーセルチラ見え分の幅に合わせる */
+  width: 180px; /* 180pxの正方形幅に統一 */
   font-family: inherit;
   box-sizing: border-box;
   overflow: hidden;
@@ -192,10 +192,10 @@
   scroll-snap-type: x mandatory; /* スナップスクロールを設定 */
   scrollbar-width: none; /* スクロールバー非表示 */
   -webkit-overflow-scrolling: touch; /* iOSでの滑らかなスクロール */
-  width: 172px;
+  width: 180px;
   min-width: 0;
   box-sizing: border-box;
-  gap: 8px; /* スライド間の隙間 */
+  gap: 0; /* 静止時に隣の写真が見えないように隙間をなくす */
 }
 
 .popupScrollContainer::-webkit-scrollbar {
@@ -203,47 +203,50 @@
 }
 
 .popupPhotoItem {
-  flex: 0 0 160px; /* 160pxにして右側のチラ見えを確保 */
+  flex: 0 0 180px; /* 写真の幅を180pxに統一 */
   scroll-snap-align: start; /* スナップ位置を左端に合わせる */
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative; /* 指標アイコンの絶対配置の基準 */
 }
 
 .popupImageWrapper {
-  width: 160px;
-  height: 160px; /* 160pxの正方形 */
+  width: 180px;
+  height: 180px; /* 180pxの正方形 */
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* スワイプ可能を示すインジケータ */
-.swipeIndicator {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background-color: rgba(0, 0, 0, 0.55);
-  color: #ffffff;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  pointer-events: none;
-  z-index: 10;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  animation: swipePulse 2s infinite ease-in-out;
+/* カルーセル自動スライド弾性ヒント（スプリングアニメーション） */
+.popupScrollContainerHint {
+  animation: popupSwipeHint 1.2s cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation-delay: 0.4s; /* ポップアップ展開完了のタイミングに合わせる */
 }
 
-@keyframes swipePulse {
-  0% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.1); opacity: 0.95; }
-  100% { transform: scale(1); opacity: 0.6; }
+@keyframes popupSwipeHint {
+  0% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-35px); /* 左へ引っ張る */
+  }
+  35% {
+    transform: translateX(8px);    /* 弾力バウンド（右へ行き過ぎる） */
+  }
+  52% {
+    transform: translateX(-4px);   /* 小さく戻る */
+  }
+  70% {
+    transform: translateX(1px);    /* 微小バウンド */
+  }
+  85% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .popupImage {
