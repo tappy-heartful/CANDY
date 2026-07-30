@@ -130,19 +130,23 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
           <div class="${styles.popupImageWrapper}">
             <img src="${photo.url}" class="${styles.popupImage}" alt="photo preview" />
           </div>
-          ${sortedPhotos.length > 1 ? `<div class="${styles.swipeIndicator}"><i class="fa-solid fa-angles-left-right"></i></div>` : ""}
         </div>
       `).join('');
 
+      const isMulti = sortedPhotos.length > 1;
+      const scrollContainerClass = isMulti
+        ? `${styles.popupScrollContainer} ${styles.popupScrollContainerHint}`
+        : styles.popupScrollContainer;
+
       marker.bindPopup(`
         <div class="${styles.popupContainer}">
-          <div class="${styles.popupScrollContainer}">
+          <div class="${scrollContainerClass}">
             ${thumbsHtml}
           </div>
         </div>
       `, {
-        maxWidth: 182,
-        minWidth: 172
+        maxWidth: 200,
+        minWidth: 180
       });
       
       markers.push(marker);
