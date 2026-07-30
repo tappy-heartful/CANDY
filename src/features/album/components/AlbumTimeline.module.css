@@ -1,0 +1,432 @@
+.timelineContainer {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 24px;
+  padding-left: 28px;
+  box-sizing: border-box;
+}
+
+/* タイムラインの縦線 */
+.timelineLine {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  width: 3px;
+  background: linear-gradient(to bottom, #F7A8C4 0%, #E895B3 50%, #9B7CC3 100%);
+  border-radius: 2px;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timelineItem {
+  position: relative;
+  width: 100%;
+}
+
+/* タイムラインノード点 (ハート) */
+.timelineNode {
+  position: absolute;
+  left: -28px;
+  top: 18px;
+  width: 22px;
+  height: 22px;
+  background-color: #ffffff;
+  border: 2px solid #F7A8C4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(247, 168, 196, 0.3);
+}
+
+.timelineNode i {
+  color: #F7A8C4;
+  font-size: 10px;
+}
+
+/* カードデザイン */
+.timelineCard {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.04);
+  border: 1px solid rgba(155, 124, 195, 0.08);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.timelineCard:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 30px rgba(155, 124, 195, 0.1);
+  border-color: rgba(247, 168, 196, 0.3);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dateText {
+  font-size: 15px;
+  font-weight: 800;
+  color: #8874a3;
+}
+
+.photoCount {
+  font-size: 11px;
+  font-weight: bold;
+  background-color: #faf0f4;
+  color: #E895B3;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* コラージュグリッド */
+.collageGrid {
+  display: grid;
+  gap: 6px;
+  height: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: #fcfafc;
+}
+
+.collageItem {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.collageImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.timelineCard:hover .collageImg {
+  transform: scale(1.05);
+}
+
+/* グリッド枚数別レイアウト */
+.grid-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.grid-2 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.grid-3 {
+  grid-template-columns: 1.8fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.grid-3 .collageItem:first-child {
+  grid-row: span 2;
+}
+
+.grid-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* モーダルウィンドウ */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(26, 18, 36, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.modalBox {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(155, 124, 195, 0.1);
+}
+
+.modalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3e8f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: #8874a3;
+  display: flex;
+  align-items: center;
+}
+
+.modalCountBadge {
+  font-size: 11px;
+  font-weight: bold;
+  background-color: #f3ebf7;
+  color: #9B7CC3;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #9B7CC3;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.modalClose:hover {
+  transform: rotate(90deg);
+}
+
+.modalPhotoGrid {
+  padding: 20px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.modalPhotoItem {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  background-color: #f7f3f9;
+}
+
+.modalPhotoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.modalPhotoItem:hover .modalPhotoImg {
+  transform: scale(1.08);
+}
+
+/* ライトボックス (拡大表示) */
+.lightboxOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 3010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightboxPrev,
+.lightboxNext {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ffffff;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 3010;
+  transition: background-color 0.2s;
+}
+
+.lightboxPrev:hover,
+.lightboxNext:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightboxPrev {
+  left: 20px;
+}
+
+.lightboxNext {
+  right: 20px;
+}
+
+.lightboxContent {
+  position: relative;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lightboxImg {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.lightboxInfo {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+/* 空の状態 */
+.emptyContainer {
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fdfafb;
+  border-radius: 20px;
+  border: 2px dashed rgba(247, 168, 196, 0.3);
+  padding: 20px;
+  box-sizing: border-box;
+  margin-top: 15px;
+}
+
+.emptyCard {
+  max-width: 420px;
+  text-align: center;
+  background-color: #ffffff;
+  padding: 30px 25px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(247, 168, 196, 0.1);
+}
+
+.emptyText {
+  font-size: 15px;
+  color: #555555;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.emptySubText {
+  font-size: 12px;
+  color: #888888;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* アニメーションキーフレーム */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+  .lightboxPrev,
+  .lightboxNext {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .lightboxPrev {
+    left: 10px;
+  }
+  .lightboxNext {
+    right: 10px;
+  }
+}
+
+@media (max-width: 576px) {
+  .timelineContainer {
+    padding-left: 20px;
+  }
+  .timelineLine {
+    left: 6px;
+  }
+  .timelineNode {
+    left: -20px;
+    width: 18px;
+    height: 18px;
+    top: 20px;
+  }
+  .timelineNode i {
+    font-size: 8px;
+  }
+  .modalPhotoGrid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 12px;
+  }
+  .collageGrid {
+    height: 160px;
+  }
+  .lightboxClose {
+    top: 15px;
+    right: 15px;
+    font-size: 24px;
+  }
+}

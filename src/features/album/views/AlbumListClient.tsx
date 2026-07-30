@@ -19,6 +19,7 @@ import {
   Municipality
 } from "../api/album-client-service";
 import styles from "./Album.module.css";
+import AlbumTimeline from "../components/AlbumTimeline";
 
 const AlbumMap = dynamic(() => import("../components/AlbumMap"), {
   ssr: false,
@@ -133,13 +134,13 @@ export default function AlbumListClient() {
   const [loading, setLoading] = useState(true);
   
   // 表示モードおよび全写真の管理用
-  const [viewMode, setViewMode] = useState<"album" | "location">("album");
+  const [viewMode, setViewMode] = useState<"album" | "location" | "timeline">("album");
   const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
 
-  // 地図表示が選択され、写真が未取得の場合に全写真を取得する
+  // 地図表示または時系列表示が選択され、写真が未取得の場合に全写真を取得する
   useEffect(() => {
-    if (viewMode === "location" && allPhotos.length === 0 && !photosLoading) {
+    if ((viewMode === "location" || viewMode === "timeline") && allPhotos.length === 0 && !photosLoading) {
       setPhotosLoading(true);
       getAllPhotos()
         .then((data) => {
@@ -266,14 +267,21 @@ export default function AlbumListClient() {
               onClick={() => setViewMode("album")}
             >
               <i className="fa-solid fa-folder-open"></i>
-              アルバムごとに表示
+              アルバム
             </button>
             <button
               className={`${styles.tabBtn} ${viewMode === "location" ? styles.tabBtnActive : ""}`}
               onClick={() => setViewMode("location")}
             >
               <i className="fa-solid fa-map-location-dot"></i>
-              場所ごとに表示
+              場所
+            </button>
+            <button
+              className={`${styles.tabBtn} ${viewMode === "timeline" ? styles.tabBtnActive : ""}`}
+              onClick={() => setViewMode("timeline")}
+            >
+              <i className="fa-solid fa-timeline"></i>
+              時系列
             </button>
           </div>
         </div>
@@ -298,7 +306,7 @@ export default function AlbumListClient() {
               </span>
             </div>
           )
-        ) : (
+        ) : viewMode === "location" ? (
           photosLoading ? (
             <div className={styles.emptyGrid} style={{ minHeight: "400px" }}>
               <div className={styles.spinner}></div>
@@ -306,6 +314,16 @@ export default function AlbumListClient() {
             </div>
           ) : (
             <AlbumMap photos={allPhotos} />
+          )
+        ) : (
+          /* 時系列表示 (timeline) */
+          photosLoading ? (
+            <div className={styles.emptyGrid} style={{ minHeight: "400px" }}>
+              <div className={styles.spinner}></div>
+              <span className={styles.emptyText}>写真データを読み込み中...</span>
+            </div>
+          ) : (
+            <AlbumTimeline photos={allPhotos} />
           )
         )}
 
