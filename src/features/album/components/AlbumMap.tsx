@@ -85,6 +85,14 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
     }).setView(initialCenter, 12);
     leafletMap.current = map;
 
+    // スクロールやズーム開始時にポップアップを自動で閉じる
+    map.on("movestart", () => {
+      map.closePopup();
+    });
+    map.on("zoomstart", () => {
+      map.closePopup();
+    });
+
     // Safariなどでのタイル読み込みレイアウト崩れを防ぐためのサイズ再計算
     const timer = setTimeout(() => {
       map.invalidateSize();
@@ -122,22 +130,19 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
           <div class="${styles.popupImageWrapper}">
             <img src="${photo.url}" class="${styles.popupImage}" alt="photo preview" />
           </div>
+          ${sortedPhotos.length > 1 ? `<div class="${styles.swipeIndicator}"><i class="fa-solid fa-angles-left-right"></i></div>` : ""}
         </div>
       `).join('');
 
       marker.bindPopup(`
         <div class="${styles.popupContainer}">
-          <div class="${styles.popupHeader}">
-            <i class="fa-solid fa-location-dot"></i>
-            <span>思い出の場所 (${group.photos.length}枚)</span>
-          </div>
           <div class="${styles.popupScrollContainer}">
             ${thumbsHtml}
           </div>
         </div>
       `, {
-        maxWidth: 240,
-        minWidth: 200
+        maxWidth: 182,
+        minWidth: 172
       });
       
       markers.push(marker);
