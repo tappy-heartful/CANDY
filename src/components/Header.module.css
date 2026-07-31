@@ -186,6 +186,7 @@
   transition: right 0.3s ease;
   padding: 20px;
   box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+  overflow-y: auto; /* メニューが多くなった時のスクロール対応 */
 }
 
 .slideMenuOpen { right: 0; }
@@ -230,25 +231,30 @@
 
 .slideMenuSection {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 15px;
+  grid-template-columns: 1fr 1fr; /* 1行に2つ表示 */
+  gap: 10px;
 }
 
 .menuLink {
   display: flex;
+  flex-direction: column; /* 縦並びにして2列にすっきり収める */
   align-items: center;
-  gap: 15px;
-  padding: 15px;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 6px;
   background: #fdf2f8;
-  border-radius: 15px;
+  border-radius: 16px;
   text-decoration: none;
   color: #444;
   font-weight: 900;
-  transition: background 0.2s;
+  font-size: 13px;
+  text-align: center;
+  transition: all 0.2s;
 }
 
 .menuLink:hover {
   background: #fce4ec;
+  transform: translateY(-1px);
 }
 
 .menuIcon {

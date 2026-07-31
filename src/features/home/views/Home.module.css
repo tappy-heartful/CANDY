@@ -941,6 +941,9 @@
 .cardSettlement {
   background: linear-gradient(135deg, #f7a8c4, #ff758c) !important;
 }
+.cardIdealProperty {
+  background: linear-gradient(135deg, #a0e7d2, #81c784) !important;
+}
 
 .badgeSeason {
   background: #f5f5f5;

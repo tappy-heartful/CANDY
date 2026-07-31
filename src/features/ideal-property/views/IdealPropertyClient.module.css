@@ -1,0 +1,615 @@
+/* Tabs Styling */
+.tabContainer {
+  display: flex;
+  background: #f3e5f5;
+  padding: 6px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tabContainer::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.tabBtn {
+  flex: 1;
+  min-width: max-content;
+  border: none;
+  background: transparent;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #7b5ba0;
+  cursor: pointer;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tabBtn:hover {
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.tabActive {
+  background: white;
+  color: #9B7CC3;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.15);
+}
+
+@media (max-width: 480px) {
+  .tabBtn {
+    padding: 10px 12px;
+    font-size: 12px;
+    gap: 4px;
+  }
+}
+
+/* Compare View Container */
+.compareContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+/* Alerts */
+.infoAlert {
+  background: #e0f2f1;
+  border: 1px solid #b2dfdb;
+  color: #00796b;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: bold;
+}
+
+.infoAlert i {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+/* Summary Card */
+.summaryCard {
+  background: linear-gradient(135deg, #fce4ec, #f3e5f5);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.08);
+  border: 2px solid #f8bbd0;
+}
+
+.summaryTitle {
+  font-size: 16px;
+  font-weight: bold;
+  color: #880e4f;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summaryItem {
+  font-size: 14px;
+  color: #444;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  line-height: 1.4;
+}
+
+.summaryItem strong {
+  color: #555;
+}
+
+.matchText {
+  color: #00796b;
+  font-weight: bold;
+  background: #e0f2f1;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid #b2dfdb;
+}
+
+.warnText {
+  color: #c62828;
+  font-weight: bold;
+  background: #ffebee;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid #ffcdd2;
+}
+
+/* Property Cards */
+.compareCard {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(155, 124, 195, 0.04);
+  border: 2px solid #fcf6ff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.compareCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(155, 124, 195, 0.08);
+}
+
+.cardHeader {
+  font-size: 16px;
+  font-weight: 800;
+  color: #9B7CC3;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px dashed #f0f0f0;
+  padding-bottom: 10px;
+}
+
+/* Memo compare grid */
+.memoCompareGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 500px) {
+  .memoCompareGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.memoColumn {
+  background: #fafafa;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+}
+
+.memoText {
+  font-size: 14px;
+  color: #444;
+  margin: 8px 0 0 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* User Name Badges */
+.userNameBadgeMe, .userNameBadgePartner {
+  font-size: 11px;
+  font-weight: 900;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.userNameBadgeMe {
+  background: #F7A8C4;
+}
+
+.userNameBadgePartner {
+  background: #A0E7D2;
+  color: #2b705e;
+}
+
+/* Grid comparison inside cards */
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 500px) {
+  .compareGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compareCol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.valueText {
+  font-size: 15px;
+  font-weight: bold;
+  color: #444;
+  line-height: 1.5;
+}
+
+.subCheckList {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.subCheckList span {
+  font-size: 11px;
+  background: #f3e5f5;
+  color: #7b5ba0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+/* Tags comparisons (Layouts, Types, etc) */
+.tagComparisonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tagGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tagLabelCommon, .tagLabelMe, .tagLabelPartner {
+  font-size: 11px;
+  font-weight: bold;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.tagLabelCommon {
+  background: #fce4ec;
+  color: #d81b60;
+}
+
+.tagLabelMe {
+  background: #fdf2f8;
+  color: #ec4899;
+}
+
+.tagLabelPartner {
+  background: #e0f2f1;
+  color: #00796b;
+}
+
+.tagWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagCommon, .tagMe, .tagPartner {
+  font-size: 13px;
+  font-weight: bold;
+  padding: 6px 14px;
+  border-radius: 12px;
+}
+
+.tagCommon {
+  background: #ffe4e6;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.08);
+}
+
+.tagMe {
+  background: #fdf2f8;
+  color: #db2777;
+  border: 1px solid #fbcfe8;
+}
+
+.tagPartner {
+  background: #e0f2f1;
+  color: #0d9488;
+  border: 1px solid #ccfbf1;
+}
+
+/* Preferences compare lists */
+.preferenceCompareList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prefCompareRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #fafafa;
+  border-radius: 14px;
+  border: 1px solid #f5f5f5;
+  gap: 10px;
+}
+
+.prefCompareLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.categoryBadge {
+  font-size: 10px;
+  font-weight: bold;
+  background: #e1f5fe;
+  color: #0288d1;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.prefLabelName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #444;
+}
+
+.prefCompareStatus {
+  display: flex;
+  align-items: center;
+}
+
+.badgeBoth, .badgeMeOnly, .badgePartnerOnly {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.badgeBoth {
+  background: linear-gradient(135deg, #ff758c, #ff7eb3);
+  color: white;
+  box-shadow: 0 4px 8px rgba(255, 117, 140, 0.2);
+}
+
+.badgeMeOnly {
+  background: #fbcfe8;
+  color: #be185d;
+}
+
+.badgePartnerOnly {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: #bbb;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   Form Styling (Tab 2)
+   ========================================================================== */
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.formCard {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(155, 124, 195, 0.04);
+  border: 2px solid #fdf8ff;
+}
+
+.formHeader {
+  font-size: 16px;
+  font-weight: bold;
+  color: #9B7CC3;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid #f3e5f5;
+  padding-bottom: 8px;
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inputs, Selects */
+.appInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1bee7;
+  border-radius: 14px;
+  font-size: 14px;
+  color: #444;
+  outline: none;
+  background: #fbfbfb;
+  transition: all 0.3s;
+}
+
+.appInput:focus {
+  border-color: #9B7CC3;
+  background: white;
+  box-shadow: 0 0 8px rgba(155, 124, 195, 0.15);
+}
+
+.selectRange {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.appSelect {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  border: 2px solid #e1bee7;
+  border-radius: 14px;
+  font-size: 14px;
+  color: #444;
+  outline: none;
+  background: #fbfbfb;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.appSelect:focus {
+  border-color: #9B7CC3;
+  background: white;
+}
+
+.rangeSep {
+  color: #7b5ba0;
+  font-weight: bold;
+}
+
+.selectLabel {
+  font-size: 12px;
+  font-weight: bold;
+  color: #7b5ba0;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.subFormLabel {
+  font-size: 13px;
+  font-weight: bold;
+  color: #888;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* Checkbox & Grid */
+.checkboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #444;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"], .checkboxItem input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #9B7CC3;
+  cursor: pointer;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  font-weight: bold;
+  cursor: pointer;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.checkboxItem:hover {
+  background: #f3e5f5;
+  border-color: #e1bee7;
+}
+
+/* Preferences specific block */
+.preferenceSections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.prefCategoryBlock {
+  background: #fafafa;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #f5f5f5;
+}
+
+/* Save Button */
+.saveBtn {
+  background: linear-gradient(135deg, #9B7CC3, #7b5ba0);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.saveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(155, 124, 195, 0.35);
+  filter: brightness(1.05);
+}
+
+.saveBtn:active {
+  transform: scale(0.98);
+}
+
+.readOnlyNotice {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #666;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}

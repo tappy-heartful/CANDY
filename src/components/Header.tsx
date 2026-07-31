@@ -201,6 +201,9 @@ export default function Header() {
           <Link href="/settlement" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-hand-holding-dollar ${styles.menuIcon}`}></i> ワリカン
           </Link>
+          <Link href="/ideal-property" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-house-chimney-window ${styles.menuIcon}`}></i> 理想の物件
+          </Link>
           <Link href="/settings" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-bell ${styles.menuIcon}`}></i> 通知設定
           </Link>

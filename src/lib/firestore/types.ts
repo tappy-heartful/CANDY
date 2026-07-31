@@ -225,5 +225,135 @@ export interface SettlementItem {
   updatedAt: number;
 }
 
+export interface PropertyPreference {
+  id: string; // ドキュメントID (uid)
+  uid: string; // ユーザーID
+  areaMemo?: string; // 希望エリアのメモ
+  rentMin: number; // 賃料下限 (0: 下限なし)
+  rentMax: number; // 賃料上限 (999: 上限なし)
+  includeCommonFee: boolean; // 管理費・共益費込み
+  noKeyMoney: boolean; // 礼金なし
+  noDeposit: boolean; // 敷金・保証金なし
+  roomLayouts: string[]; // 希望の間取り
+  buildingTypes: string[]; // 希望の建物種別
+  structures: string[]; // 希望の構造
+  stationWalkMin: number; // 駅徒歩 (999: 指定なし)
+  areaMin: number; // 専有面積下限
+  areaMax: number; // 専有面積上限
+  buildingAgeMax: number; // 築年数 (999: 指定なし)
+  directions: string[]; // 希望の方位
+
+  // 1. 冷暖房
+  airConditioning: boolean; // エアコン付き
+  floorHeating: boolean; // 床暖房
+  keroseneHeating: boolean; // 灯油暖房
+  gasHeating: boolean; // ガス暖房
+
+  // 2. 収納
+  underfloorStorage: boolean; // 床下収納
+  shoesBox: boolean; // シューズボックス
+  trunkRoom: boolean; // トランクルーム
+  walkInCloset: boolean; // ウォークインクローゼット
+
+  // 3. セキュリティ
+  autoLock: boolean; // オートロック
+  caretaker: boolean; // 管理人有り
+  tvIntercom: boolean; // TVモニタ付きインタホン
+  securityCamera: boolean; // 防犯カメラ
+  securityCompany: boolean; // セキュリティ会社加入済
+
+  // 4. 建物設備
+  parkingAvailable: boolean; // 駐車場あり
+  parkingTwoOrMore: boolean; // 駐車場2台以上
+  onSiteParking: boolean; // 敷地内駐車場
+  bicycleParking: boolean; // 駐輪場あり
+  motorcycleParking: boolean; // バイク置場あり
+  elevator: boolean; // エレベーター
+  deliveryBox: boolean; // 宅配ボックス
+  onSiteGarbage: boolean; // 敷地内ゴミ置場
+  balcony: boolean; // バルコニー付
+  roofBalcony: boolean; // ルーフバルコニー付
+  privateGarden: boolean; // 専用庭
+  cityGas: boolean; // 都市ガス
+  lpg: boolean; // プロパンガス
+  barrierFree: boolean; // バリアフリー
+
+  // 5. その他
+  designers: boolean; // デザイナーズ物件
+  itExplanation: boolean; // IT重説対応物件
+  condominiumRental: boolean; // 分譲賃貸
+  noGuarantor: boolean; // 保証人不要
+  towerMansion: boolean; // タワーマンション
+  renovated: boolean; // リフォーム済み
+  renovation: boolean; // リノベーション物件
+
+  // 6. 入居条件
+  immediateOccupancy: boolean; // 即入居可
+  womenOnly: boolean; // 女性限定
+  elderlyWelcomed: boolean; // 高齢者歓迎
+  lgbtFriendly: boolean; // LGBTフレンドリー
+  petNegotiable: boolean; // ペット相談可
+  instrumentNegotiable: boolean; // 楽器相談可
+  officeUse: boolean; // 事務所利用可
+  roomShare: boolean; // ルームシェア可
+  customizable: boolean; // カスタマイズ可
+  diy: boolean; // DIY可
+  noFixedTerm: boolean; // 定期借家を含まない
+
+  // 7. お得条件
+  freeRent: boolean; // フリーレント
+  tokuyuRent: boolean; // 特定優良賃貸住宅
+
+  // 8. 表示情報
+  todayNew: boolean; // 本日の新着物件
+  recentNew: boolean; // 新着（2-7日前）
+  videoAttached: boolean; // 物件動画・スライドショー付き
+  panoramaAttached: boolean; // パノラマ付き
+  floorPlanAttached: boolean; // 間取り図付き
+  photoAttached: boolean; // 写真付き
+
+  // 9. 位置
+  firstFloor: boolean; // 1階の物件
+  secondFloorOrAbove: boolean; // 2階以上
+  topFloor: boolean; // 最上階
+  cornerRoom: boolean; // 角部屋
+  southFacing: boolean; // 南向き
+
+  // 10. キッチン
+  gasStove: boolean; // ガスコンロ対応
+  ihStove: boolean; // IHコンロ
+  twoOrMoreStoves: boolean; // コンロ2口以上
+  allElectric: boolean; // オール電化
+  systemKitchen: boolean; // システムキッチン
+  counterKitchen: boolean; // カウンターキッチン
+
+  // 11. バス・トイレ
+  bathToiletSeparate: boolean; // バス・トイレ別
+  washlet: boolean; // 温水洗浄便座
+  bathroomDryer: boolean; // 浴室乾燥機
+  reheatingBath: boolean; // 追い焚き風呂
+  showerRoom: boolean; // シャワールーム
+
+  // 12. テレビ・通信
+  internetConnected: boolean; // インターネット接続可
+  bsAntenna: boolean; // BSアンテナ
+  csAntenna: boolean; // CSアンテナ
+  cableTv: boolean; // ケーブルテレビ
+  internetFree: boolean; // インターネット無料
+
+  // 13. 室内設備
+  indoorLaundry: boolean; // 室内洗濯機置場
+  independentWashroom: boolean; // 洗面所独立
+  flooring: boolean; // フローリング
+  maisonette: boolean; // メゾネット
+  loft: boolean; // ロフト
+  soundproof: boolean; // 防音室
+  basement: boolean; // 地下室
+  furnished: boolean; // 家具付
+  appliancesAttached: boolean; // 家電付
+
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 

@@ -99,6 +99,11 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    match /propertyPreferences/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid);
+    }
+
     match /notificationSettings/{uid} {
       allow read, write: if isOwner(uid);
     }
