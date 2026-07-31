@@ -356,4 +356,53 @@ export interface PropertyPreference {
   updatedAt?: number;
 }
 
+// ==========================================
+// 家計簿機能用データ型定義
+// ==========================================
+
+export interface BudgetCategory {
+  id: string; // 例: "fixed", "variable", "income"
+  name: string; // 例: "固定費", "変動費", "収入"
+}
+
+export interface BudgetType {
+  id: string; // 例: "rent", "food"
+  categoryId: string; // 親カテゴリのID
+  name: string; // 例: "マンション", "生活費"
+}
+
+export interface BudgetMasterData {
+  categories: BudgetCategory[];
+  types: BudgetType[];
+}
+
+export interface DefaultBudget {
+  id: string;
+  coupleKey: string; // 共通キー (uid1_uid2 など)
+  uid: string; // 対象者 (たぴ / まい)
+  month: number; // 1〜12 (対象月)
+  category: string; // 区分ID ("fixed", "variable", "income")
+  type: string; // 種別ID
+  name: string; // 項目名
+  amount: number; // 金額
+  memo?: string; // 備考
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ActualBudget {
+  id: string;
+  coupleKey: string; // 共通キー
+  uid: string; // 対象者
+  year: number; // 年 (例: 2026)
+  month: number; // 月 (1〜12)
+  category: string; // 区分ID
+  type: string; // 種別ID
+  name: string; // 項目名
+  amount: number; // 金額
+  memo?: string; // 備考
+  createdAt: number;
+  updatedAt: number;
+}
+
 

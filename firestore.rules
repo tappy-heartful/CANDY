@@ -121,6 +121,19 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // 二人の家計簿機能
+    match /budgetSettings/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /defaultBudgets/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /actualBudgets/{id} {
+      allow read, write: if isSignedIn();
+    }
+
 
     // ============================
 
