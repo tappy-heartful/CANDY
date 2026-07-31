@@ -434,6 +434,133 @@ export default function IdealPropertyClient() {
     return { common, onlyMe, onlyPartner };
   };
 
+  const getBasicSpecsComparison = () => {
+    const common: string[] = [];
+    const onlyMe: string[] = [];
+    const onlyPartner: string[] = [];
+
+    const myMin = myPreference.rentMin || 0;
+    const myMax = myPreference.rentMax || 999;
+    const pMin = partnerPreference ? (partnerPreference.rentMin || 0) : 0;
+    const pMax = partnerPreference ? (partnerPreference.rentMax || 999) : 999;
+
+    // 1. エリア
+    if (myPreference.areaMemo && partnerPreference?.areaMemo) {
+      if (myPreference.areaMemo.trim() === partnerPreference.areaMemo.trim()) {
+        common.push(`希望エリア: ${myPreference.areaMemo}`);
+      } else {
+        common.push(`希望エリア: ${myPreference.areaMemo} / ${partnerPreference.areaMemo}`);
+      }
+    } else if (myPreference.areaMemo) {
+      onlyMe.push(`希望エリア: ${myPreference.areaMemo}`);
+    } else if (partnerPreference?.areaMemo) {
+      onlyPartner.push(`希望エリア: ${partnerPreference.areaMemo}`);
+    }
+
+    // 2. 家賃
+    if (partnerPreference) {
+      const agreedMin = Math.max(myMin, pMin);
+      const agreedMax = Math.min(myMax, pMax);
+      if (agreedMin <= agreedMax) {
+        common.push(`家賃合意範囲: ${agreedMin === 0 ? "下限なし" : agreedMin + "万"}〜${agreedMax === 999 ? "上限なし" : agreedMax + "万"}`);
+      } else {
+        onlyMe.push(`希望家賃: ${myMin === 0 ? "下限なし" : myMin + "万"}〜${myMax === 999 ? "上限なし" : myMax + "万"}`);
+        onlyPartner.push(`希望家賃: ${pMin === 0 ? "下限なし" : pMin + "万"}〜${pMax === 999 ? "上限なし" : pMax + "万"}`);
+      }
+    }
+
+    // 3. 管理費込・礼金・敷金
+    const checkSpecs = [
+      { key: "includeCommonFee", label: "管理費・共益費込み" },
+      { key: "noKeyMoney", label: "礼金なし" },
+      { key: "noDeposit", label: "敷金・保証金なし" },
+    ];
+    checkSpecs.forEach(spec => {
+      const myVal = !!myPreference[spec.key as keyof PropertyPreference];
+      const pVal = partnerPreference ? !!partnerPreference[spec.key as keyof PropertyPreference] : false;
+      if (myVal && pVal) common.push(spec.label);
+      else if (myVal) onlyMe.push(spec.label);
+      else if (pVal) onlyPartner.push(spec.label);
+    });
+
+    // 4. 配列項目 (間取り, 建物種別, 構造, 方位)
+    const arrayFields = [
+      { key: "roomLayouts", label: "間取り" },
+      { key: "buildingTypes", label: "建物種別" },
+      { key: "structures", label: "構造" },
+      { key: "directions", label: "方位" },
+    ] as const;
+    arrayFields.forEach(field => {
+      const myItems = myPreference[field.key] || [];
+      const pItems = partnerPreference ? (partnerPreference[field.key] || []) : [];
+      
+      myItems.forEach(item => {
+        if (pItems.includes(item)) {
+          common.push(`${field.label}: ${item}`);
+        } else {
+          onlyMe.push(`${field.label}: ${item}`);
+        }
+      });
+      pItems.forEach(item => {
+        if (!myItems.includes(item)) {
+          onlyPartner.push(`${field.label}: ${item}`);
+        }
+      });
+    });
+
+    // 5. 駅徒歩
+    const myWalk = myPreference.stationWalkMin || 999;
+    const pWalk = partnerPreference ? (partnerPreference.stationWalkMin || 999) : 999;
+    if (myWalk !== 999 && pWalk !== 999) {
+      if (myWalk === pWalk) common.push(`駅徒歩${myWalk}分以内`);
+      else {
+        common.push(`駅徒歩合意: 徒歩${Math.min(myWalk, pWalk)}分以内`);
+        if (myWalk < pWalk) onlyMe.push(`駅徒歩${myWalk}分以内`);
+        else onlyPartner.push(`駅徒歩${pWalk}分以内`);
+      }
+    } else if (myWalk !== 999) {
+      onlyMe.push(`駅徒歩${myWalk}分以内`);
+    } else if (pWalk !== 999) {
+      onlyPartner.push(`駅徒歩${pWalk}分以内`);
+    }
+
+    // 6. 専有面積
+    const myAreaMin = myPreference.areaMin || 0;
+    const myAreaMax = myPreference.areaMax || 999;
+    const pAreaMin = partnerPreference ? (partnerPreference.areaMin || 0) : 0;
+    const pAreaMax = partnerPreference ? (partnerPreference.areaMax || 999) : 999;
+    if (partnerPreference) {
+      const agreedAreaMin = Math.max(myAreaMin, pAreaMin);
+      const agreedAreaMax = Math.min(myAreaMax, pAreaMax);
+      if (agreedAreaMin <= agreedAreaMax) {
+        if (agreedAreaMin > 0 || agreedAreaMax < 999) {
+          common.push(`面積合意: ${agreedAreaMin === 0 ? "下限なし" : agreedAreaMin + "㎡"}〜${agreedAreaMax === 999 ? "上限なし" : agreedAreaMax + "㎡"}`);
+        }
+      } else {
+        onlyMe.push(`希望面積: ${myAreaMin}〜${myAreaMax}㎡`);
+        onlyPartner.push(`希望面積: ${pAreaMin}〜${pAreaMax}㎡`);
+      }
+    }
+
+    // 7. 築年数
+    const myAge = myPreference.buildingAgeMax || 999;
+    const pAge = partnerPreference ? (partnerPreference.buildingAgeMax || 999) : 999;
+    if (myAge !== 999 && pAge !== 999) {
+      if (myAge === pAge) common.push(myAge === 0 ? "新築" : `築${myAge}年以内`);
+      else {
+        common.push(`築年数合意: ${Math.min(myAge, pAge) === 0 ? "新築" : `築${Math.min(myAge, pAge)}年以内`}`);
+        if (myAge < pAge) onlyMe.push(myAge === 0 ? "新築" : `築${myAge}年以内`);
+        else onlyPartner.push(pAge === 0 ? "新築" : `築${pAge}年以内`);
+      }
+    } else if (myAge !== 999) {
+      onlyMe.push(myAge === 0 ? "新築" : `築${myAge}年以内`);
+    } else if (pAge !== 999) {
+      onlyPartner.push(pAge === 0 ? "新築" : `築${pAge}年以内`);
+    }
+
+    return { common, onlyMe, onlyPartner };
+  };
+
   const rentAgreement = getRentAgreement();
   const walkAgreement = getWalkAgreement();
   const areaAgreement = getAreaAgreement();
@@ -1158,6 +1285,168 @@ export default function IdealPropertyClient() {
               ) && <div className={styles.emptyText}>こだわり条件は現在お互いに選んでいません。</div>}
             </div>
           </div>
+
+
+          {/* ベン図でお互いの基本条件を可視化 */}
+          {partnerPreference && (
+            (() => {
+              const { common, onlyMe, onlyPartner } = getBasicSpecsComparison();
+
+              return (
+                <div className={styles.vennWrapper} style={{ marginBottom: "24px" }}>
+                  <div className={styles.vennHeader}>
+                    <i className="fa-solid fa-house-laptop"></i> お互いの基本条件重なり（ベン図）
+                  </div>
+                  
+                  <div className={styles.vennDiagram}>
+                    {/* 左円: 自分のみ */}
+                    <div className={`${styles.vennCircle} ${styles.vennLeft}`}>
+                      <span className={styles.vennLabel}>{myName}のみ</span>
+                      <span className={styles.vennCount}>{onlyMe.length}件</span>
+                    </div>
+                    
+                    {/* 右円: パートナーのみ */}
+                    <div className={`${styles.vennCircle} ${styles.vennRight}`}>
+                      <span className={styles.vennLabel}>{partnerName}のみ</span>
+                      <span className={styles.vennCount}>{onlyPartner.length}件</span>
+                    </div>
+                    
+                    {/* 重なり部分 */}
+                    <div className={styles.vennIntersection}>
+                      <span className={styles.vennLabel}>❤️ 一致</span>
+                      <span className={styles.vennCount}>{common.length}件</span>
+                    </div>
+                  </div>
+
+                  {/* 詳細タグリスト */}
+                  <div className={styles.vennDetails}>
+                    {common.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titleCommon}`}>
+                          <i className="fa-solid fa-heart"></i> お互いに一致・合意する基本条件 ({common.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {common.map((tag, idx) => (
+                            <span key={idx} className={`${styles.vennTag} ${styles.tagCommon}`}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {onlyMe.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titleMe}`}>
+                          <i className="fa-solid fa-user"></i> {myName}だけが指定する基本条件 ({onlyMe.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {onlyMe.map((tag, idx) => (
+                            <span key={idx} className={`${styles.vennTag} ${styles.tagMe}`}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {onlyPartner.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titlePartner}`}>
+                          <i className="fa-solid fa-user-friends"></i> {partnerName}だけが指定する基本条件 ({onlyPartner.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {onlyPartner.map((tag, idx) => (
+                            <span key={idx} className={`${styles.vennTag} ${styles.tagPartner}`}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          {/* ベン図でお互いのこだわり条件を可視化 */}
+          {partnerPreference && (
+            (() => {
+              const commonPrefs = PREFERENCE_ITEMS.filter(item => 
+                !!myPreference[item.key as keyof PropertyPreference] && 
+                !!partnerPreference[item.key as keyof PropertyPreference]
+              );
+              const onlyMePrefs = PREFERENCE_ITEMS.filter(item => 
+                !!myPreference[item.key as keyof PropertyPreference] && 
+                !partnerPreference[item.key as keyof PropertyPreference]
+              );
+              const onlyPartnerPrefs = PREFERENCE_ITEMS.filter(item => 
+                !myPreference[item.key as keyof PropertyPreference] && 
+                !!partnerPreference[item.key as keyof PropertyPreference]
+              );
+
+              return (
+                <div className={styles.vennWrapper}>
+                  <div className={styles.vennHeader}>
+                    <i className="fa-solid fa-diagram-project"></i> お互いのこだわり重なり（ベン図）
+                  </div>
+                  
+                  <div className={styles.vennDiagram}>
+                    {/* 左円: 自分のみ */}
+                    <div className={`${styles.vennCircle} ${styles.vennLeft}`}>
+                      <span className={styles.vennLabel}>{myName}のみ</span>
+                      <span className={styles.vennCount}>{onlyMePrefs.length}件</span>
+                    </div>
+                    
+                    {/* 右円: パートナーのみ */}
+                    <div className={`${styles.vennCircle} ${styles.vennRight}`}>
+                      <span className={styles.vennLabel}>{partnerName}のみ</span>
+                      <span className={styles.vennCount}>{onlyPartnerPrefs.length}件</span>
+                    </div>
+                    
+                    {/* 重なり部分 */}
+                    <div className={styles.vennIntersection}>
+                      <span className={styles.vennLabel}>❤️ 一致</span>
+                      <span className={styles.vennCount}>{commonPrefs.length}件</span>
+                    </div>
+                  </div>
+
+                  {/* 詳細タグリスト */}
+                  <div className={styles.vennDetails}>
+                    {commonPrefs.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titleCommon}`}>
+                          <i className="fa-solid fa-heart"></i> お互いに希望する条件 ({commonPrefs.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {commonPrefs.map(item => (
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagCommon}`}>{item.label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {onlyMePrefs.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titleMe}`}>
+                          <i className="fa-solid fa-user"></i> {myName}だけが希望する条件 ({onlyMePrefs.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {onlyMePrefs.map(item => (
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagMe}`}>{item.label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {onlyPartnerPrefs.length > 0 && (
+                      <div className={styles.vennDetailGroup}>
+                        <div className={`${styles.vennDetailTitle} ${styles.titlePartner}`}>
+                          <i className="fa-solid fa-user-friends"></i> {partnerName}だけが希望する条件 ({onlyPartnerPrefs.length})
+                        </div>
+                        <div className={styles.vennTags}>
+                          {onlyPartnerPrefs.map(item => (
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagPartner}`}>{item.label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
+          )}
         </div>
       )}
 

@@ -613,3 +613,154 @@
   font-weight: bold;
   margin-bottom: 10px;
 }
+
+/* Venn Diagram Visualization */
+.vennWrapper {
+  margin-top: 30px;
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.08);
+  border: 1px solid #f3e5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.vennHeader {
+  font-size: 16px;
+  font-weight: bold;
+  color: #7b5ba0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.vennDiagram {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 180px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.vennCircle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.vennLeft {
+  left: 10px;
+  background: rgba(247, 168, 196, 0.15);
+  border: 2px solid #f7a8c4;
+}
+
+.vennRight {
+  right: 10px;
+  background: rgba(155, 124, 195, 0.15);
+  border: 2px solid #9b7cc3;
+}
+
+.vennIntersection {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(243, 229, 245, 0.6);
+  border: 2px dashed #9B7CC3;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.vennLabel {
+  font-size: 11px;
+  color: #666;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.vennCount {
+  font-size: 18px;
+  font-weight: 900;
+  color: #444;
+}
+
+.vennIntersection .vennLabel {
+  color: #7b5ba0;
+}
+
+.vennIntersection .vennCount {
+  color: #7b5ba0;
+  font-size: 20px;
+}
+
+/* Details list styling */
+.vennDetails {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.vennDetailGroup {
+  background: #fafafa;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+}
+
+.vennDetailTitle {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.titleCommon { color: #7b5ba0; }
+.titleMe { color: #f7a8c4; }
+.titlePartner { color: #9b7cc3; }
+
+.vennTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vennTag {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.tagCommon {
+  background: #f3e5f5;
+  color: #7b5ba0;
+}
+
+.tagMe {
+  background: #fde2e4;
+  color: #e56b6f;
+}
+
+.tagPartner {
+  background: #e8e8ff;
+  color: #6c5ce7;
+}
