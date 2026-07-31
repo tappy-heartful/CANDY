@@ -140,9 +140,9 @@ const createDefaultPreference = (uid: string): PropertyPreference => ({
   areaMemo: "",
   rentMin: 0,
   rentMax: 999,
-  includeCommonFee: false,
-  noKeyMoney: false,
-  noDeposit: false,
+  includeCommonFee: 0,
+  noKeyMoney: 0,
+  noDeposit: 0,
   roomLayouts: [],
   buildingTypes: [],
   structures: [],
@@ -151,89 +151,89 @@ const createDefaultPreference = (uid: string): PropertyPreference => ({
   areaMax: 999,
   buildingAgeMax: 999,
   directions: [],
-  airConditioning: false,
-  floorHeating: false,
-  keroseneHeating: false,
-  gasHeating: false,
-  underfloorStorage: false,
-  shoesBox: false,
-  trunkRoom: false,
-  walkInCloset: false,
-  autoLock: false,
-  caretaker: false,
-  tvIntercom: false,
-  securityCamera: false,
-  securityCompany: false,
-  parkingAvailable: false,
-  parkingTwoOrMore: false,
-  onSiteParking: false,
-  bicycleParking: false,
-  motorcycleParking: false,
-  elevator: false,
-  deliveryBox: false,
-  onSiteGarbage: false,
-  balcony: false,
-  roofBalcony: false,
-  privateGarden: false,
-  cityGas: false,
-  lpg: false,
-  barrierFree: false,
-  designers: false,
-  itExplanation: false,
-  condominiumRental: false,
-  noGuarantor: false,
-  towerMansion: false,
-  renovated: false,
-  renovation: false,
-  immediateOccupancy: false,
-  womenOnly: false,
-  elderlyWelcomed: false,
-  lgbtFriendly: false,
-  petNegotiable: false,
-  instrumentNegotiable: false,
-  officeUse: false,
-  roomShare: false,
-  customizable: false,
-  diy: false,
-  noFixedTerm: false,
-  freeRent: false,
-  tokuyuRent: false,
-  todayNew: false,
-  recentNew: false,
-  videoAttached: false,
-  panoramaAttached: false,
-  floorPlanAttached: false,
-  photoAttached: false,
-  firstFloor: false,
-  secondFloorOrAbove: false,
-  topFloor: false,
-  cornerRoom: false,
-  southFacing: false,
-  gasStove: false,
-  ihStove: false,
-  twoOrMoreStoves: false,
-  allElectric: false,
-  systemKitchen: false,
-  counterKitchen: false,
-  bathToiletSeparate: false,
-  washlet: false,
-  bathroomDryer: false,
-  reheatingBath: false,
-  showerRoom: false,
-  internetConnected: false,
-  bsAntenna: false,
-  csAntenna: false,
-  cableTv: false,
-  internetFree: false,
-  indoorLaundry: false,
-  independentWashroom: false,
-  flooring: false,
-  maisonette: false,
-  loft: false,
-  soundproof: false,
-  basement: false,
-  furnished: false,
-  appliancesAttached: false,
+  airConditioning: 0,
+  floorHeating: 0,
+  keroseneHeating: 0,
+  gasHeating: 0,
+  underfloorStorage: 0,
+  shoesBox: 0,
+  trunkRoom: 0,
+  walkInCloset: 0,
+  autoLock: 0,
+  caretaker: 0,
+  tvIntercom: 0,
+  securityCamera: 0,
+  securityCompany: 0,
+  parkingAvailable: 0,
+  parkingTwoOrMore: 0,
+  onSiteParking: 0,
+  bicycleParking: 0,
+  motorcycleParking: 0,
+  elevator: 0,
+  deliveryBox: 0,
+  onSiteGarbage: 0,
+  balcony: 0,
+  roofBalcony: 0,
+  privateGarden: 0,
+  cityGas: 0,
+  lpg: 0,
+  barrierFree: 0,
+  designers: 0,
+  itExplanation: 0,
+  condominiumRental: 0,
+  noGuarantor: 0,
+  towerMansion: 0,
+  renovated: 0,
+  renovation: 0,
+  immediateOccupancy: 0,
+  womenOnly: 0,
+  elderlyWelcomed: 0,
+  lgbtFriendly: 0,
+  petNegotiable: 0,
+  instrumentNegotiable: 0,
+  officeUse: 0,
+  roomShare: 0,
+  customizable: 0,
+  diy: 0,
+  noFixedTerm: 0,
+  freeRent: 0,
+  tokuyuRent: 0,
+  todayNew: 0,
+  recentNew: 0,
+  videoAttached: 0,
+  panoramaAttached: 0,
+  floorPlanAttached: 0,
+  photoAttached: 0,
+  firstFloor: 0,
+  secondFloorOrAbove: 0,
+  topFloor: 0,
+  cornerRoom: 0,
+  southFacing: 0,
+  gasStove: 0,
+  ihStove: 0,
+  twoOrMoreStoves: 0,
+  allElectric: 0,
+  systemKitchen: 0,
+  counterKitchen: 0,
+  bathToiletSeparate: 0,
+  washlet: 0,
+  bathroomDryer: 0,
+  reheatingBath: 0,
+  showerRoom: 0,
+  internetConnected: 0,
+  bsAntenna: 0,
+  csAntenna: 0,
+  cableTv: 0,
+  internetFree: 0,
+  indoorLaundry: 0,
+  independentWashroom: 0,
+  flooring: 0,
+  maisonette: 0,
+  loft: 0,
+  soundproof: 0,
+  basement: 0,
+  furnished: 0,
+  appliancesAttached: 0,
 });
 
 export default function IdealPropertyClient() {
@@ -332,10 +332,10 @@ export default function IdealPropertyClient() {
   const partnerName = partnerUser?.nickname || "パートナー";
 
   // 一致・乖離の分析計算
-  const getRentRangeText = (min: number, max: number, hasFee: boolean) => {
+  const getRentRangeText = (min: number, max: number, feePriority: number) => {
     const minText = min === 0 ? "下限なし" : `${min}万円`;
     const maxText = max === 999 ? "上限なし" : `${max}万円`;
-    const feeText = hasFee ? " (管理費等込)" : " (管理費等除く)";
+    const feeText = feePriority > 0 ? ` (管理費等込: 希望度 ${feePriority})` : " (管理費等除く)";
     return `${minText} 〜 ${maxText}${feeText}`;
   };
 
@@ -476,11 +476,15 @@ export default function IdealPropertyClient() {
       { key: "noDeposit", label: "敷金・保証金なし" },
     ];
     checkSpecs.forEach(spec => {
-      const myVal = !!myPreference[spec.key as keyof PropertyPreference];
-      const pVal = partnerPreference ? !!partnerPreference[spec.key as keyof PropertyPreference] : false;
-      if (myVal && pVal) common.push(spec.label);
-      else if (myVal) onlyMe.push(spec.label);
-      else if (pVal) onlyPartner.push(spec.label);
+      const myVal = Number(myPreference[spec.key as keyof PropertyPreference] || 0);
+      const pVal = partnerPreference ? Number(partnerPreference[spec.key as keyof PropertyPreference] || 0) : 0;
+      if (myVal > 0 && pVal > 0) {
+        common.push(`${spec.label} (自分: ${myVal}, 相手: ${pVal})`);
+      } else if (myVal > 0) {
+        onlyMe.push(`${spec.label} (希望度: ${myVal})`);
+      } else if (pVal > 0) {
+        onlyPartner.push(`${spec.label} (希望度: ${pVal})`);
+      }
     });
 
     // 4. 配列項目 (間取り, 建物種別, 構造, 方位)
@@ -637,43 +641,64 @@ export default function IdealPropertyClient() {
               </select>
             </div>
 
-            <div className={styles.checkboxGroup}>
-              <label className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={pref.includeCommonFee}
-                  onChange={() => {
+            <div className={styles.prioritySelectGroup}>
+              <div className={styles.prioritySelectRow}>
+                <span className={styles.priorityLabel}>管理費・共益費込み</span>
+                <select
+                  className={styles.preferenceSelect}
+                  value={Number(pref.includeCommonFee || 0)}
+                  onChange={(e) => {
                     if (isReadOnly) return;
-                    setEditForm({ ...editForm!, includeCommonFee: !editForm!.includeCommonFee });
+                    setEditForm({ ...editForm!, includeCommonFee: Number(e.target.value) });
                   }}
                   disabled={isReadOnly}
-                />
-                管理費・共益費込み
-              </label>
-              <label className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={pref.noKeyMoney}
-                  onChange={() => {
+                >
+                  <option value={0}>こだわりなし</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      希望度 {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.prioritySelectRow}>
+                <span className={styles.priorityLabel}>礼金なし</span>
+                <select
+                  className={styles.preferenceSelect}
+                  value={Number(pref.noKeyMoney || 0)}
+                  onChange={(e) => {
                     if (isReadOnly) return;
-                    setEditForm({ ...editForm!, noKeyMoney: !editForm!.noKeyMoney });
+                    setEditForm({ ...editForm!, noKeyMoney: Number(e.target.value) });
                   }}
                   disabled={isReadOnly}
-                />
-                礼金なし
-              </label>
-              <label className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={pref.noDeposit}
-                  onChange={() => {
+                >
+                  <option value={0}>こだわりなし</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      希望度 {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.prioritySelectRow}>
+                <span className={styles.priorityLabel}>敷金・保証金なし</span>
+                <select
+                  className={styles.preferenceSelect}
+                  value={Number(pref.noDeposit || 0)}
+                  onChange={(e) => {
                     if (isReadOnly) return;
-                    setEditForm({ ...editForm!, noDeposit: !editForm!.noDeposit });
+                    setEditForm({ ...editForm!, noDeposit: Number(e.target.value) });
                   }}
                   disabled={isReadOnly}
-                />
-                敷金・保証金なし
-              </label>
+                >
+                  <option value={0}>こだわりなし</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      希望度 {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -901,18 +926,25 @@ export default function IdealPropertyClient() {
                 <span className={styles.subFormLabel}>{category}</span>
                 <div className={styles.checkboxGrid}>
                   {PREFERENCE_ITEMS.filter((item) => item.category === category).map((item) => (
-                    <label key={item.key} className={styles.checkboxItem}>
-                      <input
-                        type="checkbox"
-                        checked={!!pref[item.key as keyof PropertyPreference]}
-                        onChange={() => {
+                    <div key={item.key} className={styles.preferenceItem}>
+                      <span className={styles.preferenceLabel}>{item.label}</span>
+                      <select
+                        className={styles.preferenceSelect}
+                        value={Number(pref[item.key as keyof PropertyPreference] || 0)}
+                        onChange={(e) => {
                           if (isReadOnly) return;
-                          setEditForm({ ...editForm!, [item.key]: !editForm![item.key as keyof PropertyPreference] });
+                          setEditForm({ ...editForm!, [item.key]: Number(e.target.value) });
                         }}
                         disabled={isReadOnly}
-                      />
-                      {item.label}
-                    </label>
+                      >
+                        <option value={0}>こだわりなし</option>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                          <option key={num} value={num}>
+                            希望度 {num}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1031,8 +1063,8 @@ export default function IdealPropertyClient() {
                 <div className={styles.valueText}>
                   {getRentRangeText(myPreference.rentMin, myPreference.rentMax, myPreference.includeCommonFee)}
                   <div className={styles.subCheckList}>
-                    {myPreference.noKeyMoney && <span>礼金なし</span>}
-                    {myPreference.noDeposit && <span>敷金なし</span>}
+                    {myPreference.noKeyMoney > 0 && <span>礼金なし (希望度: {myPreference.noKeyMoney})</span>}
+                    {myPreference.noDeposit > 0 && <span>敷金なし (希望度: {myPreference.noDeposit})</span>}
                   </div>
                 </div>
               </div>
@@ -1047,8 +1079,8 @@ export default function IdealPropertyClient() {
                     )
                     : "未設定"}
                   <div className={styles.subCheckList}>
-                    {partnerPreference?.noKeyMoney && <span>礼金なし</span>}
-                    {partnerPreference?.noDeposit && <span>敷金なし</span>}
+                    {partnerPreference && partnerPreference.noKeyMoney > 0 && <span>礼金なし (希望度: {partnerPreference.noKeyMoney})</span>}
+                    {partnerPreference && partnerPreference.noDeposit > 0 && <span>敷金なし (希望度: {partnerPreference.noDeposit})</span>}
                   </div>
                 </div>
               </div>
@@ -1247,16 +1279,16 @@ export default function IdealPropertyClient() {
             </div>
             <div className={styles.preferenceCompareList}>
               {PREFERENCE_ITEMS.map((item) => {
-                const myVal = !!myPreference[item.key as keyof PropertyPreference];
-                const pVal = partnerPreference ? !!partnerPreference[item.key as keyof PropertyPreference] : false;
-
+                const myVal = Number(myPreference[item.key as keyof PropertyPreference] || 0);
+                const pVal = partnerPreference ? Number(partnerPreference[item.key as keyof PropertyPreference] || 0) : 0;
+ 
                 let matchStatus: "both" | "meOnly" | "partnerOnly" | "none" = "none";
-                if (myVal && pVal) matchStatus = "both";
-                else if (myVal) matchStatus = "meOnly";
-                else if (pVal) matchStatus = "partnerOnly";
-
+                if (myVal > 0 && pVal > 0) matchStatus = "both";
+                else if (myVal > 0) matchStatus = "meOnly";
+                else if (pVal > 0) matchStatus = "partnerOnly";
+ 
                 if (matchStatus === "none") return null;
-
+ 
                 return (
                   <div key={item.key} className={styles.prefCompareRow}>
                     <div className={styles.prefCompareLabel}>
@@ -1265,13 +1297,13 @@ export default function IdealPropertyClient() {
                     </div>
                     <div className={styles.prefCompareStatus}>
                       {matchStatus === "both" && (
-                        <span className={styles.badgeBoth}>❤️ 両方希望</span>
+                        <span className={styles.badgeBoth}>❤️ 両方希望 (自分: {myVal}, 相手: {pVal})</span>
                       )}
                       {matchStatus === "meOnly" && (
-                        <span className={styles.badgeMeOnly}>{myName}希望</span>
+                        <span className={styles.badgeMeOnly}>{myName}希望 (希望度: {myVal})</span>
                       )}
                       {matchStatus === "partnerOnly" && (
-                        <span className={styles.badgePartnerOnly}>{partnerName}希望</span>
+                        <span className={styles.badgePartnerOnly}>{partnerName}希望 (希望度: {pVal})</span>
                       )}
                     </div>
                   </div>
@@ -1280,8 +1312,8 @@ export default function IdealPropertyClient() {
               {/* どちらもこだわり条件を何も選んでいない場合 */}
               {PREFERENCE_ITEMS.every(
                 (item) =>
-                  !myPreference[item.key as keyof PropertyPreference] &&
-                  (!partnerPreference || !partnerPreference[item.key as keyof PropertyPreference])
+                  Number(myPreference[item.key as keyof PropertyPreference] || 0) === 0 &&
+                  (!partnerPreference || Number(partnerPreference[item.key as keyof PropertyPreference] || 0) === 0)
               ) && <div className={styles.emptyText}>こだわり条件は現在お互いに選んでいません。</div>}
             </div>
           </div>
@@ -1366,16 +1398,16 @@ export default function IdealPropertyClient() {
           {partnerPreference && (
             (() => {
               const commonPrefs = PREFERENCE_ITEMS.filter(item => 
-                !!myPreference[item.key as keyof PropertyPreference] && 
-                !!partnerPreference[item.key as keyof PropertyPreference]
+                Number(myPreference[item.key as keyof PropertyPreference] || 0) > 0 && 
+                Number(partnerPreference ? partnerPreference[item.key as keyof PropertyPreference] || 0 : 0) > 0
               );
               const onlyMePrefs = PREFERENCE_ITEMS.filter(item => 
-                !!myPreference[item.key as keyof PropertyPreference] && 
-                !partnerPreference[item.key as keyof PropertyPreference]
+                Number(myPreference[item.key as keyof PropertyPreference] || 0) > 0 && 
+                Number(partnerPreference ? partnerPreference[item.key as keyof PropertyPreference] || 0 : 0) === 0
               );
               const onlyPartnerPrefs = PREFERENCE_ITEMS.filter(item => 
-                !myPreference[item.key as keyof PropertyPreference] && 
-                !!partnerPreference[item.key as keyof PropertyPreference]
+                Number(myPreference[item.key as keyof PropertyPreference] || 0) === 0 && 
+                Number(partnerPreference ? partnerPreference[item.key as keyof PropertyPreference] || 0 : 0) > 0
               );
 
               return (
@@ -1413,7 +1445,9 @@ export default function IdealPropertyClient() {
                         </div>
                         <div className={styles.vennTags}>
                           {commonPrefs.map(item => (
-                            <span key={item.key} className={`${styles.vennTag} ${styles.tagCommon}`}>{item.label}</span>
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagCommon}`}>
+                              {item.label} (自分: {myPreference[item.key as keyof PropertyPreference]}, 相手: {partnerPreference ? partnerPreference[item.key as keyof PropertyPreference] : 0})
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -1425,7 +1459,9 @@ export default function IdealPropertyClient() {
                         </div>
                         <div className={styles.vennTags}>
                           {onlyMePrefs.map(item => (
-                            <span key={item.key} className={`${styles.vennTag} ${styles.tagMe}`}>{item.label}</span>
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagMe}`}>
+                              {item.label} (希望度: {myPreference[item.key as keyof PropertyPreference]})
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -1437,7 +1473,9 @@ export default function IdealPropertyClient() {
                         </div>
                         <div className={styles.vennTags}>
                           {onlyPartnerPrefs.map(item => (
-                            <span key={item.key} className={`${styles.vennTag} ${styles.tagPartner}`}>{item.label}</span>
+                            <span key={item.key} className={`${styles.vennTag} ${styles.tagPartner}`}>
+                              {item.label} (希望度: {partnerPreference ? partnerPreference[item.key as keyof PropertyPreference] : 0})
+                            </span>
                           ))}
                         </div>
                       </div>

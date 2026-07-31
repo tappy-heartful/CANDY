@@ -764,3 +764,76 @@
   background: #e8e8ff;
   color: #6c5ce7;
 }
+
+/* 10-level Priority Dropdowns and Select Rows */
+.prioritySelectGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.prioritySelectRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: #fafafa;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.priorityLabel {
+  font-size: 13px;
+  color: #555;
+  font-weight: bold;
+}
+
+.preferenceItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9f9f9;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+  gap: 8px;
+}
+
+.preferenceItem:hover {
+  background: #f3e5f5;
+  border-color: #e1bee7;
+}
+
+.preferenceLabel {
+  font-size: 13px;
+  color: #555;
+  font-weight: bold;
+  flex: 1;
+}
+
+.preferenceSelect {
+  padding: 6px 12px;
+  border: 2px solid #e1bee7;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #444;
+  outline: none;
+  background: white;
+  cursor: pointer;
+  max-width: 130px;
+  transition: all 0.2s;
+}
+
+.preferenceSelect:focus {
+  border-color: #9B7CC3;
+}
+
+/* Responsive adjustment for checkboxGrid when containing select boxes */
+@media (max-width: 500px) {
+  .checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+}
