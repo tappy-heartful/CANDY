@@ -76,9 +76,10 @@ export async function saveDefaultBudget(data: Omit<DefaultBudget, "id" | "create
       updatedAt: now
     }, { merge: true });
   } else {
+    const { id, ...rest } = data;
     const colRef = collection(db, "defaultBudgets");
     await addDoc(colRef, {
-      ...data,
+      ...rest,
       createdAt: now,
       updatedAt: now
     });
@@ -125,9 +126,10 @@ export async function saveActualBudget(data: Omit<ActualBudget, "id" | "createdA
       updatedAt: now
     }, { merge: true });
   } else {
+    const { id, ...rest } = data;
     const colRef = collection(db, "actualBudgets");
     await addDoc(colRef, {
-      ...data,
+      ...rest,
       createdAt: now,
       updatedAt: now
     });
