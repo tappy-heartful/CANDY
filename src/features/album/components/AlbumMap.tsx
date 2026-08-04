@@ -85,8 +85,8 @@ export default function AlbumMap({ photos }: AlbumMapProps) {
     }).setView(initialCenter, 12);
     leafletMap.current = map;
 
-    // スクロールやズーム開始時にポップアップを自動で閉じる
-    map.on("movestart", () => {
+    // ユーザー操作によるスクロール（ドラッグ）やズーム開始時にポップアップを閉じる
+    map.on("dragstart", () => {
       map.closePopup();
     });
     map.on("zoomstart", () => {
