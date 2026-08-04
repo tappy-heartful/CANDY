@@ -50,6 +50,8 @@ export default function BudgetClient() {
   const [dfName, setDfName] = useState<string>("");
   const [dfAmount, setDfAmount] = useState<number | "">("");
   const [dfMemo, setDfMemo] = useState<string>("");
+  const [dfMonths, setDfMonths] = useState<number[]>([]);
+  const [dfOriginalMonth, setDfOriginalMonth] = useState<number | null>(null);
 
   // 実際収支用のアクティブな年月
   const [actualYear, setActualYear] = useState<number>(new Date().getFullYear());
@@ -146,6 +148,7 @@ export default function BudgetClient() {
 
       setDfTargetUid(user.uid);
       setActTargetUid(user.uid);
+      setDfMonths([defaultMonth]);
 
       await Promise.all([
         loadDefaultBudgets(cKey, defaultMonth),
@@ -167,6 +170,9 @@ export default function BudgetClient() {
   // デフォルト月の切り替え
   const handleDefaultMonthChange = async (month: number) => {
     setDefaultMonth(month);
+    if (!dfId) {
+      setDfMonths([month]);
+    }
     if (coupleKey) {
       showSpinner();
       await loadDefaultBudgets(coupleKey, month);
@@ -209,24 +215,30 @@ export default function BudgetClient() {
   // デフォルト収支の保存
   const handleSaveDefault = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!coupleKey || !dfTargetUid || !dfCategory || !dfType || !dfName || dfAmount === "") {
+    if (!coupleKey || !dfTargetUid || !dfCategory || !dfType || !dfName || dfAmount === "" || dfMonths.length === 0) {
       showDialog("入力項目に不足があるようです。ご確認ください。");
       return;
     }
 
     try {
       showSpinner();
-      await saveDefaultBudget({
-        id: dfId,
-        coupleKey,
-        uid: dfTargetUid,
-        month: defaultMonth,
-        category: dfCategory,
-        type: dfType,
-        name: dfName,
-        amount: Number(dfAmount),
-        memo: dfMemo
+      const savePromises = dfMonths.map((m) => {
+        const isOriginal = dfId && m === dfOriginalMonth;
+        return saveDefaultBudget({
+          id: isOriginal ? dfId : undefined,
+          coupleKey,
+          uid: dfTargetUid,
+          month: m,
+          category: dfCategory,
+          type: dfType,
+          name: dfName,
+          amount: Number(dfAmount),
+          memo: dfMemo
+        });
       });
+
+      await Promise.all(savePromises);
+
       resetDfForm();
       await loadDefaultBudgets(coupleKey, defaultMonth);
       showDialog("デフォルト収支を保存しました✨");
@@ -243,6 +255,8 @@ export default function BudgetClient() {
     setDfName("");
     setDfAmount("");
     setDfMemo("");
+    setDfMonths([defaultMonth]);
+    setDfOriginalMonth(null);
   };
 
   const handleEditDefault = (item: DefaultBudget) => {
@@ -253,6 +267,8 @@ export default function BudgetClient() {
     setDfName(item.name);
     setDfAmount(item.amount);
     setDfMemo(item.memo || "");
+    setDfMonths([item.month]);
+    setDfOriginalMonth(item.month);
     // 入力エリアへスクロール
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -709,10 +725,13 @@ export default function BudgetClient() {
             ))}
           </div>
 
+          {/* 表表示 */}
+          {renderBudgetTable(defaultBudgets, handleDeleteDefaultItem, handleEditDefault, true)}
+
           {/* デフォルト収支登録フォーム */}
           <div className={styles.formCard}>
             <div className={styles.formTitle}>
-              <i className="fa-solid fa-pen-to-square"></i> {dfId ? `${defaultMonth}月のデフォルト収支を編集` : `${defaultMonth}月のデフォルト収支を登録`}
+              <i className="fa-solid fa-pen-to-square"></i> {dfId ? `デフォルト収支を編集` : `デフォルト収支を登録`}
             </div>
             <form onSubmit={handleSaveDefault}>
               <div className={styles.formGrid}>
@@ -742,6 +761,60 @@ export default function BudgetClient() {
                         {partnerName}
                       </label>
                     )}
+                  </div>
+                </div>
+
+                {/* 対象月 */}
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>対象月 (複数選択可)</label>
+                  <div className={styles.checkboxGroup}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
+                      const isOriginal = dfId && m === dfOriginalMonth;
+                      const isChecked = dfMonths.includes(m);
+                      return (
+                        <label key={m} className={`${styles.checkboxLabel} ${isOriginal ? styles.disabledLabel : ""}`}>
+                          <input
+                            type="checkbox"
+                            value={m}
+                            checked={isChecked}
+                            disabled={!!isOriginal}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setDfMonths([...dfMonths, m].sort((a, b) => a - b));
+                              } else {
+                                setDfMonths(dfMonths.filter((x) => x !== m));
+                              }
+                            }}
+                          />
+                          {m}月
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className={styles.checkboxActions}>
+                    <button
+                      type="button"
+                      className={styles.miniBtn}
+                      onClick={() => {
+                        const allMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+                        setDfMonths(allMonths);
+                      }}
+                    >
+                      すべて選択
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.miniBtn}
+                      onClick={() => {
+                        if (dfOriginalMonth !== null) {
+                          setDfMonths([dfOriginalMonth]);
+                        } else {
+                          setDfMonths([]);
+                        }
+                      }}
+                    >
+                      選択解除
+                    </button>
                   </div>
                 </div>
 
@@ -824,9 +897,6 @@ export default function BudgetClient() {
               </div>
             </form>
           </div>
-
-          {/* 表表示 */}
-          {renderBudgetTable(defaultBudgets, handleDeleteDefaultItem, handleEditDefault, true)}
         </div>
       )}
 

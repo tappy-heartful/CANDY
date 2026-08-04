@@ -515,6 +515,13 @@
   flex-wrap: wrap;
 }
 
+@media (max-width: 600px) {
+  .subtotalValue {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
 .subtotalPerson {
   font-size: 12px;
   color: #555;
@@ -549,3 +556,87 @@
   font-weight: bold;
   line-height: 1.6;
 }
+
+/* Checkbox Group */
+.checkboxGroup {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  background: #fbfbfb;
+  border: 2px solid #e1bee7;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+@media (max-width: 600px) {
+  .checkboxGroup {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .checkboxGroup {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #555;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.checkboxLabel:hover {
+  background-color: #f3e5f5;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #9B7CC3;
+  cursor: pointer;
+}
+
+.disabledLabel {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #eee;
+}
+
+.disabledLabel:hover {
+  background-color: #eee;
+}
+
+.checkboxActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.miniBtn {
+  background: white;
+  border: 1px solid #e1bee7;
+  color: #7b5ba0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.miniBtn:hover {
+  background: #f3e5f5;
+  border-color: #9B7CC3;
+}
+
