@@ -405,4 +405,18 @@ export interface ActualBudget {
   updatedAt: number;
 }
 
+// ==========================================
+// メモ機能用データ型定義
+// ==========================================
+
+export interface Memo {
+  id: string;
+  coupleKey: string; // カップル間で共有するためのキー
+  title: string; // メモのタイトル
+  content: string; // メモの内容
+  uid: string; // 作成者のUID
+  partnerEditable: boolean; // パートナーの編集を許可するか（デフォルト: true）
+  createdAt: number;
+  updatedAt: number;
+}
 

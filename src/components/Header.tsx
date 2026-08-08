@@ -207,6 +207,9 @@ export default function Header() {
           <Link href="/budget" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-wallet ${styles.menuIcon}`}></i> 家計簿
           </Link>
+          <Link href="/memo" onClick={closeMenu} className={styles.menuLink}>
+            <i className={`fa-solid fa-note-sticky ${styles.menuIcon}`}></i> メモ
+          </Link>
           <Link href="/settings" onClick={closeMenu} className={styles.menuLink}>
             <i className={`fa-solid fa-bell ${styles.menuIcon}`}></i> 通知設定
           </Link>
