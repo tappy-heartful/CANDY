@@ -386,6 +386,7 @@ export interface DefaultBudget {
   name: string; // 項目名
   amount: number; // 金額
   memo?: string; // 備考
+  splitRatio?: number; // 負担割合（支払者・対象者の負担率 %、0〜100、デフォルト50）
   createdAt: number;
   updatedAt: number;
 }
@@ -401,6 +402,7 @@ export interface ActualBudget {
   name: string; // 項目名
   amount: number; // 金額
   memo?: string; // 備考
+  splitRatio?: number; // 負担割合（支払者・対象者の負担率 %、0〜100、デフォルト50）
   createdAt: number;
   updatedAt: number;
 }

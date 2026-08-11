@@ -640,3 +640,584 @@
   border-color: #9B7CC3;
 }
 
+/* 負担設定フォーム */
+.ratioFormGroup {
+  border-top: 1px dashed rgba(155, 124, 195, 0.2);
+  padding-top: 16px;
+  margin-top: 8px;
+}
+
+.splitModeSelector {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.radioLabelInline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #555;
+  cursor: pointer;
+}
+
+.radioLabelInline input[type="radio"] {
+  accent-color: #9B7CC3;
+  width: 16px;
+  height: 16px;
+}
+
+.ratioInputs {
+  display: flex;
+  gap: 20px;
+  background: #fdf8ff;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #f3e5f5;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.ratioInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  font-weight: bold;
+}
+
+.ratioInput {
+  width: 60px;
+  padding: 6px 10px;
+  border: 2px solid #e1bee7;
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+  background: white;
+}
+
+.ratioInput:focus {
+  border-color: #9B7CC3;
+}
+
+/* 清算・負担のまとめ */
+.settlementSection {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.04);
+  border: 2px solid #fdf8ff;
+  margin-bottom: 24px;
+}
+
+.settlementTitle {
+  font-size: 15px;
+  font-weight: bold;
+  color: #7b5ba0;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settlementContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settlementGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .settlementGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.settlementCard {
+  background: #fbf8fd;
+  border: 1px solid rgba(155, 124, 195, 0.1);
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+
+.settlementCardLabel {
+  font-size: 12px;
+  font-weight: bold;
+  color: #7b5ba0;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(155, 124, 195, 0.2);
+  padding-bottom: 4px;
+}
+
+.settlementCardRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.settlementCardRow strong {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.settlementResult {
+  background: #f3e5f5;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  font-weight: bold;
+  color: #4a148c;
+  font-size: 14px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.settlementClean {
+  color: #00796b;
+}
+
+.settlementOwe strong {
+  font-family: monospace;
+  font-size: 18px;
+  color: #c2185b;
+  margin: 0 4px;
+}
+
+.myName, .partnerName {
+  color: #512da8;
+  font-size: 15px;
+}
+
+/* モバイル用リスト表示 (PCでは非表示) */
+.mobileList {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .budgetTable {
+    display: none;
+  }
+  .mobileList {
+    display: block;
+  }
+}
+
+.mobileSection {
+  margin-bottom: 20px;
+}
+
+.mobileSectionTitle {
+  font-size: 14px;
+  font-weight: bold;
+  color: #8e24aa;
+  padding: 8px 12px;
+  background: #fbf6fc;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.mobileCard {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mobileCard:active {
+  transform: scale(0.98);
+  background: #faf5fc;
+}
+
+.mobileCardMain {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mobileCardName {
+  font-weight: bold;
+  color: #333;
+  font-size: 14px;
+}
+
+.mobileCardAmount {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 15px;
+  color: #111;
+}
+
+.mobileCardSub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #888;
+  flex-wrap: wrap;
+}
+
+.mobileTypeName {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mobileUserBadgeMe, .mobileUserBadgePartner {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.mobileUserBadgeMe {
+  background: #F7A8C4;
+}
+
+.mobileUserBadgePartner {
+  background: #A0E7D2;
+  color: #2b705e;
+}
+
+.mobileCardRatio {
+  color: #9B7CC3;
+  font-weight: bold;
+}
+
+.mobileSubtotalCard {
+  background: #fdfcff;
+  border: 1px dashed #d1c4e9;
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.mobileSubtotalTitle {
+  font-size: 12px;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.mobileSubtotalGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+  color: #555;
+  border-bottom: 1px dashed rgba(155, 124, 195, 0.15);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.mobileSubtotalPerson {
+  display: flex;
+  justify-content: space-between;
+}
+
+.mobileSubtotalTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #4a148c;
+  font-weight: bold;
+}
+
+/* 詳細モーダル (スマホ向け) */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.detailModal {
+  background: white;
+  width: 100%;
+  max-width: 450px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+  animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  border: 1px solid rgba(155, 124, 195, 0.1);
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fbf8fd;
+  border-bottom: 1px solid rgba(155, 124, 195, 0.1);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4a148c;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.modalBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #f9f9f9;
+  padding-bottom: 10px;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detailLabel {
+  font-size: 11px;
+  font-weight: bold;
+  color: #888;
+}
+
+.detailValue {
+  font-size: 14px;
+  color: #333;
+}
+
+.detailAmount {
+  font-family: monospace;
+  font-size: 20px;
+  font-weight: 900;
+  color: #c2185b;
+}
+
+.detailRatioBlock {
+  background: #fdf8ff;
+  border: 1px solid #f3e5f5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailRatioItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #555;
+}
+
+.modalActions {
+  display: flex;
+  padding: 16px 20px;
+  background: #fafafa;
+  gap: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.modalEditBtn {
+  flex: 2;
+  background: linear-gradient(135deg, #9B7CC3, #7b5ba0);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(155, 124, 195, 0.15);
+}
+
+.modalDeleteBtn {
+  flex: 1;
+  background: #ffebee;
+  color: #c2185b;
+  border: 1px solid #ffcdd2;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.modalDeleteBtn:hover {
+  background: #ffcdd2;
+}
+
+/* 清算フロー & 計算プロセス詳細 */
+.settlementFlowBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.settlementFlow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.userNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.userAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #e1bee7;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(155, 124, 195, 0.15);
+}
+
+.userName {
+  font-size: 12px;
+  font-weight: bold;
+  color: #4a148c;
+}
+
+.flowArrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #9B7CC3;
+  gap: 4px;
+}
+
+.amountHighlight {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 900;
+  color: #c2185b;
+  background: #ffebee;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.settlementActionText {
+  font-size: 14px;
+  font-weight: bold;
+  color: #c2185b;
+  text-align: center;
+}
+
+.formulaBox {
+  margin-top: 16px;
+  background: #faf6fc;
+  border: 1px solid #f3e5f5;
+  border-radius: 16px;
+  padding: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.formulaTitle {
+  font-weight: 800;
+  font-size: 13px;
+  color: #7b5ba0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed rgba(155, 124, 195, 0.2);
+  padding-bottom: 6px;
+}
+
+.formulaStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #444;
+}
+
+.formulaStep:last-child {
+  margin-bottom: 0;
+}
+
+.stepNum {
+  background: #9B7CC3;
+  color: white;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
@@ -10,11 +11,12 @@ import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./Memo.module.css";
 
-type ModalMode = "closed" | "detail" | "create" | "edit";
+type ModalMode = "closed" | "detail";
 
 export default function MemoClient() {
   const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
+  const router = useRouter();
 
   const [partnerUser, setPartnerUser] = useState<FirestoreUser | null>(null);
   const [coupleKey, setCoupleKey] = useState<string>("");
@@ -24,12 +26,6 @@ export default function MemoClient() {
   // モーダル
   const [modalMode, setModalMode] = useState<ModalMode>("closed");
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
-
-  // フォーム
-  const [formTitle, setFormTitle] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [formPartnerEditable, setFormPartnerEditable] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setBreadcrumbs([{ title: "メモ" }]);
@@ -84,13 +80,9 @@ export default function MemoClient() {
     return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
-  // --- モーダル操作 ---
+  // --- 画面遷移およびモーダル操作 ---
   const openCreateModal = () => {
-    setFormTitle("");
-    setFormContent("");
-    setFormPartnerEditable(true);
-    setSelectedMemo(null);
-    setModalMode("create");
+    router.push("/memo/new");
   };
 
   const openDetailModal = (memo: Memo) => {
@@ -99,81 +91,12 @@ export default function MemoClient() {
   };
 
   const openEditModal = (memo: Memo) => {
-    setFormTitle(memo.title);
-    setFormContent(memo.content);
-    setFormPartnerEditable(memo.partnerEditable);
-    setSelectedMemo(memo);
-    setModalMode("edit");
+    router.push(`/memo/edit/${memo.id}`);
   };
 
   const closeModal = () => {
     setModalMode("closed");
     setSelectedMemo(null);
-  };
-
-  // --- CRUD ---
-  const handleSave = async () => {
-    if (!formTitle.trim()) {
-      showDialog("タイトルを入力してください。");
-      return;
-    }
-    if (!coupleKey || !user) return;
-
-    setIsSubmitting(true);
-    showSpinner();
-    try {
-      if (modalMode === "create") {
-        const docRef = await addMemo({
-          coupleKey,
-          title: formTitle.trim(),
-          content: formContent,
-          uid: user.uid,
-          partnerEditable: formPartnerEditable,
-        });
-        const newMemo: Memo = {
-          id: docRef.id,
-          coupleKey,
-          title: formTitle.trim(),
-          content: formContent,
-          uid: user.uid,
-          partnerEditable: formPartnerEditable,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setMemos((prev) => [newMemo, ...prev]);
-        showDialog("メモを保存しました✨");
-      } else if (modalMode === "edit" && selectedMemo) {
-        // 編集権限の確認（作成者 or パートナー編集許可）
-        // パートナーの場合、partnerEditable の変更は許可しない（作成者のみ変更可能）
-        const updateData: Partial<Omit<Memo, "id" | "createdAt">> = {
-          title: formTitle.trim(),
-          content: formContent,
-        };
-        if (isMyMemo(selectedMemo)) {
-          updateData.partnerEditable = formPartnerEditable;
-        }
-        await updateMemo(selectedMemo.id, updateData);
-        setMemos((prev) =>
-          prev.map((m) =>
-            m.id === selectedMemo.id
-              ? {
-                  ...m,
-                  ...updateData,
-                  updatedAt: Date.now(),
-                }
-              : m
-          )
-        );
-        showDialog("メモを更新しました✨");
-      }
-      closeModal();
-    } catch (e) {
-      console.error(e);
-      showDialog("保存できませんでした。恐れ入りますが、もう一度お試しいただけますか？");
-    } finally {
-      setIsSubmitting(false);
-      hideSpinner();
-    }
   };
 
   const handleDelete = async () => {
@@ -341,101 +264,6 @@ export default function MemoClient() {
           </div>
         )}
 
-        {/* モーダル: 作成・編集 */}
-        {(modalMode === "create" || modalMode === "edit") && (
-          <div className={styles.modalOverlay} onClick={closeModal}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <div className={styles.modalHeader}>
-                <h2 className={styles.modalTitle}>
-                  <i className="fa-solid fa-note-sticky"></i>
-                  {modalMode === "create" ? "新しいメモ" : "メモを編集"}
-                </h2>
-                <button className={styles.modalClose} onClick={closeModal}>
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>タイトル</label>
-                <input
-                  type="text"
-                  className={styles.formInput}
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="メモのタイトルを入力"
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>内容</label>
-                <textarea
-                  className={styles.formTextarea}
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  placeholder="メモの内容を自由に書いてください"
-                />
-              </div>
-
-              {/* パートナー編集許可トグル（作成者のみ変更可能） */}
-              {(modalMode === "create" ||
-                (modalMode === "edit" &&
-                  selectedMemo &&
-                  isMyMemo(selectedMemo))) && (
-                <div className={styles.formGroup}>
-                  <div className={styles.toggleGroup}>
-                    <div className={styles.toggleLabel}>
-                      <span className={styles.toggleLabelText}>
-                        <i className="fa-solid fa-user-group"></i>{" "}
-                        パートナーの編集を許可
-                      </span>
-                      <span className={styles.toggleLabelHint}>
-                        許可すると、パートナーもこのメモを編集できます
-                      </span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        className={styles.toggleSwitchInput}
-                        checked={formPartnerEditable}
-                        onChange={(e) =>
-                          setFormPartnerEditable(e.target.checked)
-                        }
-                      />
-                      <span className={styles.toggleSwitchSlider}></span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.formActions}>
-                <button
-                  className={styles.saveButton}
-                  onClick={handleSave}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    "保存中..."
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-check"></i> 保存する
-                    </>
-                  )}
-                </button>
-                {modalMode === "edit" &&
-                  selectedMemo &&
-                  canDelete(selectedMemo) && (
-                    <button
-                      className={styles.deleteButton}
-                      onClick={handleDelete}
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       <BackToHome />
     </div>

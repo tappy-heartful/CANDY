@@ -1,0 +1,252 @@
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #f3e5f5;
+  padding-bottom: 12px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #4a148c;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  color: #9B7CC3;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #7b5ba0;
+  text-decoration: none;
+  background: #f3e5f5;
+  padding: 8px 14px;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.backLink:hover {
+  background: #e1bee7;
+  color: #4a148c;
+}
+
+.formCard {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(155, 124, 195, 0.06);
+  border: 1px solid rgba(155, 124, 195, 0.1);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.formLabel {
+  font-size: 13px;
+  font-weight: bold;
+  color: #7b5ba0;
+}
+
+.formInput {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid #e1bee7;
+  border-radius: 14px;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  background: #fcfbfd;
+  transition: all 0.3s;
+}
+
+.formInput:focus {
+  border-color: #9B7CC3;
+  background: white;
+  box-shadow: 0 0 10px rgba(155, 124, 195, 0.15);
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid #e1bee7;
+  border-radius: 14px;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  background: #fcfbfd;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s;
+}
+
+.formTextarea:focus {
+  border-color: #9B7CC3;
+  background: white;
+  box-shadow: 0 0 10px rgba(155, 124, 195, 0.15);
+}
+
+/* Toggle Switch */
+.toggleGroup {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fbf8fd;
+  border: 1px solid rgba(155, 124, 195, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.toggleLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  padding-right: 16px;
+}
+
+.toggleLabelText {
+  font-size: 14px;
+  font-weight: bold;
+  color: #4a148c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggleLabelHint {
+  font-size: 11px;
+  color: #888;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.toggleSwitchInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSwitchSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .3s;
+  border-radius: 34px;
+}
+
+.toggleSwitchSlider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggleSwitchInput:checked + .toggleSwitchSlider {
+  background-color: #9B7CC3;
+}
+
+.toggleSwitchInput:checked + .toggleSwitchSlider:before {
+  transform: translateX(22px);
+}
+
+/* Form Actions */
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 24px;
+}
+
+.saveButton {
+  flex: 2;
+  background: linear-gradient(135deg, #9B7CC3, #7b5ba0);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.2);
+  transition: all 0.3s;
+}
+
+.saveButton:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.deleteButton {
+  flex: 1;
+  background: #ffebee;
+  color: #c2185b;
+  border: 1px solid #ffcdd2;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.deleteButton:hover {
+  background: #ffcdd2;
+}

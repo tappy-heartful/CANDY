@@ -52,6 +52,9 @@ export default function BudgetClient() {
   const [dfMemo, setDfMemo] = useState<string>("");
   const [dfMonths, setDfMonths] = useState<number[]>([]);
   const [dfOriginalMonth, setDfOriginalMonth] = useState<number | null>(null);
+  const [dfSplitMode, setDfSplitMode] = useState<"equal" | "custom">("equal");
+  const [dfMyRatio, setDfMyRatio] = useState<number | "">(50);
+  const [dfPartnerRatio, setDfPartnerRatio] = useState<number | "">(50);
 
   // 実際収支用のアクティブな年月
   const [actualYear, setActualYear] = useState<number>(new Date().getFullYear());
@@ -69,6 +72,13 @@ export default function BudgetClient() {
   const [actAmount, setActAmount] = useState<number | "">("");
   const [actMemo, setActMemo] = useState<string>("");
   const [showActForm, setShowActForm] = useState<boolean>(false);
+  const [actSplitMode, setActSplitMode] = useState<"equal" | "custom">("equal");
+  const [actMyRatio, setActMyRatio] = useState<number | "">(50);
+  const [actPartnerRatio, setActPartnerRatio] = useState<number | "">(50);
+
+  // 詳細モーダル用
+  const [selectedBudget, setSelectedBudget] = useState<any | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
 
   useEffect(() => {
     setBreadcrumbs([{ title: "家計簿" }]);
@@ -99,6 +109,8 @@ export default function BudgetClient() {
 
   const myName = userData?.nickname || "自分";
   const partnerName = partnerUser?.nickname || "パートナー";
+  const myPictureUrl = userData?.pictureUrl || "/default-avatar.png";
+  const partnerPictureUrl = partnerUser?.pictureUrl || "/default-avatar.png";
 
   const sortBudgets = (list: any[]) => {
     const categoryOrder = ["fixed", "variable", "income"];
@@ -220,6 +232,21 @@ export default function BudgetClient() {
       return;
     }
 
+    let splitRatio = 50;
+    if (dfCategory !== "income") {
+      if (dfSplitMode === "equal") {
+        splitRatio = 50;
+      } else {
+        const myRatio = Number(dfMyRatio) || 0;
+        const partnerRatio = Number(dfPartnerRatio) || 0;
+        if (myRatio + partnerRatio !== 100) {
+          showDialog("負担割合の合計が100%になるように設定してください。");
+          return;
+        }
+        splitRatio = dfTargetUid === user?.uid ? myRatio : partnerRatio;
+      }
+    }
+
     try {
       showSpinner();
       const savePromises = dfMonths.map((m) => {
@@ -233,7 +260,8 @@ export default function BudgetClient() {
           type: dfType,
           name: dfName,
           amount: Number(dfAmount),
-          memo: dfMemo
+          memo: dfMemo,
+          splitRatio
         });
       });
 
@@ -257,6 +285,9 @@ export default function BudgetClient() {
     setDfMemo("");
     setDfMonths([defaultMonth]);
     setDfOriginalMonth(null);
+    setDfSplitMode("equal");
+    setDfMyRatio(50);
+    setDfPartnerRatio(50);
   };
 
   const handleEditDefault = (item: DefaultBudget) => {
@@ -269,6 +300,23 @@ export default function BudgetClient() {
     setDfMemo(item.memo || "");
     setDfMonths([item.month]);
     setDfOriginalMonth(item.month);
+
+    const ratio = item.splitRatio ?? 50;
+    if (ratio === 50) {
+      setDfSplitMode("equal");
+      setDfMyRatio(50);
+      setDfPartnerRatio(50);
+    } else {
+      setDfSplitMode("custom");
+      if (item.uid === user?.uid) {
+        setDfMyRatio(ratio);
+        setDfPartnerRatio(100 - ratio);
+      } else {
+        setDfMyRatio(100 - ratio);
+        setDfPartnerRatio(ratio);
+      }
+    }
+
     // 入力エリアへスクロール
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -295,6 +343,21 @@ export default function BudgetClient() {
       return;
     }
 
+    let splitRatio = 50;
+    if (actCategory !== "income") {
+      if (actSplitMode === "equal") {
+        splitRatio = 50;
+      } else {
+        const myRatio = Number(actMyRatio) || 0;
+        const partnerRatio = Number(actPartnerRatio) || 0;
+        if (myRatio + partnerRatio !== 100) {
+          showDialog("負担割合の合計が100%になるように設定してください。");
+          return;
+        }
+        splitRatio = actTargetUid === user?.uid ? myRatio : partnerRatio;
+      }
+    }
+
     try {
       showSpinner();
       await saveActualBudget({
@@ -307,7 +370,8 @@ export default function BudgetClient() {
         type: actType,
         name: actName,
         amount: Number(actAmount),
-        memo: actMemo
+        memo: actMemo,
+        splitRatio
       });
       resetActForm();
       setShowActForm(false);
@@ -326,6 +390,9 @@ export default function BudgetClient() {
     setActName("");
     setActAmount("");
     setActMemo("");
+    setActSplitMode("equal");
+    setActMyRatio(50);
+    setActPartnerRatio(50);
   };
 
   const handleEditActual = (item: ActualBudget) => {
@@ -336,6 +403,23 @@ export default function BudgetClient() {
     setActName(item.name);
     setActAmount(item.amount);
     setActMemo(item.memo || "");
+
+    const ratio = item.splitRatio ?? 50;
+    if (ratio === 50) {
+      setActSplitMode("equal");
+      setActMyRatio(50);
+      setActPartnerRatio(50);
+    } else {
+      setActSplitMode("custom");
+      if (item.uid === user?.uid) {
+        setActMyRatio(ratio);
+        setActPartnerRatio(100 - ratio);
+      } else {
+        setActMyRatio(100 - ratio);
+        setActPartnerRatio(ratio);
+      }
+    }
+
     setShowActForm(true);
   };
 
@@ -396,6 +480,51 @@ export default function BudgetClient() {
     };
   };
 
+  const getSettlementSummary = (list: any[]) => {
+    if (!user) return null;
+    const expenses = list.filter(item => item.category !== "income");
+    
+    let myPaid = 0;
+    let partnerPaid = 0;
+    let myBurden = 0;
+    let partnerBurden = 0;
+
+    expenses.forEach(item => {
+      const amount = item.amount || 0;
+      const ratio = item.splitRatio !== undefined ? item.splitRatio : 50;
+
+      if (item.uid === user.uid) {
+        myPaid += amount;
+        myBurden += amount * (ratio / 100);
+        partnerBurden += amount * ((100 - ratio) / 100);
+      } else {
+        partnerPaid += amount;
+        partnerBurden += amount * (ratio / 100);
+        myBurden += amount * ((100 - ratio) / 100);
+      }
+    });
+
+    const diff = myPaid - myBurden;
+
+    return {
+      myPaid,
+      partnerPaid,
+      myBurden,
+      partnerBurden,
+      diff
+    };
+  };
+
+  const openDetailModal = (item: any) => {
+    setSelectedBudget(item);
+    setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setSelectedBudget(null);
+    setShowDetailModal(false);
+  };
+
   const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
     const sections = [
       { id: "fixed", title: "固定費 🏠" },
@@ -424,6 +553,7 @@ export default function BudgetClient() {
 
     return (
       <div className={styles.tableWrapper}>
+        {/* PC用テーブル */}
         <table className={styles.budgetTable}>
           <thead>
             <tr>
@@ -432,6 +562,7 @@ export default function BudgetClient() {
               <th>人</th>
               <th>名前</th>
               <th>金額</th>
+              <th>負担割合</th>
               <th>備考</th>
               <th>操作</th>
             </tr>
@@ -446,7 +577,7 @@ export default function BudgetClient() {
               return (
                 <Fragment key={section.id}>
                   <tr className={styles.sectionHeaderRow}>
-                    <td colSpan={7}>{section.title}</td>
+                    <td colSpan={8}>{section.title}</td>
                   </tr>
 
                   {filtered.map(item => {
@@ -465,6 +596,13 @@ export default function BudgetClient() {
                         </td>
                         <td className={styles.nameCell}>{item.name}</td>
                         <td className={styles.amountCell}>{formatCurrency(item.amount)}</td>
+                        <td className={styles.ratioCell}>
+                          {item.category === "income" ? "-" : (
+                            item.splitRatio === undefined || item.splitRatio === 50 ? "折半" :
+                            item.uid === user?.uid ? `自分:${item.splitRatio}% / 相手:${100 - item.splitRatio}%` :
+                            `自分:${100 - item.splitRatio}% / 相手:${item.splitRatio}%`
+                          )}
+                        </td>
                         <td className={styles.memoCell}>{item.memo || "-"}</td>
                         <td className={styles.actionCell}>
                           <button className={styles.editRowBtn} onClick={() => onEdit(item)}>
@@ -484,7 +622,7 @@ export default function BudgetClient() {
 
                   <tr className={styles.subtotalRow}>
                     <td colSpan={2} className={styles.subtotalLabel}>小計</td>
-                    <td colSpan={5} className={styles.subtotalValue}>
+                    <td colSpan={6} className={styles.subtotalValue}>
                       <span className={styles.subtotalPerson}>{myName}: <strong>{formatCurrency(subtotals.my)}</strong></span>
                       {partnerUser && (
                         <span className={styles.subtotalPerson}>{partnerName}: <strong>{formatCurrency(subtotals.partner)}</strong></span>
@@ -497,6 +635,66 @@ export default function BudgetClient() {
             })}
           </tbody>
         </table>
+
+        {/* スマホ用カードリスト */}
+        <div className={styles.mobileList}>
+          {sections.map(section => {
+            const filtered = list.filter(item => item.category === section.id);
+            if (filtered.length === 0) return null;
+            const subtotals = getSubtotals(list, section.id);
+
+            return (
+              <div key={section.id} className={styles.mobileSection}>
+                <div className={styles.mobileSectionTitle}>{section.title}</div>
+                {filtered.map(item => {
+                  const typeName = types.find(t => t.id === item.type)?.name || item.type;
+                  const itemUserName = item.uid === user?.uid ? myName : partnerName;
+                  return (
+                    <div key={item.id} className={styles.mobileCard} onClick={() => openDetailModal(item)}>
+                      <div className={styles.mobileCardMain}>
+                        <span className={styles.mobileCardName}>{item.name}</span>
+                        <span className={styles.mobileCardAmount}>{formatCurrency(item.amount)}</span>
+                      </div>
+                      <div className={styles.mobileCardSub}>
+                        <span className={item.uid === user?.uid ? styles.mobileUserBadgeMe : styles.mobileUserBadgePartner}>
+                          {itemUserName}
+                        </span>
+                        <span className={styles.mobileTypeName}>{typeName}</span>
+                        {item.category !== "income" && (
+                          <span className={styles.mobileCardRatio}>
+                            負担: {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" : 
+                              item.uid === user?.uid ? `自分:${item.splitRatio}%` :
+                              `相手:${item.splitRatio}%`
+                            }
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className={styles.mobileSubtotalCard}>
+                  <div className={styles.mobileSubtotalTitle}>小計</div>
+                  <div className={styles.mobileSubtotalGrid}>
+                    <div className={styles.mobileSubtotalPerson}>
+                      <span>{myName}:</span>
+                      <strong>{formatCurrency(subtotals.my)}</strong>
+                    </div>
+                    {partnerUser && (
+                      <div className={styles.mobileSubtotalPerson}>
+                        <span>{partnerName}:</span>
+                        <strong>{formatCurrency(subtotals.partner)}</strong>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.mobileSubtotalTotal}>
+                    <span>合計:</span>
+                    <strong>{formatCurrency(subtotals.total)}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -552,6 +750,178 @@ export default function BudgetClient() {
           </div>
         </div>
       </div>
+
+      {/* 清算・負担のまとめエリア */}
+      {activeTab === "actual" && (
+        <div className={styles.settlementSection}>
+          <div className={styles.settlementTitle}>
+            <i className="fa-solid fa-hand-holding-dollar"></i> 清算・負担のまとめ
+          </div>
+          {(() => {
+            const setSum = getSettlementSummary(actualBudgets);
+            if (!setSum) return null;
+            return (
+              <div className={styles.settlementContent}>
+                <div className={styles.settlementGrid}>
+                  <div className={styles.settlementCard}>
+                    <div className={styles.settlementCardLabel}>{myName}の状況</div>
+                    <div className={styles.settlementCardRow}>
+                      <span>支払った額:</span>
+                      <strong>{formatCurrency(setSum.myPaid)}</strong>
+                    </div>
+                    <div className={styles.settlementCardRow}>
+                      <span>実質負担額:</span>
+                      <strong>{formatCurrency(setSum.myBurden)}</strong>
+                    </div>
+                  </div>
+                  {partnerUser && (
+                    <div className={styles.settlementCard}>
+                      <div className={styles.settlementCardLabel}>{partnerName}の状況</div>
+                      <div className={styles.settlementCardRow}>
+                        <span>支払った額:</span>
+                        <strong>{formatCurrency(setSum.partnerPaid)}</strong>
+                      </div>
+                      <div className={styles.settlementCardRow}>
+                        <span>実質負担額:</span>
+                        <strong>{formatCurrency(setSum.partnerBurden)}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 視覚的清算フロー表示 */}
+                <div className={styles.settlementResult}>
+                  {setSum.diff === 0 ? (
+                    <div className={styles.settlementClean}>現在、二人の清算額はピッタリ折半で清算なしです！✨</div>
+                  ) : (
+                    <div className={styles.settlementFlowBlock}>
+                      <div className={styles.settlementFlow}>
+                        {/* 送金元 */}
+                        <div className={styles.userNode}>
+                          <img
+                            src={setSum.diff < 0 ? myPictureUrl : partnerPictureUrl}
+                            alt="送金元"
+                            className={styles.userAvatar}
+                          />
+                          <span className={styles.userName}>
+                            {setSum.diff < 0 ? myName : partnerName}
+                          </span>
+                        </div>
+
+                        {/* 矢印 & 金額 */}
+                        <div className={styles.flowArrow}>
+                          <span className={styles.amountHighlight}>
+                            {formatCurrency(Math.abs(setSum.diff))}
+                          </span>
+                          <i
+                            className="fa-solid fa-arrow-right-long"
+                            style={{ fontSize: "24px" }}
+                          ></i>
+                        </div>
+
+                        {/* 送金先 */}
+                        <div className={styles.userNode}>
+                          <img
+                            src={setSum.diff < 0 ? partnerPictureUrl : myPictureUrl}
+                            alt="送金先"
+                            className={styles.userAvatar}
+                          />
+                          <span className={styles.userName}>
+                            {setSum.diff < 0 ? partnerName : myName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className={styles.settlementActionText}>
+                        {setSum.diff < 0 ? (
+                          <>
+                            <strong>{myName}</strong> から <strong>{partnerName}</strong> へ <strong>{formatCurrency(Math.abs(setSum.diff))}</strong> 送金して調整します。💸
+                          </>
+                        ) : (
+                          <>
+                            <strong>{partnerName}</strong> から <strong>{myName}</strong> へ <strong>{formatCurrency(setSum.diff)}</strong> 送金して調整します。💰
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 計算プロセスの詳細 */}
+                <div className={styles.formulaBox}>
+                  <div className={styles.formulaTitle}>
+                    <i className="fa-solid fa-calculator"></i>
+                    <span>精算額の計算プロセスと詳細</span>
+                  </div>
+                  <div className={styles.formulaStep}>
+                    <span className={styles.stepNum}>1</span>
+                    <div>
+                      <span>二人の支出（固定費＋変動費）の実支払額</span>
+                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                        • 全体の支出合計: <strong>{formatCurrency(setSum.myPaid + setSum.partnerPaid)}</strong><br />
+                        • {myName} の支払額: {formatCurrency(setSum.myPaid)}<br />
+                        • {partnerName} の支払額: {formatCurrency(setSum.partnerPaid)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.formulaStep}>
+                    <span className={styles.stepNum}>2</span>
+                    <div>
+                      <span>各項目の負担割合に基づく目標負担額</span>
+                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                        • {myName} の目標負担額: <strong>{formatCurrency(setSum.myBurden)}</strong><br />
+                        • {partnerName} の目標負担額: <strong>{formatCurrency(setSum.partnerBurden)}</strong><br />
+                        <span style={{ fontSize: "11px", color: "#888" }}>
+                          (※ 各支出項目ごとの設定割合「金額 × 負担率 %」の合算値です。未設定項目は折半 50% として計算されます)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.formulaStep}>
+                    <span className={styles.stepNum}>3</span>
+                    <div>
+                      <span>支払済みの金額と目標負担額の差額</span>
+                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                        • {myName}: {formatCurrency(setSum.myPaid)} (支払額) - {formatCurrency(setSum.myBurden)} (目標) = <strong>{setSum.diff > 0 ? `+${formatCurrency(setSum.diff)}` : formatCurrency(setSum.diff)}</strong><br />
+                        • {partnerName}: {formatCurrency(setSum.partnerPaid)} (支払額) - {formatCurrency(setSum.partnerBurden)} (目標) = <strong>{-setSum.diff > 0 ? `+${formatCurrency(-setSum.diff)}` : formatCurrency(-setSum.diff)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.formulaStep}>
+                    <span className={styles.stepNum}>4</span>
+                    <div>
+                      <span><strong>精算のアクション</strong></span>
+                      <div style={{ fontSize: "12px", color: "#c2185b", fontWeight: "bold", marginTop: "2px" }}>
+                        {setSum.diff === 0 ? (
+                          <span>支払額と目標負担が一致しているため、送金による清算は不要です。⚖️</span>
+                        ) : setSum.diff < 0 ? (
+                          <span>
+                            目標の負担額に合わせるため、{myName} から {partnerName} へ <strong>{formatCurrency(Math.abs(setSum.diff))}</strong> を送金して調整します。💸
+                            {partnerUser?.paypayId && (
+                              <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
+                                👉 送金先 ({partnerName}) の PayPay ID: <strong>{partnerUser.paypayId}</strong>
+                              </div>
+                            )}
+                          </span>
+                        ) : (
+                          <span>
+                            目標の負担額に合わせるため、{partnerName} から {myName} へ <strong>{formatCurrency(setSum.diff)}</strong> を送金して調整します。💰
+                            {userData?.paypayId && (
+                              <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
+                                👉 送金先 ({myName}) の PayPay ID: <strong>{userData.paypayId}</strong>
+                              </div>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* タブコンテンツ */}
       {activeTab === "actual" && (
@@ -688,6 +1058,77 @@ export default function BudgetClient() {
                       onChange={(e) => setActMemo(e.target.value)}
                     />
                   </div>
+
+                  {/* 負担設定 */}
+                  {actCategory !== "income" && (
+                    <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
+                      <label className={styles.formLabel}>負担設定</label>
+                      <div className={styles.splitModeSelector}>
+                        <label className={styles.radioLabelInline}>
+                          <input
+                            type="radio"
+                            name="actSplitMode"
+                            value="equal"
+                            checked={actSplitMode === "equal"}
+                            onChange={() => setActSplitMode("equal")}
+                          />
+                          折半 (5:5)
+                        </label>
+                        <label className={styles.radioLabelInline}>
+                          <input
+                            type="radio"
+                            name="actSplitMode"
+                            value="custom"
+                            checked={actSplitMode === "custom"}
+                            onChange={() => setActSplitMode("custom")}
+                          />
+                          比率を指定
+                        </label>
+                      </div>
+                      {actSplitMode === "custom" && (
+                        <div className={styles.ratioInputs}>
+                          <div className={styles.ratioInputWrapper}>
+                            <span>{myName}:</span>
+                            <input
+                              type="number"
+                              className={styles.ratioInput}
+                              min="0"
+                              max="100"
+                              value={actMyRatio}
+                              placeholder="50"
+                              onChange={(e) => {
+                                const val = e.target.value !== "" ? Number(e.target.value) : "";
+                                setActMyRatio(val);
+                                if (typeof val === "number") {
+                                  setActPartnerRatio(100 - val);
+                                }
+                              }}
+                            />
+                            <span>%</span>
+                          </div>
+                          <div className={styles.ratioInputWrapper}>
+                            <span>{partnerName}:</span>
+                            <input
+                              type="number"
+                              className={styles.ratioInput}
+                              min="0"
+                              max="100"
+                              value={actPartnerRatio}
+                              placeholder="50"
+                              onChange={(e) => {
+                                const val = e.target.value !== "" ? Number(e.target.value) : "";
+                                setActPartnerRatio(val);
+                                if (typeof val === "number") {
+                                  setActMyRatio(100 - val);
+                                }
+                              }}
+                            />
+                            <span>%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className={styles.formActions}>
@@ -883,6 +1324,77 @@ export default function BudgetClient() {
                     onChange={(e) => setDfMemo(e.target.value)}
                   />
                 </div>
+
+                {/* 負担設定 */}
+                {dfCategory !== "income" && (
+                  <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
+                    <label className={styles.formLabel}>負担設定</label>
+                    <div className={styles.splitModeSelector}>
+                      <label className={styles.radioLabelInline}>
+                        <input
+                          type="radio"
+                          name="dfSplitMode"
+                          value="equal"
+                          checked={dfSplitMode === "equal"}
+                          onChange={() => setDfSplitMode("equal")}
+                        />
+                        折半 (5:5)
+                      </label>
+                      <label className={styles.radioLabelInline}>
+                        <input
+                          type="radio"
+                          name="dfSplitMode"
+                          value="custom"
+                          checked={dfSplitMode === "custom"}
+                          onChange={() => setDfSplitMode("custom")}
+                        />
+                        比率を指定
+                      </label>
+                    </div>
+                    {dfSplitMode === "custom" && (
+                      <div className={styles.ratioInputs}>
+                        <div className={styles.ratioInputWrapper}>
+                          <span>{myName}:</span>
+                          <input
+                            type="number"
+                            className={styles.ratioInput}
+                            min="0"
+                            max="100"
+                            value={dfMyRatio}
+                            placeholder="50"
+                            onChange={(e) => {
+                              const val = e.target.value !== "" ? Number(e.target.value) : "";
+                              setDfMyRatio(val);
+                              if (typeof val === "number") {
+                                setDfPartnerRatio(100 - val);
+                              }
+                            }}
+                          />
+                          <span>%</span>
+                        </div>
+                        <div className={styles.ratioInputWrapper}>
+                          <span>{partnerName}:</span>
+                          <input
+                            type="number"
+                            className={styles.ratioInput}
+                            min="0"
+                            max="100"
+                            value={dfPartnerRatio}
+                            placeholder="50"
+                            onChange={(e) => {
+                              const val = e.target.value !== "" ? Number(e.target.value) : "";
+                              setDfPartnerRatio(val);
+                              if (typeof val === "number") {
+                                setDfMyRatio(100 - val);
+                              }
+                            }}
+                          />
+                          <span>%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className={styles.formActions}>
@@ -896,6 +1408,100 @@ export default function BudgetClient() {
                 )}
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 詳細確認モーダル */}
+      {showDetailModal && selectedBudget && (
+        <div className={styles.modalOverlay} onClick={closeDetailModal}>
+          <div className={styles.detailModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                <i className="fa-solid fa-file-invoice-dollar"></i> 収支の詳細
+              </h2>
+              <button className={styles.modalClose} onClick={closeDetailModal}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>区分・種別:</span>
+                <span className={styles.detailValue}>
+                  {categories.find(c => c.id === selectedBudget.category)?.name || selectedBudget.category} /{" "}
+                  {types.find(t => t.id === selectedBudget.type)?.name || selectedBudget.type}
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>品名・名前:</span>
+                <span className={styles.detailValue}><strong>{selectedBudget.name}</strong></span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>金額:</span>
+                <span className={`${styles.detailValue} ${styles.detailAmount}`}>{formatCurrency(selectedBudget.amount)}</span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>支払者:</span>
+                <span className={styles.detailValue}>
+                  <span className={selectedBudget.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
+                    {selectedBudget.uid === user?.uid ? myName : partnerName}
+                  </span>
+                </span>
+              </div>
+              {selectedBudget.category !== "income" && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>負担割合:</span>
+                  <div className={styles.detailRatioBlock}>
+                    {(() => {
+                      const ratio = selectedBudget.splitRatio !== undefined ? selectedBudget.splitRatio : 50;
+                      const isMe = selectedBudget.uid === user?.uid;
+                      const myShare = isMe ? ratio : 100 - ratio;
+                      const partnerShare = isMe ? 100 - ratio : ratio;
+                      return (
+                        <>
+                          <div className={styles.detailRatioItem}>
+                            <span>{myName}:</span>
+                            <strong>{myShare}%</strong> ({formatCurrency(selectedBudget.amount * (myShare / 100))})
+                          </div>
+                          <div className={styles.detailRatioItem}>
+                            <span>{partnerName}:</span>
+                            <strong>{partnerShare}%</strong> ({formatCurrency(selectedBudget.amount * (partnerShare / 100))})
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>備考:</span>
+                <span className={styles.detailValue}>{selectedBudget.memo || "（なし）"}</span>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.modalEditBtn} onClick={() => {
+                closeDetailModal();
+                if (activeTab === "actual") {
+                  handleEditActual(selectedBudget);
+                } else {
+                  handleEditDefault(selectedBudget);
+                }
+              }}>
+                <i className="fa-solid fa-pen"></i> 編集する
+              </button>
+              <button className={styles.modalDeleteBtn} onClick={() => {
+                if (window.confirm("この項目を削除してもよろしいですか？")) {
+                  closeDetailModal();
+                  if (activeTab === "actual") {
+                    handleDeleteActualItem(selectedBudget.id);
+                  } else {
+                    handleDeleteDefaultItem(selectedBudget.id);
+                  }
+                }
+              }}>
+                <i className="fa-solid fa-trash"></i> 削除する
+              </button>
+            </div>
           </div>
         </div>
       )}

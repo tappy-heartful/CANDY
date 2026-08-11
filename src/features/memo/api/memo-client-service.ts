@@ -5,6 +5,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -71,4 +72,21 @@ export async function updateMemo(
 export async function deleteMemo(id: string) {
   const ref = doc(db, "memos", id);
   return await deleteDoc(ref);
+}
+
+/**
+ * 指定されたIDのメモを取得する
+ */
+export async function getMemo(id: string): Promise<Memo | null> {
+  try {
+    const ref = doc(db, "memos", id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return toPlainObject(snap) as Memo;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting memo:", error);
+    return null;
+  }
 }

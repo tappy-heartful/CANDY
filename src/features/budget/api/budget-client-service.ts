@@ -169,6 +169,7 @@ export async function copyDefaultToActual(coupleKey: string, year: number, month
         name: item.name,
         amount: item.amount,
         memo: item.memo || "",
+        splitRatio: item.splitRatio ?? 50,
         createdAt: now,
         updatedAt: now
       })
