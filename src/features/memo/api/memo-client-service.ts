@@ -22,11 +22,11 @@ export async function getMemos(coupleKey: string): Promise<Memo[]> {
     const ref = collection(db, "memos");
     const q = query(
       ref,
-      where("coupleKey", "==", coupleKey),
-      orderBy("updatedAt", "desc")
+      where("coupleKey", "==", coupleKey)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => toPlainObject(d) as Memo);
+    const memos = snap.docs.map((d) => toPlainObject(d) as Memo);
+    return memos.sort((a, b) => b.updatedAt - a.updatedAt);
   } catch (error) {
     console.error("Error getting memos:", error);
     return [];

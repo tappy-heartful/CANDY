@@ -205,7 +205,6 @@ export default function MemoClient() {
   return (
     <div className="page-container">
       <div className={styles.container}>
-        <BackToHome />
 
         <div className={styles.header}>
           <h1 className={styles.title}>
@@ -438,6 +437,7 @@ export default function MemoClient() {
           </div>
         )}
       </div>
+      <BackToHome />
     </div>
   );
 }
