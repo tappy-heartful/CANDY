@@ -24,6 +24,8 @@ interface TodoModalProps {
   }) => Promise<void>;
   isSubmitting: boolean;
   onAddGroup?: () => void;
+  onDelete?: (todoId: string) => Promise<void>;
+  onToggleComplete?: (todo: Todo) => Promise<void>;
 }
 
 interface DateSetting {
@@ -44,7 +46,9 @@ export default function TodoModal({
   onClose,
   onSave,
   isSubmitting,
-  onAddGroup
+  onAddGroup,
+  onDelete,
+  onToggleComplete
 }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
@@ -52,6 +56,8 @@ export default function TodoModal({
   const [uid, setUid] = useState("");
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [steps, setSteps] = useState<TodoStep[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
 
   const prevGroupsLength = useRef(groups.length);
   const isInitialized = useRef(false);
@@ -147,7 +153,7 @@ export default function TodoModal({
         setGroupId(newGroup.id);
       }
     }
-    
+
     prevGroupsLength.current = groups.length;
   }, [groups, isOpen, todo]);
 
@@ -201,7 +207,7 @@ export default function TodoModal({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          
+
           <div className={styles.formGroup}>
             <label className={styles.inputLabel}>グループ</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -236,7 +242,7 @@ export default function TodoModal({
                     setUid(currentUserId);
                   }}
                 />
-                {myNickname}のTODO
+                {myNickname}
               </label>
               {partnerUid && (
                 <label className={styles.radioLabel}>
@@ -250,7 +256,7 @@ export default function TodoModal({
                       setUid(partnerUid);
                     }}
                   />
-                  {partnerNickname}のTODO
+                  {partnerNickname}
                 </label>
               )}
               <label className={styles.radioLabel}>
@@ -264,7 +270,7 @@ export default function TodoModal({
                     setUid(todo?.uid || currentUserId);
                   }}
                 />
-                2人のTODO
+                2人
               </label>
             </div>
           </div>
@@ -354,12 +360,53 @@ export default function TodoModal({
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.btnCancel} onClick={onClose} disabled={isSubmitting}>
-            キャンセル
-          </button>
-          <button className={styles.btnSave} onClick={handleSave} disabled={isSubmitting}>
-            {isSubmitting ? "保存中..." : "保存する"}
-          </button>
+          <div className={styles.footerRow}>
+            {todo && onToggleComplete && (
+              <button
+                type="button"
+                className={todo.isCompleted ? styles.btnToggleUncomplete : styles.btnToggleComplete}
+                onClick={async () => {
+                  setIsToggling(true);
+                  await onToggleComplete(todo);
+                  setIsToggling(false);
+                }}
+                disabled={isSubmitting || isDeleting || isToggling}
+              >
+                {todo.isCompleted ? "未完了にする" : "完了にする"}
+              </button>
+            )}
+            <button
+              className={styles.btnSave}
+              onClick={handleSave}
+              disabled={isSubmitting || isDeleting || isToggling}
+            >
+              {isSubmitting ? "保存中..." : "保存する"}
+            </button>
+          </div>
+          <div className={styles.footerRow}>
+            {todo && onDelete && (
+              <button
+                type="button"
+                className={styles.btnDelete}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  await onDelete(todo.id);
+                  setIsDeleting(false);
+                }}
+                disabled={isSubmitting || isDeleting || isToggling}
+                title="TODOを削除"
+              >
+                <i className="fa-solid fa-trash-can"></i>
+              </button>
+            )}
+            <button
+              className={styles.btnCancel}
+              onClick={onClose}
+              disabled={isSubmitting || isDeleting || isToggling}
+            >
+              キャンセル
+            </button>
+          </div>
         </div>
       </div>
     </div>

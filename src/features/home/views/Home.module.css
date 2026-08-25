@@ -1081,5 +1081,42 @@
   animation: crownWiggle 1.5s ease-in-out infinite alternate;
 }
 
+/* Todo interactive styles */
+.todoCheckbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 2px;
+  accent-color: #9B7CC3;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.deleteTodoBtn {
+  background: none;
+  border: none;
+  color: #c5a9df;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.deleteTodoBtn:hover {
+  background: #fdf2f8;
+  color: #F7A8C4;
+}
+
+.titleCompleted {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+
 
 

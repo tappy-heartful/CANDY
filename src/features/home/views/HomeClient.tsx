@@ -10,11 +10,11 @@ import { getPartnerData, updateProfile } from "@/src/features/user/api/user-clie
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { notifyDailyStatusSaved, notifyDailyStatusCommented } from "@/src/features/home/api/daily-status-server-actions";
 import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
-import { getGroups, updateTodo } from "@/src/features/todo/api/todo-client-service";
+import { getGroups, updateTodo, deleteTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
 import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep } from "@/src/lib/firestore/types";
-import { getNextAnniversaryDiff } from "@/src/lib/functions";
+import { getNextAnniversaryDiff, showDialog } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
@@ -66,7 +66,6 @@ export default function HomeClient() {
 
   const [recentWishlist, setRecentWishlist] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(false);
   const [partnerData, setPartnerData] = useState<FirestoreUser | null>(null);
   const [activeProfileModal, setActiveProfileModal] = useState<'partner' | 'me' | null>(null);
   const [myDailyStatus, setMyDailyStatus] = useState<DailyStatus | null>(null);
@@ -152,16 +151,6 @@ export default function HomeClient() {
       console.error("Failed to refresh todos:", e);
     }
   };
-
-  useEffect(() => {
-    // ログイン直後の演出用
-    const hasWelcomed = sessionStorage.getItem('candy.welcomed');
-    if (!hasWelcomed && userData?.nickname) {
-      setShowWelcome(true);
-      sessionStorage.setItem('candy.welcomed', 'true');
-      setTimeout(() => setShowWelcome(false), 3500);
-    }
-  }, [userData]);
 
   useEffect(() => {
     if (userData?.clockTheme) {
@@ -315,6 +304,31 @@ export default function HomeClient() {
     }
   };
 
+  const handleToggleCompleteTodo = async (todo: Todo) => {
+    try {
+      await updateTodo(todo.id, { isCompleted: !todo.isCompleted });
+      if (user) {
+        await refreshTodos(user.uid);
+      }
+    } catch (e) {
+      showDialog("更新に失敗しました");
+    }
+  };
+
+  const handleDeleteTodo = async (todoId: string) => {
+    const confirmed = await showDialog("本当にこのTODOを削除しますか？");
+    if (!confirmed) return;
+    try {
+      await deleteTodo(todoId);
+      if (user) {
+        await refreshTodos(user.uid);
+      }
+    } catch (e) {
+      showDialog("削除に失敗しました");
+    }
+  };
+
+
   const handleSaveDailyStatus = async (data: Partial<DailyStatus>) => {
     setIsStatusSubmitting(true);
     try {
@@ -460,16 +474,6 @@ export default function HomeClient() {
             isMe={true}
             onClose={() => setActiveProfileModal(null)}
           />
-        )}
-
-        {showWelcome && (
-          <div className={styles.welcomeOverlay}>
-            <div className={styles.welcomeCandy}>🍭</div>
-            <div className={styles.welcomeText}>
-              Welcome Back,
-              <span className={styles.welcomeName}>{userData?.nickname}</span>
-            </div>
-          </div>
         )}
 
         {isFireworksActive && <FireworksCanvas />}
@@ -797,14 +801,35 @@ export default function HomeClient() {
                           setIsTodoModalOpen(true);
                         }}
                         className={styles.notificationSubItem}
-                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
-                          <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                        <input
+                          type="checkbox"
+                          className={styles.todoCheckbox}
+                          checked={t.isCompleted}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggleCompleteTodo(t);
+                          }}
+                        />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                            <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
+                            <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                          </div>
+                          <span className={`${styles.notificationTitle} ${t.isCompleted ? styles.titleCompleted : ""}`}>{t.title}</span>
                         </div>
-                        <span className={styles.notificationTitle}>{t.title}</span>
+                        <button
+                          className={styles.deleteTodoBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTodo(t.id);
+                          }}
+                          title="TODOを削除"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
                       </div>
                     );
                   })}
@@ -859,14 +884,35 @@ export default function HomeClient() {
                           setIsTodoModalOpen(true);
                         }}
                         className={styles.notificationSubItem}
-                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
-                          <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                        <input
+                          type="checkbox"
+                          className={styles.todoCheckbox}
+                          checked={t.isCompleted}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggleCompleteTodo(t);
+                          }}
+                        />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                            <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{y}.{String(m).padStart(2, '0')}.{String(d).padStart(2, '0')}({day})</span>
+                            <span className={styles.countdownBadge} style={badgeStyle}>{countdownText}</span>
+                          </div>
+                          <span className={`${styles.notificationTitle} ${t.isCompleted ? styles.titleCompleted : ""}`}>{t.title}</span>
                         </div>
-                        <span className={styles.notificationTitle}>{t.title}</span>
+                        <button
+                          className={styles.deleteTodoBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTodo(t.id);
+                          }}
+                          title="TODOを削除"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
                       </div>
                     );
                   })}
@@ -904,13 +950,34 @@ export default function HomeClient() {
                           setIsTodoModalOpen(true);
                         }}
                         className={styles.notificationSubItem}
-                        style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
-                          <span className={styles.countdownBadge} style={{ background: '#f5f0fa', color: '#7a5ba0', borderColor: '#7a5ba0' }}>🏷️ 期限なし</span>
+                        <input
+                          type="checkbox"
+                          className={styles.todoCheckbox}
+                          checked={t.isCompleted}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggleCompleteTodo(t);
+                          }}
+                        />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span className={`${styles.badge} ${badgeClass}`}>{typeLabel}</span>
+                            <span className={styles.countdownBadge} style={{ background: '#f5f0fa', color: '#7a5ba0', borderColor: '#7a5ba0' }}>🏷️ 期限なし</span>
+                          </div>
+                          <span className={`${styles.notificationTitle} ${t.isCompleted ? styles.titleCompleted : ""}`}>{t.title}</span>
                         </div>
-                        <span className={styles.notificationTitle}>{t.title}</span>
+                        <button
+                          className={styles.deleteTodoBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTodo(t.id);
+                          }}
+                          title="TODOを削除"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
                       </div>
                     );
                   })}

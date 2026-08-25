@@ -585,9 +585,15 @@
 .modalFooter {
   padding: 16px 20px;
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
+}
+.footerRow {
+  display: flex;
+  gap: 12px;
+  width: 100%;
 }
 .btnCancel, .btnSave {
   flex: 1;
@@ -719,3 +725,70 @@
 .addStepBtn:active {
   transform: scale(0.95);
 }
+
+.btnDelete {
+  background: #ffebee;
+  color: #ef5350;
+  border: 1px solid #ef5350;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex: 0 0 60px;
+}
+.btnDelete:hover {
+  background: #ffcdd2;
+}
+.btnDelete:disabled {
+  opacity: 0.6;
+}
+
+.btnToggleComplete {
+  background: #e8f5e9;
+  color: #4caf50;
+  border: 1px solid #4caf50;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex: 1;
+}
+.btnToggleComplete:hover {
+  background: #c8e6c9;
+}
+.btnToggleComplete:disabled {
+  opacity: 0.6;
+}
+
+.btnToggleUncomplete {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ccc;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex: 1;
+}
+.btnToggleUncomplete:hover {
+  background: #e0e0e0;
+}
+.btnToggleUncomplete:disabled {
+  opacity: 0.6;
+}
+

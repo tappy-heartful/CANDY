@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { CalendarEvent, Anniversary, Todo, User, Group, TodoStep } from "@/src/lib/firestore/types";
 import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
-import { addTodo, updateTodo, getGroups } from "@/src/features/todo/api/todo-client-service";
+import { addTodo, updateTodo, deleteTodo, getGroups } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
@@ -160,6 +160,7 @@ export default function CalendarView({
   const [activeDateStr, setActiveDateStr] = useState<string>("");
   const [todoGroups, setTodoGroups] = useState<Group[]>([]);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [isTodoSubmitting, setIsTodoSubmitting] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -949,6 +950,7 @@ export default function CalendarView({
     dates?: { date: string; dateMode: "due" | "on" }[];
     steps?: TodoStep[];
   }) => {
+    setIsTodoSubmitting(true);
     showSpinner();
     try {
       if (editingTodo) {
@@ -1013,6 +1015,45 @@ export default function CalendarView({
       showDialog("TODOの保存に失敗しました");
     } finally {
       hideSpinner();
+      setIsTodoSubmitting(false);
+    }
+  };
+
+  const handleDeleteTodo = async (todoId: string) => {
+    const confirmed = await showDialog("本当にこのTODOを削除しますか？");
+    if (!confirmed) return;
+    setIsTodoSubmitting(true);
+    showSpinner();
+    try {
+      await deleteTodo(todoId);
+      setTodos((prev) => prev.filter((t) => t.id !== todoId));
+      setIsTodoModalOpen(false);
+      setEditingTodo(null);
+    } catch (e) {
+      console.error("Failed to delete todo:", e);
+      showDialog("TODOの削除に失敗しました");
+    } finally {
+      hideSpinner();
+      setIsTodoSubmitting(false);
+    }
+  };
+
+  const handleToggleCompleteTodo = async (todo: Todo) => {
+    setIsTodoSubmitting(true);
+    showSpinner();
+    try {
+      const nextStatus = !todo.isCompleted;
+      await updateTodo(todo.id, { isCompleted: nextStatus });
+      setTodos((prev) =>
+        prev.map((t) => (t.id === todo.id ? { ...t, isCompleted: nextStatus } : t))
+      );
+      setEditingTodo({ ...todo, isCompleted: nextStatus });
+    } catch (e) {
+      console.error("Failed to toggle todo:", e);
+      showDialog("TODOの更新に失敗しました");
+    } finally {
+      hideSpinner();
+      setIsTodoSubmitting(false);
     }
   };
 
@@ -1952,7 +1993,9 @@ export default function CalendarView({
             setEditingTodo(null);
           }}
           onSave={handleSaveTodo}
-          isSubmitting={false}
+          onDelete={handleDeleteTodo}
+          onToggleComplete={handleToggleCompleteTodo}
+          isSubmitting={isTodoSubmitting}
         />
       )}
     </div>
