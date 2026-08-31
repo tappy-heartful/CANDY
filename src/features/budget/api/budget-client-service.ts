@@ -27,6 +27,19 @@ const DEFAULT_MASTER_DATA: BudgetMasterData = {
 };
 
 /**
+ * オブジェクトから値が undefined のプロパティを排除する
+ */
+function cleanUndefined<T extends object>(obj: T): T {
+  const activeObj = { ...obj } as any;
+  Object.keys(activeObj).forEach((key) => {
+    if (activeObj[key] === undefined) {
+      delete activeObj[key];
+    }
+  });
+  return activeObj;
+}
+
+/**
  * 家計簿のマスタデータを取得する (DBにない場合は初期作成)
  */
 export async function getBudgetMasterData(): Promise<BudgetMasterData> {
@@ -70,14 +83,15 @@ export async function getDefaultBudgets(coupleKey: string, month: number): Promi
  */
 export async function saveDefaultBudget(data: Omit<DefaultBudget, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<void> {
   const now = Date.now();
+  const cleaned = cleanUndefined(data);
   if (data.id) {
     const docRef = doc(db, "defaultBudgets", data.id);
     await setDoc(docRef, {
-      ...data,
+      ...cleaned,
       updatedAt: now
     }, { merge: true });
   } else {
-    const { id, ...rest } = data;
+    const { id, ...rest } = cleaned;
     const colRef = collection(db, "defaultBudgets");
     await addDoc(colRef, {
       ...rest,
@@ -120,14 +134,15 @@ export async function getActualBudgets(coupleKey: string, year: number, month: n
  */
 export async function saveActualBudget(data: Omit<ActualBudget, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<void> {
   const now = Date.now();
+  const cleaned = cleanUndefined(data);
   if (data.id) {
     const docRef = doc(db, "actualBudgets", data.id);
     await setDoc(docRef, {
-      ...data,
+      ...cleaned,
       updatedAt: now
     }, { merge: true });
   } else {
-    const { id, ...rest } = data;
+    const { id, ...rest } = cleaned;
     const colRef = collection(db, "actualBudgets");
     await addDoc(colRef, {
       ...rest,
