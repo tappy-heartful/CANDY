@@ -6,24 +6,8 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 
 // マスタデータ
 const DEFAULT_MASTER_DATA: BudgetMasterData = {
-  categories: [
-    { id: "fixed", name: "固定費" },
-    { id: "variable", name: "変動費" },
-    { id: "income", name: "収入" }
-  ],
-  types: [
-    { id: "rent", categoryId: "fixed", name: "マンション" },
-    { id: "telecom", categoryId: "fixed", name: "通信費" },
-    { id: "tax", categoryId: "fixed", name: "税金" },
-    { id: "loan", categoryId: "fixed", name: "ローン" },
-    { id: "food", categoryId: "variable", name: "生活費" },
-    { id: "entertainment", categoryId: "variable", name: "娯楽" },
-    { id: "daily", categoryId: "variable", name: "日用品費" },
-    { id: "medical", categoryId: "variable", name: "医療費" },
-    { id: "salary", categoryId: "income", name: "給料" },
-    { id: "other_expense", categoryId: "variable", name: "その他支出" },
-    { id: "other_income", categoryId: "income", name: "その他収入" }
-  ]
+  categories: [],
+  types: []
 };
 
 /**

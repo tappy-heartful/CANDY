@@ -415,3 +415,35 @@
     font-size: 11px;
   }
 }
+
+/* Drag and Drop & Inline Edit Styles */
+.inlineInput {
+  border: 1px solid #9B7CC3;
+  background: white;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #333;
+  outline: none;
+  width: 100px;
+}
+
+.inlineCategoryInput {
+  border: 1.5px solid #9B7CC3;
+  background: white;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #333;
+  outline: none;
+  width: 250px;
+}
+
+.masterBadge[draggable="true"], .categoryListItem[draggable="true"] {
+  user-select: none;
+}
+
+.masterBadge:hover, .categoryListItem:hover {
+  box-shadow: 0 4px 8px rgba(155, 124, 195, 0.1);
+  border-color: #9B7CC3;
+}

@@ -13,12 +13,9 @@ interface BudgetMasterSettingsModalProps {
   onSave: (newCategories: BudgetCategory[], newTypes: BudgetType[]) => Promise<void>;
 }
 
-// 削除不可能な初期マスタID
-const SYSTEM_CATEGORY_IDS = ["fixed", "variable", "income"];
-const SYSTEM_TYPE_IDS = [
-  "rent", "telecom", "tax", "loan", "food", "entertainment", 
-  "daily", "medical", "salary", "other_expense", "other_income"
-];
+// 削除不可能な初期マスタID (空にしてすべての項目を編集可能にする)
+const SYSTEM_CATEGORY_IDS: string[] = [];
+const SYSTEM_TYPE_IDS: string[] = [];
 
 export default function BudgetMasterSettingsModal({
   isOpen,
@@ -39,6 +36,17 @@ export default function BudgetMasterSettingsModal({
 
   // 編集モードやタブの管理
   const [activeSettingsTab, setActiveSettingsTab] = useState<"type" | "category">("type");
+
+  // インライン編集状態
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState<string>("");
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editingTypeName, setEditingTypeName] = useState<string>("");
+
+  // ドラッグ＆ドロップ状態
+  const [draggedCategoryIndex, setDraggedCategoryIndex] = useState<number | null>(null);
+  const [draggedTypeIndex, setDraggedTypeIndex] = useState<number | null>(null);
+  const [draggedTypeCategoryId, setDraggedTypeCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -115,11 +123,6 @@ export default function BudgetMasterSettingsModal({
 
   // 区分の削除
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    if (SYSTEM_CATEGORY_IDS.includes(categoryId)) {
-      showDialog("こちらの初期区分は、家計簿の基本構成に必要なため整理（削除）できません。🌸");
-      return;
-    }
-
     // 紐づく種別があるかチェック
     const hasLinkedTypes = localTypes.some(t => t.categoryId === categoryId);
     if (hasLinkedTypes) {
@@ -139,15 +142,79 @@ export default function BudgetMasterSettingsModal({
 
   // 種別の削除
   const handleDeleteType = (typeId: string, typeName: string) => {
-    if (SYSTEM_TYPE_IDS.includes(typeId)) {
-      showDialog("こちらの初期種別は、家計簿の基本項目のため整理（削除）できません。🌸");
-      return;
-    }
-
     // 削除確認
     if (window.confirm(`種別「${typeName}」を整理（削除）してもよろしいですか？\n※保存ボタンを押すまで確定しません。`)) {
       setLocalTypes(localTypes.filter(t => t.id !== typeId));
     }
+  };
+
+  // カテゴリ（区分）のDnD
+  const handleCategoryDragStart = (index: number) => {
+    setDraggedCategoryIndex(index);
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleCategoryDrop = (index: number) => {
+    if (draggedCategoryIndex === null) return;
+    const list = [...localCategories];
+    const draggedItem = list[draggedCategoryIndex];
+    list.splice(draggedCategoryIndex, 1);
+    list.splice(index, 0, draggedItem);
+    setLocalCategories(list);
+    setDraggedCategoryIndex(null);
+  };
+
+  // 種別のDnD
+  const handleTypeDragStart = (index: number, categoryId: string) => {
+    setDraggedTypeIndex(index);
+    setDraggedTypeCategoryId(categoryId);
+  };
+
+  const handleTypeDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleTypeDrop = (targetIndex: number, categoryId: string) => {
+    if (draggedTypeIndex === null || draggedTypeCategoryId !== categoryId) return;
+
+    const targetTypes = localTypes.filter(t => t.categoryId === categoryId);
+    const otherTypes = localTypes.filter(t => t.categoryId !== categoryId);
+
+    const draggedItem = targetTypes[draggedTypeIndex];
+    targetTypes.splice(draggedTypeIndex, 1);
+    targetTypes.splice(targetIndex, 0, draggedItem);
+
+    setLocalTypes([...otherTypes, ...targetTypes]);
+    setDraggedTypeIndex(null);
+    setDraggedTypeCategoryId(null);
+  };
+
+  // インライン編集用ハンドラ
+  const startEditCategory = (id: string, name: string) => {
+    setEditingCategoryId(id);
+    setEditingCategoryName(name);
+  };
+
+  const saveEditCategory = (id: string) => {
+    const name = editingCategoryName.trim();
+    if (!name) return;
+    setLocalCategories(localCategories.map(c => c.id === id ? { ...c, name } : c));
+    setEditingCategoryId(null);
+  };
+
+  const startEditType = (id: string, name: string) => {
+    setEditingTypeId(id);
+    setEditingTypeName(name);
+  };
+
+  const saveEditType = (id: string) => {
+    const name = editingTypeName.trim();
+    if (!name) return;
+    setLocalTypes(localTypes.map(t => t.id === id ? { ...t, name } : t));
+    setEditingTypeId(null);
   };
 
   // マスタ保存の実行
@@ -180,6 +247,8 @@ export default function BudgetMasterSettingsModal({
         <div className={styles.modalBody}>
           <p className={styles.leadText}>
             家計簿で入力する「区分（カテゴリ）」や「種別（項目名）」を使いやすいようにカスタマイズできます。🌱
+            <br />
+            ※項目をクリックすると名前を編集でき、ドラッグ＆ドロップで表示順を変更できます。
           </p>
 
           {/* タブ切り替え */}
@@ -253,19 +322,51 @@ export default function BudgetMasterSettingsModal({
                         <p className={styles.emptyText}>この区分には種別が登録されていません。</p>
                       ) : (
                         <div className={styles.badgeGrid}>
-                          {categoryTypes.map(type => {
-                            const isSystem = SYSTEM_TYPE_IDS.includes(type.id);
+                          {categoryTypes.map((type, idx) => {
                             return (
-                              <div key={type.id} className={`${styles.masterBadge} ${isSystem ? styles.systemBadge : styles.customBadge}`}>
-                                <span>{type.name}</span>
-                                {!isSystem && (
-                                  <button
-                                    className={styles.deleteBadgeBtn}
-                                    onClick={() => handleDeleteType(type.id, type.name)}
-                                    title="整理（削除）する"
-                                  >
-                                    <i className="fa-solid fa-xmark"></i>
-                                  </button>
+                              <div
+                                key={type.id}
+                                className={`${styles.masterBadge} ${styles.customBadge}`}
+                                draggable
+                                onDragStart={() => handleTypeDragStart(idx, category.id)}
+                                onDragOver={handleTypeDragOver}
+                                onDrop={() => handleTypeDrop(idx, category.id)}
+                                style={{ cursor: "grab" }}
+                              >
+                                {editingTypeId === type.id ? (
+                                  <input
+                                    type="text"
+                                    className={styles.inlineInput}
+                                    value={editingTypeName}
+                                    onChange={(e) => setEditingTypeName(e.target.value)}
+                                    onBlur={() => saveEditType(type.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        saveEditType(type.id);
+                                      } else if (e.key === "Escape") {
+                                        setEditingTypeId(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <>
+                                    <span onClick={() => startEditType(type.id, type.name)}>
+                                      <i className="fa-solid fa-grip-vertical" style={{ marginRight: "6px", color: "#ccc", cursor: "grab" }}></i>
+                                      {type.name} <i className="fa-solid fa-pen" style={{ fontSize: "10px", marginLeft: "4px", opacity: 0.5, cursor: "pointer" }}></i>
+                                    </span>
+                                    <button
+                                      className={styles.deleteBadgeBtn}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteType(type.id, type.name);
+                                      }}
+                                      title="整理（削除）する"
+                                    >
+                                      <i className="fa-solid fa-xmark"></i>
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             );
@@ -313,23 +414,52 @@ export default function BudgetMasterSettingsModal({
                 <i className="fa-solid fa-list-ul"></i> 登録済みの区分一覧
               </div>
               <div className={styles.categoryList}>
-                {localCategories.map(category => {
-                  const isSystem = SYSTEM_CATEGORY_IDS.includes(category.id);
+                {localCategories.map((category, idx) => {
                   return (
-                    <div key={category.id} className={styles.categoryListItem}>
-                      <span className={styles.categoryNameDisplay}>
-                        <i className={`fa-solid ${isSystem ? "fa-folder" : "fa-folder-plus"} ${styles.folderIcon}`}></i>
-                        {category.name}
-                        {isSystem && <span className={styles.systemTag}>初期区分</span>}
-                      </span>
-                      {!isSystem && (
-                        <button
-                          className={styles.deleteListItemBtn}
-                          onClick={() => handleDeleteCategory(category.id, category.name)}
-                          title="整理（削除）する"
-                        >
-                          <i className="fa-solid fa-trash-can"></i> 整理する
-                        </button>
+                    <div
+                      key={category.id}
+                      className={styles.categoryListItem}
+                      draggable
+                      onDragStart={() => handleCategoryDragStart(idx)}
+                      onDragOver={handleCategoryDragOver}
+                      onDrop={() => handleCategoryDrop(idx)}
+                      style={{ cursor: "grab" }}
+                    >
+                      {editingCategoryId === category.id ? (
+                        <input
+                          type="text"
+                          className={styles.inlineCategoryInput}
+                          value={editingCategoryName}
+                          onChange={(e) => setEditingCategoryName(e.target.value)}
+                          onBlur={() => saveEditCategory(category.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEditCategory(category.id);
+                            } else if (e.key === "Escape") {
+                              setEditingCategoryId(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <span className={styles.categoryNameDisplay} onClick={() => startEditCategory(category.id, category.name)}>
+                            <i className="fa-solid fa-grip-vertical" style={{ marginRight: "10px", color: "#ccc", cursor: "grab" }}></i>
+                            <i className={`fa-solid fa-folder-plus ${styles.folderIcon}`}></i>
+                            {category.name} <i className="fa-solid fa-pen" style={{ fontSize: "11px", marginLeft: "6px", opacity: 0.5, cursor: "pointer" }}></i>
+                          </span>
+                          <button
+                            className={styles.deleteListItemBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCategory(category.id, category.name);
+                            }}
+                            title="整理（削除）する"
+                          >
+                            <i className="fa-solid fa-trash-can"></i> 整理する
+                          </button>
+                        </>
                       )}
                     </div>
                   );
