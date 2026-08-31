@@ -20,6 +20,8 @@ import {
   updateBudgetMasterData
 } from "../api/budget-client-service";
 import BudgetMasterSettingsModal from "../components/BudgetMasterSettingsModal";
+import BudgetAnalysis from "../components/BudgetAnalysis";
+
 
 export default function BudgetClient() {
   const { user, userData } = useAuth();
@@ -1467,6 +1469,19 @@ export default function BudgetClient() {
         types={types}
         onSave={handleSaveMasterSettings}
       />
+      {/* 今月の家計分析（実際の収支タブかつデータがある場合のみ表示） */}
+      {activeTab === "actual" && actualBudgets.length > 0 && (
+        <BudgetAnalysis
+          actualBudgets={actualBudgets}
+          categories={categories}
+          types={types}
+          user={userData}
+          partnerUser={partnerUser}
+          year={actualYear}
+          month={actualMonth}
+        />
+      )}
+
       {/* 計算プロセスの詳細 */}
       {activeTab === "actual" && (() => {
         const setSum = getSettlementSummary(actualBudgets);
