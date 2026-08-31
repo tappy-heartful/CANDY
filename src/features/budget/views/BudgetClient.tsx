@@ -871,77 +871,6 @@ export default function BudgetClient() {
                   )}
                 </div>
 
-                {/* 計算プロセスの詳細 */}
-                <div className={styles.formulaBox}>
-                  <div className={styles.formulaTitle}>
-                    <i className="fa-solid fa-calculator"></i>
-                    <span>精算額の計算プロセスと詳細</span>
-                  </div>
-                  <div className={styles.formulaStep}>
-                    <span className={styles.stepNum}>1</span>
-                    <div>
-                      <span>二人の支出（固定費＋変動費）の実支払額</span>
-                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                        • 全体の支出合計: <strong>{formatCurrency(setSum.myPaid + setSum.partnerPaid)}</strong><br />
-                        • {myName} の支払額: {formatCurrency(setSum.myPaid)}<br />
-                        • {partnerName} の支払額: {formatCurrency(setSum.partnerPaid)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.formulaStep}>
-                    <span className={styles.stepNum}>2</span>
-                    <div>
-                      <span>各項目の負担割合に基づく目標負担額</span>
-                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                        • {myName} の目標負担額: <strong>{formatCurrency(setSum.myBurden)}</strong><br />
-                        • {partnerName} の目標負担額: <strong>{formatCurrency(setSum.partnerBurden)}</strong><br />
-                        <span style={{ fontSize: "11px", color: "#888" }}>
-                          (※ 各支出項目ごとの設定割合「金額 × 負担率 %」の合算値です。未設定項目は折半 50% として計算されます)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.formulaStep}>
-                    <span className={styles.stepNum}>3</span>
-                    <div>
-                      <span>支払済みの金額と目標負担額の差額</span>
-                      <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                        • {myName}: {formatCurrency(setSum.myPaid)} (支払額) - {formatCurrency(setSum.myBurden)} (目標) = <strong>{setSum.diff > 0 ? `+${formatCurrency(setSum.diff)}` : formatCurrency(setSum.diff)}</strong><br />
-                        • {partnerName}: {formatCurrency(setSum.partnerPaid)} (支払額) - {formatCurrency(setSum.partnerBurden)} (目標) = <strong>{-setSum.diff > 0 ? `+${formatCurrency(-setSum.diff)}` : formatCurrency(-setSum.diff)}</strong>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.formulaStep}>
-                    <span className={styles.stepNum}>4</span>
-                    <div>
-                      <span><strong>精算のアクション</strong></span>
-                      <div style={{ fontSize: "12px", color: "#c2185b", fontWeight: "bold", marginTop: "2px" }}>
-                        {setSum.diff === 0 ? (
-                          <span>支払額と目標負担が一致しているため、送金による清算は不要です。⚖️</span>
-                        ) : setSum.diff < 0 ? (
-                          <span>
-                            目標の負担額に合わせるため、{myName} から {partnerName} へ <strong>{formatCurrency(Math.abs(setSum.diff))}</strong> を送金して調整します。💸
-                            {partnerUser?.paypayId && (
-                              <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
-                                👉 送金先 ({partnerName}) の PayPay ID: <strong>{partnerUser.paypayId}</strong>
-                              </div>
-                            )}
-                          </span>
-                        ) : (
-                          <span>
-                            目標の負担額に合わせるため、{partnerName} から {myName} へ <strong>{formatCurrency(setSum.diff)}</strong> を送金して調整します。💰
-                            {userData?.paypayId && (
-                              <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
-                                👉 送金先 ({myName}) の PayPay ID: <strong>{userData.paypayId}</strong>
-                              </div>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             );
           })()}
@@ -1538,6 +1467,82 @@ export default function BudgetClient() {
         types={types}
         onSave={handleSaveMasterSettings}
       />
+      {/* 計算プロセスの詳細 */}
+      {activeTab === "actual" && (() => {
+        const setSum = getSettlementSummary(actualBudgets);
+        if (!setSum) return null;
+        return (
+          <div className={styles.formulaBox} style={{ marginTop: "24px", marginBottom: "24px" }}>
+            <div className={styles.formulaTitle}>
+              <i className="fa-solid fa-calculator"></i>
+              <span>精算額の計算プロセスと詳細</span>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>1</span>
+              <div>
+                <span>二人の支出（固定費＋変動費）の実支払額</span>
+                <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                  • 全体の支出合計: <strong>{formatCurrency(setSum.myPaid + setSum.partnerPaid)}</strong><br />
+                  • {myName} の支払額: {formatCurrency(setSum.myPaid)}<br />
+                  • {partnerName} の支払額: {formatCurrency(setSum.partnerPaid)}
+                </div>
+              </div>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>2</span>
+              <div>
+                <span>各項目の負担割合に基づく目標負担額</span>
+                <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                  • {myName} の目標負担額: <strong>{formatCurrency(setSum.myBurden)}</strong><br />
+                  • {partnerName} の目標負担額: <strong>{formatCurrency(setSum.partnerBurden)}</strong><br />
+                  <span style={{ fontSize: "11px", color: "#888" }}>
+                    (※ 各支出項目ごとの設定割合「金額 × 負担率 %」の合算値です。未設定項目は折半 50% として計算されます)
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>3</span>
+              <div>
+                <span>支払済みの金額と目標負担額の差額</span>
+                <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
+                  • {myName}: {formatCurrency(setSum.myPaid)} (支払額) - {formatCurrency(setSum.myBurden)} (目標) = <strong>{setSum.diff > 0 ? `+${formatCurrency(setSum.diff)}` : formatCurrency(setSum.diff)}</strong><br />
+                  • {partnerName}: {formatCurrency(setSum.partnerPaid)} (支払額) - {formatCurrency(setSum.partnerBurden)} (目標) = <strong>{-setSum.diff > 0 ? `+${formatCurrency(-setSum.diff)}` : formatCurrency(-setSum.diff)}</strong>
+                </div>
+              </div>
+            </div>
+            <div className={styles.formulaStep}>
+              <span className={styles.stepNum}>4</span>
+              <div>
+                <span><strong>精算のアクション</strong></span>
+                <div style={{ fontSize: "12px", color: "#c2185b", fontWeight: "bold", marginTop: "2px" }}>
+                  {setSum.diff === 0 ? (
+                    <span>支払額と目標負担が一致しているため、送金による清算は不要です。⚖️</span>
+                  ) : setSum.diff < 0 ? (
+                    <span>
+                      目標の負担額に合わせるため、{myName} から {partnerName} へ <strong>{formatCurrency(Math.abs(setSum.diff))}</strong> を送金して調整します。💸
+                      {partnerUser?.paypayId && (
+                        <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
+                          👉 送金先 ({partnerName}) の PayPay ID: <strong>{partnerUser.paypayId}</strong>
+                        </div>
+                      )}
+                    </span>
+                  ) : (
+                    <span>
+                      目標の負担額に合わせるため、{partnerName} から {myName} へ <strong>{formatCurrency(setSum.diff)}</strong> を送金して調整します。💰
+                      {userData?.paypayId && (
+                        <div style={{ fontSize: "11px", color: "#666", fontWeight: "normal", marginTop: "4px" }}>
+                          👉 送金先 ({myName}) の PayPay ID: <strong>{userData.paypayId}</strong>
+                        </div>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <BackToHome />
     </div>
