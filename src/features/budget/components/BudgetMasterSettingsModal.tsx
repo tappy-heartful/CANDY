@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BudgetCategory, BudgetType } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import styles from "./BudgetMasterSettingsModal.module.css";
@@ -43,10 +43,20 @@ export default function BudgetMasterSettingsModal({
   const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
   const [editingTypeName, setEditingTypeName] = useState<string>("");
 
-  // ドラッグ＆ドロップ状態
+  // ドラッグ＆ドロップ状態 (PC HTML5)
   const [draggedCategoryIndex, setDraggedCategoryIndex] = useState<number | null>(null);
   const [draggedTypeIndex, setDraggedTypeIndex] = useState<number | null>(null);
   const [draggedTypeCategoryId, setDraggedTypeCategoryId] = useState<string | null>(null);
+
+  // タッチ操作状態 (スマホ / PWA)
+  const [touchCategoryIndex, setTouchCategoryIndex] = useState<number | null>(null);
+  const [touchTypeState, setTouchTypeState] = useState<{ index: number; categoryId: string } | null>(null);
+
+  // 最新の state を touch イベント内で参照するための ref
+  const categoriesRef = useRef<BudgetCategory[]>([]);
+  const typesRef = useRef<BudgetType[]>([]);
+  categoriesRef.current = localCategories;
+  typesRef.current = localTypes;
 
   useEffect(() => {
     if (isOpen) {
@@ -70,7 +80,6 @@ export default function BudgetMasterSettingsModal({
       return;
     }
 
-    // 重複チェック
     const isDuplicate = localCategories.some(c => c.name === name);
     if (isDuplicate) {
       showDialog("その区分はすでに登録されているようです。✨");
@@ -85,7 +94,6 @@ export default function BudgetMasterSettingsModal({
 
     setLocalCategories([...localCategories, newCategory]);
     setNewCategoryName("");
-    // 追加した区分をそのまま選択状態にする
     setSelectedCategoryId(newId);
     showDialog(`新しい区分「${name}」を一時追加しました。下部の「保存する」ボタンを押すと確定します。🌱`);
   };
@@ -102,7 +110,6 @@ export default function BudgetMasterSettingsModal({
       return;
     }
 
-    // 同一区分内での重複チェック
     const isDuplicate = localTypes.some(t => t.categoryId === selectedCategoryId && t.name === name);
     if (isDuplicate) {
       showDialog("選択した区分の中に、同じ名前の種別がすでに登録されているようです。✨");
@@ -123,14 +130,12 @@ export default function BudgetMasterSettingsModal({
 
   // 区分の削除
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    // 紐づく種別があるかチェック
     const hasLinkedTypes = localTypes.some(t => t.categoryId === categoryId);
     if (hasLinkedTypes) {
       showDialog("この区分の中に登録されている種別があります。先に種別を整理（削除）してから区分を整理してください。✨");
       return;
     }
 
-    // 削除確認
     if (window.confirm(`区分「${categoryName}」を整理（削除）してもよろしいですか？\n※保存ボタンを押すまで確定しません。`)) {
       const updated = localCategories.filter(c => c.id !== categoryId);
       setLocalCategories(updated);
@@ -142,13 +147,37 @@ export default function BudgetMasterSettingsModal({
 
   // 種別の削除
   const handleDeleteType = (typeId: string, typeName: string) => {
-    // 削除確認
     if (window.confirm(`種別「${typeName}」を整理（削除）してもよろしいですか？\n※保存ボタンを押すまで確定しません。`)) {
       setLocalTypes(localTypes.filter(t => t.id !== typeId));
     }
   };
 
-  // カテゴリ（区分）のDnD
+  // ----------------------------------------------------
+  // 並び替え処理 (共通ヘルパー)
+  // ----------------------------------------------------
+  const moveCategory = (fromIndex: number, toIndex: number) => {
+    const list = [...categoriesRef.current];
+    if (toIndex < 0 || toIndex >= list.length || fromIndex === toIndex) return;
+    const item = list.splice(fromIndex, 1)[0];
+    list.splice(toIndex, 0, item);
+    setLocalCategories(list);
+  };
+
+  const moveType = (fromIndex: number, toIndex: number, categoryId: string) => {
+    const currentTypes = [...typesRef.current];
+    const targetTypes = currentTypes.filter(t => t.categoryId === categoryId);
+    if (toIndex < 0 || toIndex >= targetTypes.length || fromIndex === toIndex) return;
+    const otherTypes = currentTypes.filter(t => t.categoryId !== categoryId);
+
+    const item = targetTypes.splice(fromIndex, 1)[0];
+    targetTypes.splice(toIndex, 0, item);
+
+    setLocalTypes([...otherTypes, ...targetTypes]);
+  };
+
+  // ----------------------------------------------------
+  // PC用 HTML5 Drag and Drop
+  // ----------------------------------------------------
   const handleCategoryDragStart = (index: number) => {
     setDraggedCategoryIndex(index);
   };
@@ -159,15 +188,10 @@ export default function BudgetMasterSettingsModal({
 
   const handleCategoryDrop = (index: number) => {
     if (draggedCategoryIndex === null) return;
-    const list = [...localCategories];
-    const draggedItem = list[draggedCategoryIndex];
-    list.splice(draggedCategoryIndex, 1);
-    list.splice(index, 0, draggedItem);
-    setLocalCategories(list);
+    moveCategory(draggedCategoryIndex, index);
     setDraggedCategoryIndex(null);
   };
 
-  // 種別のDnD
   const handleTypeDragStart = (index: number, categoryId: string) => {
     setDraggedTypeIndex(index);
     setDraggedTypeCategoryId(categoryId);
@@ -179,20 +203,60 @@ export default function BudgetMasterSettingsModal({
 
   const handleTypeDrop = (targetIndex: number, categoryId: string) => {
     if (draggedTypeIndex === null || draggedTypeCategoryId !== categoryId) return;
-
-    const targetTypes = localTypes.filter(t => t.categoryId === categoryId);
-    const otherTypes = localTypes.filter(t => t.categoryId !== categoryId);
-
-    const draggedItem = targetTypes[draggedTypeIndex];
-    targetTypes.splice(draggedTypeIndex, 1);
-    targetTypes.splice(targetIndex, 0, draggedItem);
-
-    setLocalTypes([...otherTypes, ...targetTypes]);
+    moveType(draggedTypeIndex, targetIndex, categoryId);
     setDraggedTypeIndex(null);
     setDraggedTypeCategoryId(null);
   };
 
-  // インライン編集用ハンドラ
+  // ----------------------------------------------------
+  // スマホ / PWA タッチ操作 (Touch Drag & Drop)
+  // ----------------------------------------------------
+  const handleCategoryTouchStart = (index: number) => {
+    setTouchCategoryIndex(index);
+  };
+
+  const handleCategoryTouchMove = (e: React.TouchEvent) => {
+    if (touchCategoryIndex === null) return;
+    const touch = e.touches[0];
+    const targetElem = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("[data-category-index]");
+    if (targetElem) {
+      const targetIdx = Number(targetElem.getAttribute("data-category-index"));
+      if (!isNaN(targetIdx) && targetIdx !== touchCategoryIndex) {
+        moveCategory(touchCategoryIndex, targetIdx);
+        setTouchCategoryIndex(targetIdx);
+      }
+    }
+  };
+
+  const handleCategoryTouchEnd = () => {
+    setTouchCategoryIndex(null);
+  };
+
+  const handleTypeTouchStart = (index: number, categoryId: string) => {
+    setTouchTypeState({ index, categoryId });
+  };
+
+  const handleTypeTouchMove = (e: React.TouchEvent) => {
+    if (!touchTypeState) return;
+    const touch = e.touches[0];
+    const targetElem = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("[data-type-index]");
+    if (targetElem) {
+      const targetIdx = Number(targetElem.getAttribute("data-type-index"));
+      const targetCatId = targetElem.getAttribute("data-category-id");
+      if (!isNaN(targetIdx) && targetCatId === touchTypeState.categoryId && targetIdx !== touchTypeState.index) {
+        moveType(touchTypeState.index, targetIdx, touchTypeState.categoryId);
+        setTouchTypeState({ index: targetIdx, categoryId: touchTypeState.categoryId });
+      }
+    }
+  };
+
+  const handleTypeTouchEnd = () => {
+    setTouchTypeState(null);
+  };
+
+  // ----------------------------------------------------
+  // インライン編集
+  // ----------------------------------------------------
   const startEditCategory = (id: string, name: string) => {
     setEditingCategoryId(id);
     setEditingCategoryName(name);
@@ -248,7 +312,7 @@ export default function BudgetMasterSettingsModal({
           <p className={styles.leadText}>
             家計簿で入力する「区分（カテゴリ）」や「種別（項目名）」を使いやすいようにカスタマイズできます。🌱
             <br />
-            ※項目をクリックすると名前を編集でき、ドラッグ＆ドロップで表示順を変更できます。
+            ※項目をクリックして名前を変更できます。ハンドル（⋮⋮）のドラッグまたは矢印ボタン（◀▶ / ▲▼）で順番を並び替えられます。
           </p>
 
           {/* タブ切り替え */}
@@ -323,15 +387,17 @@ export default function BudgetMasterSettingsModal({
                       ) : (
                         <div className={styles.badgeGrid}>
                           {categoryTypes.map((type, idx) => {
+                            const isTouching = touchTypeState?.categoryId === category.id && touchTypeState.index === idx;
                             return (
                               <div
                                 key={type.id}
-                                className={`${styles.masterBadge} ${styles.customBadge}`}
+                                data-type-index={idx}
+                                data-category-id={category.id}
+                                className={`${styles.masterBadge} ${styles.customBadge} ${isTouching ? styles.draggingActive : ""}`}
                                 draggable
                                 onDragStart={() => handleTypeDragStart(idx, category.id)}
                                 onDragOver={handleTypeDragOver}
                                 onDrop={() => handleTypeDrop(idx, category.id)}
-                                style={{ cursor: "grab" }}
                               >
                                 {editingTypeId === type.id ? (
                                   <input
@@ -352,10 +418,48 @@ export default function BudgetMasterSettingsModal({
                                   />
                                 ) : (
                                   <>
-                                    <span onClick={() => startEditType(type.id, type.name)}>
-                                      <i className="fa-solid fa-grip-vertical" style={{ marginRight: "6px", color: "#ccc", cursor: "grab" }}></i>
-                                      {type.name} <i className="fa-solid fa-pen" style={{ fontSize: "10px", marginLeft: "4px", opacity: 0.5, cursor: "pointer" }}></i>
+                                    <span
+                                      className={styles.dragHandle}
+                                      onTouchStart={() => handleTypeTouchStart(idx, category.id)}
+                                      onTouchMove={handleTypeTouchMove}
+                                      onTouchEnd={handleTypeTouchEnd}
+                                      title="ドラッグして並び替え"
+                                    >
+                                      <i className="fa-solid fa-grip-vertical"></i>
                                     </span>
+
+                                    <span onClick={() => startEditType(type.id, type.name)} style={{ cursor: "pointer" }}>
+                                      {type.name} <i className="fa-solid fa-pen" style={{ fontSize: "10px", marginLeft: "2px", opacity: 0.5 }}></i>
+                                    </span>
+
+                                    {/* モバイルでも使いやすい矢印並び替えボタン */}
+                                    <span className={styles.typeOrderBtns}>
+                                      <button
+                                        type="button"
+                                        className={styles.orderBtn}
+                                        disabled={idx === 0}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveType(idx, idx - 1, category.id);
+                                        }}
+                                        title="前へ移動"
+                                      >
+                                        <i className="fa-solid fa-chevron-left"></i>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={styles.orderBtn}
+                                        disabled={idx === categoryTypes.length - 1}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveType(idx, idx + 1, category.id);
+                                        }}
+                                        title="次へ移動"
+                                      >
+                                        <i className="fa-solid fa-chevron-right"></i>
+                                      </button>
+                                    </span>
+
                                     <button
                                       className={styles.deleteBadgeBtn}
                                       onClick={(e) => {
@@ -415,15 +519,16 @@ export default function BudgetMasterSettingsModal({
               </div>
               <div className={styles.categoryList}>
                 {localCategories.map((category, idx) => {
+                  const isTouching = touchCategoryIndex === idx;
                   return (
                     <div
                       key={category.id}
-                      className={styles.categoryListItem}
+                      data-category-index={idx}
+                      className={`${styles.categoryListItem} ${isTouching ? styles.draggingActive : ""}`}
                       draggable
                       onDragStart={() => handleCategoryDragStart(idx)}
                       onDragOver={handleCategoryDragOver}
                       onDrop={() => handleCategoryDrop(idx)}
-                      style={{ cursor: "grab" }}
                     >
                       {editingCategoryId === category.id ? (
                         <input
@@ -444,21 +549,61 @@ export default function BudgetMasterSettingsModal({
                         />
                       ) : (
                         <>
-                          <span className={styles.categoryNameDisplay} onClick={() => startEditCategory(category.id, category.name)}>
-                            <i className="fa-solid fa-grip-vertical" style={{ marginRight: "10px", color: "#ccc", cursor: "grab" }}></i>
+                          <span className={styles.categoryNameDisplay}>
+                            <span
+                              className={styles.dragHandle}
+                              onTouchStart={() => handleCategoryTouchStart(idx)}
+                              onTouchMove={handleCategoryTouchMove}
+                              onTouchEnd={handleCategoryTouchEnd}
+                              title="ドラッグして並び替え"
+                            >
+                              <i className="fa-solid fa-grip-vertical"></i>
+                            </span>
                             <i className={`fa-solid fa-folder-plus ${styles.folderIcon}`}></i>
-                            {category.name} <i className="fa-solid fa-pen" style={{ fontSize: "11px", marginLeft: "6px", opacity: 0.5, cursor: "pointer" }}></i>
+                            <span onClick={() => startEditCategory(category.id, category.name)} style={{ cursor: "pointer" }}>
+                              {category.name} <i className="fa-solid fa-pen" style={{ fontSize: "11px", marginLeft: "4px", opacity: 0.5 }}></i>
+                            </span>
                           </span>
-                          <button
-                            className={styles.deleteListItemBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCategory(category.id, category.name);
-                            }}
-                            title="整理（削除）する"
-                          >
-                            <i className="fa-solid fa-trash-can"></i> 整理する
-                          </button>
+
+                          <div className={styles.categoryRightActions}>
+                            <div className={styles.categoryOrderBtns}>
+                              <button
+                                type="button"
+                                className={styles.orderBtn}
+                                disabled={idx === 0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  moveCategory(idx, idx - 1);
+                                }}
+                                title="上へ移動"
+                              >
+                                <i className="fa-solid fa-chevron-up"></i>
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.orderBtn}
+                                disabled={idx === localCategories.length - 1}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  moveCategory(idx, idx + 1);
+                                }}
+                                title="下へ移動"
+                              >
+                                <i className="fa-solid fa-chevron-down"></i>
+                              </button>
+                            </div>
+
+                            <button
+                              className={styles.deleteListItemBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCategory(category.id, category.name);
+                              }}
+                              title="整理（削除）する"
+                            >
+                              <i className="fa-solid fa-trash-can"></i> 整理する
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
