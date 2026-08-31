@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useRef } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget } from "@/src/lib/firestore/types";
+import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./BudgetClient.module.css";
@@ -17,7 +17,10 @@ import {
   saveActualBudget,
   deleteActualBudget,
   copyDefaultToActual,
-  updateBudgetMasterData
+  updateBudgetMasterData,
+  getBudgetSettlementProof,
+  uploadBudgetSettlementProof,
+  removeBudgetSettlementProof
 } from "../api/budget-client-service";
 import BudgetMasterSettingsModal from "../components/BudgetMasterSettingsModal";
 import BudgetAnalysis from "../components/BudgetAnalysis";
@@ -87,6 +90,11 @@ export default function BudgetClient() {
   // マスタ設定モーダル用
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
+  // 清算証明エビデンス用
+  const [settlementProof, setSettlementProof] = useState<BudgetSettlementProof | null>(null);
+  const [isProofModalOpen, setIsProofModalOpen] = useState<boolean>(false);
+  const proofInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     setBreadcrumbs([{ title: "家計簿" }]);
   }, [setBreadcrumbs]);
@@ -143,6 +151,12 @@ export default function BudgetClient() {
     setActualBudgets(sortBudgets(data));
   };
 
+  const loadSettlementProof = async (cKey: string, year: number, month: number) => {
+    if (!cKey) return;
+    const proof = await getBudgetSettlementProof(cKey, year, month);
+    setSettlementProof(proof);
+  };
+
   const loadMasterAndPartner = async () => {
     if (!user) return;
     try {
@@ -171,7 +185,8 @@ export default function BudgetClient() {
 
       await Promise.all([
         loadDefaultBudgets(cKey, defaultMonth),
-        loadActualBudgets(cKey, actualYear, actualMonth)
+        loadActualBudgets(cKey, actualYear, actualMonth),
+        loadSettlementProof(cKey, actualYear, actualMonth)
       ]);
     } catch (e) {
       console.error(e);
@@ -205,7 +220,10 @@ export default function BudgetClient() {
     setActualMonth(month);
     if (coupleKey) {
       showSpinner();
-      await loadActualBudgets(coupleKey, year, month);
+      await Promise.all([
+        loadActualBudgets(coupleKey, year, month),
+        loadSettlementProof(coupleKey, year, month)
+      ]);
       hideSpinner();
     }
   };
@@ -547,6 +565,45 @@ export default function BudgetClient() {
     }
   };
 
+  // エビデンス画像のアップロード
+  const handleProofFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !coupleKey || !user) return;
+    try {
+      showSpinner();
+      const proof = await uploadBudgetSettlementProof(coupleKey, actualYear, actualMonth, file, user.uid);
+      setSettlementProof(proof);
+      showDialog("清算証明エビデンスを登録しました！📸");
+    } catch (err) {
+      console.error("Failed to upload budget settlement proof:", err);
+      showDialog("画像のアップロード中に問題が発生したようです。");
+    } finally {
+      hideSpinner();
+      if (proofInputRef.current) {
+        proofInputRef.current.value = "";
+      }
+    }
+  };
+
+  // エビデンス画像の登録解除 (削除)
+  const handleRemoveProof = async () => {
+    if (!coupleKey) return;
+    if (window.confirm("この証明書の登録を解除してもよろしいですか？\n※画像データも削除されます。")) {
+      try {
+         showSpinner();
+         await removeBudgetSettlementProof(coupleKey, actualYear, actualMonth);
+         setSettlementProof(null);
+         setIsProofModalOpen(false);
+         showDialog("証明書の登録を解除しました。");
+      } catch (err) {
+         console.error("Failed to remove proof:", err);
+         showDialog("解除処理中に問題が発生したようです。");
+      } finally {
+         hideSpinner();
+      }
+    }
+  };
+
   const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
     const sections = [
       { id: "fixed", title: "固定費 🏠" },
@@ -867,6 +924,29 @@ export default function BudgetClient() {
                           <>
                             <strong>{partnerName}</strong> から <strong>{myName}</strong> へ <strong>{formatCurrency(setSum.diff)}</strong> 送金して調整します。💰
                           </>
+                        )}
+                      </div>
+
+                      {/* PayPay支払いのエビデンス登録 */}
+                      <div className={styles.settlementProofArea}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={proofInputRef}
+                          style={{ display: "none" }}
+                          onChange={handleProofFileSelect}
+                        />
+                        {settlementProof ? (
+                          <div className={styles.proofInfoBox}>
+                            <span className={styles.proofLabel}>清算エビデンス：</span>
+                            <button type="button" className={styles.proofBadgeBtn} onClick={() => setIsProofModalOpen(true)}>
+                              <i className="fa-solid fa-image"></i> 送金完了の証明を確認
+                            </button>
+                          </div>
+                        ) : (
+                          <button type="button" className={styles.uploadProofBtn} onClick={() => proofInputRef.current?.click()}>
+                            <i className="fa-solid fa-file-arrow-up"></i> PayPay支払いのエビデンスを登録
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1558,6 +1638,41 @@ export default function BudgetClient() {
           </div>
         );
       })()}
+
+      {/* エビデンス画像プレビューモーダル */}
+      {isProofModalOpen && settlementProof && (
+        <div className={styles.modalOverlay} onClick={() => setIsProofModalOpen(false)}>
+          <div className={styles.proofModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                <i className="fa-solid fa-image"></i> 清算エビデンス
+              </h2>
+              <button className={styles.modalClose} onClick={() => setIsProofModalOpen(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className={styles.modalBody} style={{ textAlign: "center", padding: "16px" }}>
+              <img
+                src={settlementProof.proofUrl}
+                alt="清算証明"
+                className={styles.proofFullImage}
+              />
+              <div className={styles.proofMetaInfo}>
+                <p>登録ファイル名: {settlementProof.proofFileName}</p>
+                <p>登録日時: {new Date(settlementProof.proofUploadedAt).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.modalDeleteBtn} onClick={handleRemoveProof}>
+                <i className="fa-solid fa-trash"></i> 登録を解除する
+              </button>
+              <button className={styles.cancelBtn} onClick={() => setIsProofModalOpen(false)}>
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BackToHome />
     </div>

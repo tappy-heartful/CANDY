@@ -422,3 +422,15 @@ export interface Memo {
   updatedAt: number;
 }
 
+export interface BudgetSettlementProof {
+  id: string; // proof_${coupleKey}_${year}_${month}
+  coupleKey: string;
+  year: number;
+  month: number;
+  proofUrl: string;
+  proofFileName: string;
+  proofUploadedAt: number;
+  uploadedUid: string;
+}
+
+

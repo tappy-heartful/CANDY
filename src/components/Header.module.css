@@ -26,11 +26,31 @@
   display: inline-block;
 }
 
-.c { color: #9B7CC3; } /* Pastel Purple */
-.a { color: #F7A8C4; } /* Pastel Pink */
-.n { color: #FFE066; } /* Pastel Yellow */
-.d { color: #A0E7D2; } /* Pastel Mint */
-.y { color: #90CAF9; } /* Pastel Sky Blue */
+.c {
+  color: #9B7CC3;
+}
+
+/* Pastel Purple */
+.a {
+  color: #F7A8C4;
+}
+
+/* Pastel Pink */
+.n {
+  color: #FFE066;
+}
+
+/* Pastel Yellow */
+.d {
+  color: #A0E7D2;
+}
+
+/* Pastel Mint */
+.y {
+  color: #90CAF9;
+}
+
+/* Pastel Sky Blue */
 
 .headerRight {
   display: flex;
@@ -134,7 +154,9 @@
   scrollbar-width: none;
 }
 
-.breadcrumbList::-webkit-scrollbar { display: none; }
+.breadcrumbList::-webkit-scrollbar {
+  display: none;
+}
 
 .breadcrumbItem {
   color: #9B7CC3;
@@ -172,7 +194,9 @@
   display: none;
 }
 
-.menuOverlayShow { display: block; }
+.menuOverlayShow {
+  display: block;
+}
 
 .slideMenu {
   position: fixed;
@@ -186,10 +210,13 @@
   transition: right 0.3s ease;
   padding: 20px;
   box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
-  overflow-y: auto; /* メニューが多くなった時のスクロール対応 */
+  overflow-y: auto;
+  /* メニューが多くなった時のスクロール対応 */
 }
 
-.slideMenuOpen { right: 0; }
+.slideMenuOpen {
+  right: 0;
+}
 
 .menuHeader {
   display: flex;
@@ -230,34 +257,114 @@
 }
 
 .slideMenuSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 4px;
+}
+
+.mainMenuGrid,
+.subMenuGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 1行に2つ表示 */
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-.menuLink {
+/* メインリンクの強調スタイル */
+.menuLinkMain {
   display: flex;
-  flex-direction: column; /* 縦並びにして2列にすっきり収める */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 6px;
-  background: #fdf2f8;
-  border-radius: 16px;
+  padding: 16px 8px;
+  background: linear-gradient(135deg, #fff9fb, #f3e5f5);
+  border: 1.5px solid rgba(155, 124, 195, 0.25);
+  border-radius: 18px;
   text-decoration: none;
-  color: #444;
+  color: #4a148c;
   font-weight: 900;
-  font-size: 13px;
+  font-size: 13.5px;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  box-shadow: 0 4px 10px rgba(155, 124, 195, 0.05);
+}
+
+.menuLinkMain:hover {
+  background: linear-gradient(135deg, #fce4ec, #e1bee7);
+  border-color: #9B7CC3;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(155, 124, 195, 0.12);
+}
+
+.menuIconMain {
+  color: #9B7CC3;
+  font-size: 22px;
+}
+
+/* Homeリンク専用（2列分の幅、横並び） */
+.menuLinkHome {
+  grid-column: span 2;
+  flex-direction: row;
+  padding: 14px 20px;
+  gap: 12px;
+  justify-content: center;
+}
+
+
+/* ディバイダー */
+.menuDivider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #7b1fa2;
+  font-size: 11px;
+  font-weight: bold;
+  margin: 6px 0;
+  opacity: 0.7;
+}
+
+.menuDivider::before,
+.menuDivider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1.5px dashed rgba(155, 124, 195, 0.25);
+}
+
+.menuDivider:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.menuDivider:not(:empty)::after {
+  margin-left: .5em;
+}
+
+/* サブリンクの控えめスタイル */
+.menuLinkSub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px;
+  background: #fcfcfc;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #777777;
+  font-weight: bold;
+  font-size: 11px;
   text-align: center;
   transition: all 0.2s;
 }
 
-.menuLink:hover {
-  background: #fce4ec;
-  transform: translateY(-1px);
+.menuLinkSub:hover {
+  background: #f5f5f5;
+  color: #333333;
+  border-color: #cccccc;
 }
 
-.menuIcon {
-  color: #9B7CC3;
-  font-size: 20px;
+.menuIconSub {
+  color: rgba(155, 124, 195, 1);
+  font-size: 16px;
 }

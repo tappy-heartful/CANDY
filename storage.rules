@@ -11,5 +11,10 @@ service firebase.storage {
     match /settlements/{eventId}/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
+
+    // ログイン済みユーザーのみ、家計簿関連ファイル（送金証明画像等）の読み書きを許可
+    match /budgets/{coupleKey}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

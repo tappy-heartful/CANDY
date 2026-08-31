@@ -134,6 +134,11 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    match /budgetSettlementProofs/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+
 
     // ============================
 

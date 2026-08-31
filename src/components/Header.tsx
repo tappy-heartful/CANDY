@@ -177,42 +177,54 @@ export default function Header() {
         </div>
 
         <div className={styles.slideMenuSection}>
-          <Link href="/home" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-house ${styles.menuIcon}`}></i> Home
-          </Link>
-          <Link href="/todo" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-list-check ${styles.menuIcon}`}></i> TODO
-          </Link>
-          <Link href="/wishlist" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-gift ${styles.menuIcon}`}></i> Wishlist
-          </Link>
-          <Link href="/status-history" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-clock-rotate-left ${styles.menuIcon}`}></i> 過去の私たち
-          </Link>
-          <Link href="/anniversaries" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-cake-candles ${styles.menuIcon}`}></i> 記念日
-          </Link>
-          <Link href="/albums" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-images ${styles.menuIcon}`}></i> アルバム
-          </Link>
-          <Link href="/investment" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-chart-line ${styles.menuIcon}`}></i> 投資シミュレーション
-          </Link>
-          <Link href="/settlement" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-hand-holding-dollar ${styles.menuIcon}`}></i> ワリカン
-          </Link>
-          <Link href="/ideal-property" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-house-chimney-window ${styles.menuIcon}`}></i> 理想の物件
-          </Link>
-          <Link href="/budget" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-wallet ${styles.menuIcon}`}></i> 家計簿
-          </Link>
-          <Link href="/memo" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-note-sticky ${styles.menuIcon}`}></i> メモ
-          </Link>
-          <Link href="/settings" onClick={closeMenu} className={styles.menuLink}>
-            <i className={`fa-solid fa-bell ${styles.menuIcon}`}></i> 通知設定
-          </Link>
+          {/* メイン機能 (強調表示) */}
+          <div className={styles.mainMenuGrid}>
+            <Link href="/home" onClick={closeMenu} className={`${styles.menuLinkMain} ${styles.menuLinkHome}`}>
+              <i className={`fa-solid fa-house ${styles.menuIconMain}`}></i> Home
+            </Link>
+            <Link href="/todo" onClick={closeMenu} className={styles.menuLinkMain}>
+              <i className={`fa-solid fa-list-check ${styles.menuIconMain}`}></i> TODO
+            </Link>
+            <Link href="/albums" onClick={closeMenu} className={styles.menuLinkMain}>
+              <i className={`fa-solid fa-images ${styles.menuIconMain}`}></i> アルバム
+            </Link>
+            <Link href="/budget" onClick={closeMenu} className={styles.menuLinkMain}>
+              <i className={`fa-solid fa-wallet ${styles.menuIconMain}`}></i> 家計簿
+            </Link>
+            <Link href="/memo" onClick={closeMenu} className={styles.menuLinkMain}>
+              <i className={`fa-solid fa-note-sticky ${styles.menuIconMain}`}></i> メモ
+            </Link>
+          </div>
+
+          {/* ディバイダー */}
+          <div className={styles.menuDivider}>
+            <span>その他の機能</span>
+          </div>
+
+          {/* サブ機能 (控えめ表示) */}
+          <div className={styles.subMenuGrid}>
+            <Link href="/wishlist" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-gift ${styles.menuIconSub}`}></i> Wishlist
+            </Link>
+            <Link href="/status-history" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-clock-rotate-left ${styles.menuIconSub}`}></i> 過去の私たち
+            </Link>
+            <Link href="/anniversaries" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-cake-candles ${styles.menuIconSub}`}></i> 記念日
+            </Link>
+            <Link href="/investment" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-chart-line ${styles.menuIconSub}`}></i> 投資
+            </Link>
+            <Link href="/settlement" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-hand-holding-dollar ${styles.menuIconSub}`}></i> ワリカン
+            </Link>
+            <Link href="/ideal-property" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-house-chimney-window ${styles.menuIconSub}`}></i> 理想の物件
+            </Link>
+            <Link href="/settings" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-bell ${styles.menuIconSub}`}></i> 通知設定
+            </Link>
+          </div>
         </div>
 
       </div>

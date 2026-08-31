@@ -1,7 +1,8 @@
-import { db } from "@/src/lib/firebase";
+import { db, storage } from "@/src/lib/firebase";
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { BudgetMasterData, DefaultBudget, ActualBudget } from "@/src/lib/firestore/types";
+import { BudgetMasterData, DefaultBudget, ActualBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
 import { toPlainObject } from "@/src/lib/firestore/utils";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 // マスタデータ
 const DEFAULT_MASTER_DATA: BudgetMasterData = {
@@ -184,4 +185,79 @@ export async function updateBudgetMasterData(data: BudgetMasterData): Promise<vo
   const docRef = doc(db, "budgetSettings", "master");
   await setDoc(docRef, data);
 }
+
+/**
+ * 指定年月の家計簿清算証明データを取得する
+ */
+export async function getBudgetSettlementProof(coupleKey: string, year: number, month: number): Promise<BudgetSettlementProof | null> {
+  try {
+    const docId = `proof_${coupleKey}_${year}_${month}`;
+    const docRef = doc(db, "budgetSettlementProofs", docId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as BudgetSettlementProof;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting budget settlement proof:", error);
+    return null;
+  }
+}
+
+/**
+ * 家計簿の清算証明画像 (PayPay等) をアップロードして登録する
+ */
+export async function uploadBudgetSettlementProof(
+  coupleKey: string,
+  year: number,
+  month: number,
+  file: File,
+  uid: string
+): Promise<BudgetSettlementProof> {
+  const fileName = `${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, `budgets/${coupleKey}/proofs/${fileName}`);
+  await uploadBytes(storageRef, file);
+  const proofUrl = await getDownloadURL(storageRef);
+
+  const docId = `proof_${coupleKey}_${year}_${month}`;
+  const docRef = doc(db, "budgetSettlementProofs", docId);
+  const proofData: BudgetSettlementProof = {
+    id: docId,
+    coupleKey,
+    year,
+    month,
+    proofUrl,
+    proofFileName: file.name,
+    proofUploadedAt: Date.now(),
+    uploadedUid: uid
+  };
+
+  await setDoc(docRef, proofData);
+  return proofData;
+}
+
+/**
+ * 家計簿の清算証明画像を削除する
+ */
+export async function removeBudgetSettlementProof(coupleKey: string, year: number, month: number): Promise<void> {
+  const docId = `proof_${coupleKey}_${year}_${month}`;
+  const docRef = doc(db, "budgetSettlementProofs", docId);
+  
+  try {
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data() as BudgetSettlementProof;
+      if (data.proofUrl) {
+        // StorageのURLから参照を取得して削除
+        const fileRef = ref(storage, data.proofUrl);
+        await deleteObject(fileRef).catch(e => console.warn("Failed to delete storage file:", e));
+      }
+    }
+  } catch (e) {
+    console.warn("Storage file delete attempt failed:", e);
+  }
+  
+  await deleteDoc(docRef);
+}
+
 
