@@ -1058,11 +1058,7 @@ export default function BudgetClient() {
               }}>
                 <i className="fa-solid fa-plus"></i> 新しい実際の収支を登録
               </button>
-              {actualBudgets.length > 0 && (
-                <button className={styles.copyBtnSecondary} onClick={handleCopyDefault}>
-                  <i className="fa-solid fa-rotate"></i> デフォルトから再読み込み
-                </button>
-              )}
+
             </div>
           )}
 
