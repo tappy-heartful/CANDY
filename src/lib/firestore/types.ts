@@ -403,6 +403,9 @@ export interface ActualBudget {
   amount: number; // 金額
   memo?: string; // 備考
   splitRatio?: number; // 負担割合（支払者・対象者の負担率 %、0〜100、デフォルト50）
+  proofUrl?: string; // 領収書等のエビデンスファイルURL
+  proofFileName?: string; // ファイル名
+  proofFileType?: string; // ファイル種別 ("image" | "pdf")
   createdAt: number;
   updatedAt: number;
 }

@@ -20,7 +20,10 @@ import {
   updateBudgetMasterData,
   getBudgetSettlementProof,
   uploadBudgetSettlementProof,
-  removeBudgetSettlementProof
+  removeBudgetSettlementProof,
+  uploadActualBudgetProof,
+  removeActualBudgetProofFile,
+  generateActualBudgetId
 } from "../api/budget-client-service";
 import BudgetMasterSettingsModal from "../components/BudgetMasterSettingsModal";
 import BudgetAnalysis from "../components/BudgetAnalysis";
@@ -94,6 +97,12 @@ export default function BudgetClient() {
   const [settlementProof, setSettlementProof] = useState<BudgetSettlementProof | null>(null);
   const [isProofModalOpen, setIsProofModalOpen] = useState<boolean>(false);
   const proofInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 実際収支フォーム内の添付ファイル用
+  const [actProofUrl, setActProofUrl] = useState<string>("");
+  const [actProofFileName, setActProofFileName] = useState<string>("");
+  const [actProofFileType, setActProofFileType] = useState<string>("");
+  const actProofInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setBreadcrumbs([{ title: "家計簿" }]);
@@ -382,7 +391,6 @@ export default function BudgetClient() {
         splitRatio = actTargetUid === user?.uid ? myRatio : partnerRatio;
       }
     }
-
     try {
       showSpinner();
       await saveActualBudget({
@@ -396,7 +404,10 @@ export default function BudgetClient() {
         name: actName,
         amount: Number(actAmount),
         memo: actMemo,
-        splitRatio
+        splitRatio,
+        proofUrl: actProofUrl || undefined,
+        proofFileName: actProofFileName || undefined,
+        proofFileType: actProofFileType || undefined
       });
       resetActForm();
       setShowActForm(false);
@@ -418,6 +429,9 @@ export default function BudgetClient() {
     setActSplitMode("equal");
     setActMyRatio(50);
     setActPartnerRatio(50);
+    setActProofUrl("");
+    setActProofFileName("");
+    setActProofFileType("");
   };
 
   const handleEditActual = (item: ActualBudget) => {
@@ -428,6 +442,9 @@ export default function BudgetClient() {
     setActName(item.name);
     setActAmount(item.amount);
     setActMemo(item.memo || "");
+    setActProofUrl(item.proofUrl || "");
+    setActProofFileName(item.proofFileName || "");
+    setActProofFileType(item.proofFileType || "");
 
     const ratio = item.splitRatio ?? 50;
     if (ratio === 50) {
@@ -600,6 +617,63 @@ export default function BudgetClient() {
          showDialog("解除処理中に問題が発生したようです。");
       } finally {
          hideSpinner();
+      }
+    }
+  };
+
+  // 収支項目の添付ファイルをアップロードする
+  const handleActProofFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !coupleKey) return;
+    try {
+      showSpinner();
+      
+      // すでにファイルが添付されている場合は、古いファイルを Storage から自動で削除
+      if (actProofUrl) {
+        await removeActualBudgetProofFile(actProofUrl).catch(err => 
+          console.warn("Failed to delete old file during replace:", err)
+        );
+      }
+
+      // IDが無い場合は事前生成
+      let targetId = actId;
+      if (!targetId) {
+        targetId = generateActualBudgetId();
+        setActId(targetId);
+      }
+
+      const uploaded = await uploadActualBudgetProof(coupleKey, targetId, file);
+      setActProofUrl(uploaded.proofUrl);
+      setActProofFileName(uploaded.proofFileName);
+      setActProofFileType(uploaded.proofFileType);
+      showDialog("添付ファイルを更新しました！📎");
+    } catch (err) {
+      console.error("Failed to upload/replace actual budget proof:", err);
+      showDialog("ファイルの添付中に問題が発生したようです。");
+    } finally {
+      hideSpinner();
+      if (actProofInputRef.current) {
+        actProofInputRef.current.value = "";
+      }
+    }
+  };
+
+  // 収支項目の添付ファイルの登録を解除する
+  const handleRemoveActProofFile = async () => {
+    if (!actProofUrl) return;
+    if (window.confirm("このファイルの添付を解除してもよろしいですか？")) {
+      try {
+        showSpinner();
+        await removeActualBudgetProofFile(actProofUrl);
+        setActProofUrl("");
+        setActProofFileName("");
+        setActProofFileType("");
+        showDialog("添付ファイルを解除しました。");
+      } catch (err) {
+        console.error("Failed to remove actual budget proof file:", err);
+        showDialog("ファイルの解除中に問題が発生したようです。");
+      } finally {
+        hideSpinner();
       }
     }
   };
@@ -992,14 +1066,21 @@ export default function BudgetClient() {
             </div>
           )}
 
-          {/* 実際収支フォーム */}
+          {/* 実際収支フォームモーダル */}
           {showActForm && (
-            <div className={styles.formCard}>
-              <div className={styles.formTitle}>
-                <i className="fa-solid fa-pen-to-square"></i> {actId ? "実際の収支を編集" : "実際の収支を登録"}
-              </div>
-              <form onSubmit={handleSaveActual}>
-                <div className={styles.formGrid}>
+            <div className={styles.modalOverlay} onClick={() => { resetActForm(); setShowActForm(false); }}>
+              <div className={styles.formModal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h2 className={styles.modalTitle}>
+                    <i className="fa-solid fa-pen-to-square"></i> {actId ? "実際の収支を編集" : "実際の収支を登録"}
+                  </h2>
+                  <button type="button" className={styles.modalClose} onClick={() => { resetActForm(); setShowActForm(false); }}>
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <form onSubmit={handleSaveActual} className={styles.formModalForm}>
+                  <div className={styles.formModalBody}>
+                    <div className={styles.formGrid}>
                   {/* 人 */}
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>人</label>
@@ -1089,10 +1170,61 @@ export default function BudgetClient() {
                     <input
                       type="text"
                       className={styles.appInput}
-                      placeholder="例: 高熱費が高め"
+                      placeholder="例: 光熱費が高め"
                       value={actMemo}
                       onChange={(e) => setActMemo(e.target.value)}
                     />
+                  </div>
+
+                  {/* エビデンス添付 */}
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>エビデンス (画像・PDF)</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      ref={actProofInputRef}
+                      style={{ display: "none" }}
+                      onChange={handleActProofFileSelect}
+                    />
+                    {actProofUrl ? (
+                      <div className={styles.attachedProofBox}>
+                        <span className={styles.attachedProofName} title={actProofFileName}>
+                          {actProofFileType === "pdf" ? "📄" : "📷"} {actProofFileName}
+                        </span>
+                        <div className={styles.attachedProofActions}>
+                          <a
+                            href={actProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.viewAttachBtn}
+                          >
+                            確認
+                          </a>
+                          <button
+                            type="button"
+                            className={styles.changeAttachBtn}
+                            onClick={() => actProofInputRef.current?.click()}
+                          >
+                            変更
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.removeAttachBtn}
+                            onClick={handleRemoveActProofFile}
+                          >
+                            解除
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.attachBtn}
+                        onClick={() => actProofInputRef.current?.click()}
+                      >
+                        <i className="fa-solid fa-paperclip"></i> ファイルを添付
+                      </button>
+                    )}
                   </div>
 
                   {/* 負担設定 */}
@@ -1166,21 +1298,23 @@ export default function BudgetClient() {
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div className={styles.formActions}>
-                  <button type="submit" className={styles.submitBtn}>
-                    <i className="fa-solid fa-check"></i> 保存する
-                  </button>
-                  <button type="button" className={styles.cancelBtn} onClick={() => {
-                    resetActForm();
-                    setShowActForm(false);
-                  }}>
-                    キャンセル
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+              <div className={styles.modalActions}>
+                <button type="submit" className={styles.submitBtn}>
+                  <i className="fa-solid fa-check"></i> 保存する
+                </button>
+                <button type="button" className={styles.cancelBtn} onClick={() => {
+                  resetActForm();
+                  setShowActForm(false);
+                }}>
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
           {/* 表表示 */}
           {renderBudgetTable(actualBudgets, handleDeleteActualItem, handleEditActual, false)}
@@ -1513,6 +1647,31 @@ export default function BudgetClient() {
                 <span className={styles.detailLabel}>備考:</span>
                 <span className={styles.detailValue}>{selectedBudget.memo || "（なし）"}</span>
               </div>
+              {selectedBudget.proofUrl && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>添付エビデンス:</span>
+                  <span className={styles.detailValue}>
+                    <a
+                      href={selectedBudget.proofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.detailProofLink}
+                    >
+                      {selectedBudget.proofFileType === "pdf" ? (
+                        <>
+                          <i className="fa-solid fa-file-pdf" style={{ color: "#e53935", marginRight: "6px" }}></i>
+                          領収書PDFを確認する 📄
+                        </>
+                      ) : (
+                        <>
+                          <i className="fa-solid fa-image" style={{ color: "#3949ab", marginRight: "6px" }}></i>
+                          添付画像を確認する 📷
+                        </>
+                      )}
+                    </a>
+                  </span>
+                </div>
+              )}
             </div>
             <div className={styles.modalActions}>
               <button className={styles.modalEditBtn} onClick={() => {

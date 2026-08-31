@@ -224,6 +224,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  width: 100%;
   max-width: 500px;
   margin: 0 auto;
 }
@@ -1387,3 +1388,182 @@
     opacity: 1;
   }
 }
+
+/* 収支項目エビデンス添付用のスタイル */
+.attachBtn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.attachBtn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.attachedProofBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.attachedProofName {
+  font-size: 12.5px;
+  color: #1565c0;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.attachedProofActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewAttachBtn {
+  background: #1976d2;
+  color: white;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.viewAttachBtn:hover {
+  background: #115293;
+}
+
+.changeAttachBtn {
+  background: #e8eaf6;
+  border: 1px solid #c5cae9;
+  color: #3f51b5;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.changeAttachBtn:hover {
+  background: #3f51b5;
+  color: white;
+  border-color: #3f51b5;
+}
+
+.removeAttachBtn {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.removeAttachBtn:hover {
+  background: #c62828;
+  color: white;
+  border-color: #c62828;
+}
+
+/* 詳細確認モーダル内のエビデンスリンク */
+.detailProofLink {
+  display: inline-flex;
+  align-items: center;
+  background: #e8eaf6;
+  border: 1px solid #c5cae9;
+  color: #3f51b5;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.detailProofLink:hover {
+  background: #3f51b5;
+  color: white;
+  box-shadow: 0 2px 6px rgba(63, 81, 181, 0.2);
+}
+
+/* 登録フォームモーダル専用 */
+.formModal {
+  background: white;
+  border-radius: 24px;
+  width: 96%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 登録フォームモーダル専用のform */
+.formModalForm {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: inherit;
+  overflow: hidden;
+}
+
+/* スクロールバーのカスタマイズ (Webkitブラウザ向け) */
+.formModalBody::-webkit-scrollbar {
+  width: 6px;
+}
+.formModalBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+.formModalBody::-webkit-scrollbar-thumb {
+  background: rgba(155, 124, 195, 0.3);
+  border-radius: 3px;
+}
+.formModalBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(155, 124, 195, 0.5);
+}
+
+/* 登録フォームモーダル専用のBody */
+.formModalBody {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+@media (max-width: 480px) {
+  .formModalBody {
+    padding: 16px 12px; /* スマホサイズではさらに左右の余白を12pxに狭めて表示幅を広げる */
+  }
+}
+
+
+
+

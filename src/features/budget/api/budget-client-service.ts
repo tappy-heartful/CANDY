@@ -260,4 +260,42 @@ export async function removeBudgetSettlementProof(coupleKey: string, year: numbe
   await deleteDoc(docRef);
 }
 
+/**
+ * 実際の収支項目のエビデンスファイル (画像・PDF) を Firebase Storage にアップロードする
+ */
+export async function uploadActualBudgetProof(
+  coupleKey: string,
+  actualId: string,
+  file: File
+): Promise<{ proofUrl: string; proofFileName: string; proofFileType: "image" | "pdf" }> {
+  const fileName = `${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, `budgets/${coupleKey}/actuals/${actualId}/${fileName}`);
+  await uploadBytes(storageRef, file);
+  const proofUrl = await getDownloadURL(storageRef);
 
+  let proofFileType: "image" | "pdf" = "image";
+  if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+    proofFileType = "pdf";
+  }
+
+  return { proofUrl, proofFileName: file.name, proofFileType };
+}
+
+/**
+ * 実際の収支項目のエビデンスファイルをごみ箱削除する
+ */
+export async function removeActualBudgetProofFile(proofUrl: string): Promise<void> {
+  try {
+    const fileRef = ref(storage, proofUrl);
+    await deleteObject(fileRef);
+  } catch (error) {
+    console.warn("Failed to delete actual budget proof file from Storage:", error);
+  }
+}
+
+/**
+ * 実際の収支項目のためにクライアント側で新規ドキュメントIDを事前生成する
+ */
+export function generateActualBudgetId(): string {
+  return doc(collection(db, "actualBudgets")).id;
+}
