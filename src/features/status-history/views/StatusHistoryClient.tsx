@@ -9,7 +9,7 @@ import styles from "./StatusHistory.module.css";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import Link from "next/link";
 import AuthGuard from "@/src/components/AuthGuard";
 import BackToHome from "@/src/components/Common/BackToHome";
@@ -46,6 +46,7 @@ export default function StatusHistoryClient() {
       setHistoryData(grouped);
     } catch (err) {
       console.error("Failed to fetch history:", err);
+      errorLog("今日の一言・体調履歴読み込み", err);
     } finally {
       setLoading(false);
     }
@@ -81,6 +82,7 @@ export default function StatusHistoryClient() {
       setIsModalOpen(false);
     } catch (e) {
       console.error(e);
+      errorLog("今日の一言保存 (履歴画面)", e);
       showDialog("保存に失敗しました");
     } finally {
       setIsSubmitting(false);
@@ -111,6 +113,7 @@ export default function StatusHistoryClient() {
       });
     } catch (e) {
       console.error("Failed to save partner comment in history", e);
+      errorLog("パートナーコメント保存 (履歴画面)", e);
       showDialog("保存に失敗しました");
     }
   };

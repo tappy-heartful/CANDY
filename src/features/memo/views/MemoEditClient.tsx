@@ -7,7 +7,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { getMemo, addMemo, updateMemo, deleteMemo } from "@/src/features/memo/api/memo-client-service";
 import { User as FirestoreUser, Memo } from "@/src/lib/firestore/types";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./MemoEdit.module.css";
 import Link from "next/link";
@@ -83,6 +83,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
       }
     } catch (e) {
       console.error(e);
+      errorLog("メモ詳細・パートナー読み込み", e);
       showDialog("データの読み込み中に問題が発生したようです。");
     } finally {
       setIsLoading(false);
@@ -135,6 +136,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
       router.refresh();
     } catch (e) {
       console.error(e);
+      errorLog("メモ保存", e);
       showDialog("保存できませんでした。恐れ入りますが、もう一度お試しいただけますか？");
     } finally {
       setIsSubmitting(false);
@@ -162,6 +164,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
       router.refresh();
     } catch (e) {
       console.error(e);
+      errorLog("メモ編集画面削除", e);
       showDialog("削除できませんでした。恐れ入りますが、もう一度お試しください。");
     } finally {
       hideSpinner();

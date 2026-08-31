@@ -6,7 +6,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { getPropertyPreference, savePropertyPreference } from "../api/ideal-property-client-service";
 import { PropertyPreference, User as FirestoreUser } from "@/src/lib/firestore/types";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./IdealPropertyClient.module.css";
 
@@ -277,6 +277,7 @@ export default function IdealPropertyClient() {
       }
     } catch (e) {
       console.error("Failed to load property preferences:", e);
+      errorLog("希望物件条件読み込み", e);
       showDialog("データの読み込みに失敗しました。");
     } finally {
       setIsLoading(false);
@@ -301,6 +302,7 @@ export default function IdealPropertyClient() {
       setActiveTab("compare");
     } catch (e) {
       console.error("Failed to save property preference:", e);
+      errorLog("希望物件条件保存", e);
       hideSpinner();
       showDialog("保存に失敗しました。");
     }

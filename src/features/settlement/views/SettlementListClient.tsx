@@ -7,6 +7,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import Link from "next/link";
 import styles from "./Settlement.module.css";
 import EventModal from "../components/EventModal";
+import { errorLog } from "@/src/lib/functions";
 import {
   getSettlementEvents,
   createSettlementEvent,
@@ -34,6 +35,7 @@ export default function SettlementListClient() {
       setEvents(data);
     } catch (e) {
       console.error("Failed to load settlement events:", e);
+      errorLog("清算イベント一覧読み込み", e);
     } finally {
       setLoading(false);
     }
@@ -73,6 +75,7 @@ export default function SettlementListClient() {
       await loadEvents();
     } catch (e) {
       console.error("Failed to create event:", e);
+      errorLog("清算イベント新規作成", e);
     } finally {
       setIsSubmitting(false);
     }

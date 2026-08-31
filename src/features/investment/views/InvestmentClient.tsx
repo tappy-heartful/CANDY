@@ -7,7 +7,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getInvestmentSimulation, saveInvestmentSimulation } from "../api/investment-client-service";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { User, InvestmentSimulation } from "@/src/lib/firestore/types";
-import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
+import { showSpinner, hideSpinner, showDialog, errorLog } from "@/src/lib/functions";
 import styles from "./Investment.module.css";
 
 // 資産額を「〇億〇万〇千円」の日本語フォーマットに変換する（億の位を追加、千円未満切り捨て）
@@ -129,6 +129,7 @@ export default function InvestmentClient() {
       })
       .catch((e) => {
         console.error("Failed to load simulation settings:", e);
+        errorLog("投資シミュレーション設定読み込み", e);
       })
       .finally(() => {
         hideSpinner();
@@ -150,11 +151,13 @@ export default function InvestmentClient() {
             })
             .catch((err) => {
               console.error("Failed to load partner simulation:", err);
+              errorLog("パートナー投資シミュレーション読み込み", err);
             });
         }
       })
       .catch((err) => {
         console.error("Failed to load partner data:", err);
+        errorLog("パートナーデータ読み込み (投資画面)", err);
       });
   }, [user]);
 
@@ -257,6 +260,7 @@ export default function InvestmentClient() {
       showDialog("シミュレーション設定を保存しました！🍬", true);
     } catch (e) {
       console.error(e);
+      errorLog("投資設定保存", e);
       showDialog("保存に失敗しました", true);
     } finally {
       setIsSaving(false);

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import styles from "./error.module.css";
+import { errorLog } from "@/src/lib/functions";
 
 export default function Error({
   error,
@@ -12,6 +13,7 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    errorLog("ルート画面エラー", error);
   }, [error]);
 
   return (

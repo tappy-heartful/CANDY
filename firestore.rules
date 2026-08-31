@@ -143,7 +143,12 @@ service cloud.firestore {
     // ============================
 
     // ログ・認証系（システム用）
-    match /logs/{id} { allow create: if isSignedIn(); }
+    match /logs/{id} {
+      allow create: if isSignedIn();
+      match /items/{itemId} {
+        allow create: if isSignedIn();
+      }
+    }
     match /oauthStates/{id} { allow read, write: if false; }
     match /pwaAuthSessions/{id} {
       // 誰でも読み取り可能だが、悪意あるスキャンを防ぐため、作成から15分以内のみ読み取り可能

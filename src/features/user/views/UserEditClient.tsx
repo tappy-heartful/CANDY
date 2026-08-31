@@ -5,7 +5,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import BackToHome from "@/src/components/Common/BackToHome";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
-import { showDialog, showSpinner, hideSpinner, setSession } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, setSession, errorLog } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
 import styles from "./UserEdit.module.css";
 
@@ -140,6 +140,7 @@ export default function UserEditClient() {
       router.refresh(); // 最新状態を反映
     } catch (e) {
       console.error(e);
+      errorLog("プロフィール更新", e);
       hideSpinner();
       showDialog("更新に失敗しました");
     } finally {

@@ -136,6 +136,23 @@ export async function writeLog({ dataId, action, status = 'success', errorDetail
   }
 }
 
+export async function errorLog(action: string, error: any, dataId: string = 'unknown') {
+  try {
+    const errorDetail = {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+    await writeLog({
+      dataId,
+      action,
+      status: 'error',
+      errorDetail,
+    });
+  } catch (e) {
+    console.error('errorLog failed:', e);
+  }
+}
+
 export { showDialog };
 
 /**

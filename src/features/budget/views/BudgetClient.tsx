@@ -5,7 +5,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./BudgetClient.module.css";
 import {
@@ -199,6 +199,7 @@ export default function BudgetClient() {
       ]);
     } catch (e) {
       console.error(e);
+      errorLog("家計簿マスタ・パートナーデータ読み込み", e);
       showDialog("データの読み込み中に問題が発生したようです。");
     } finally {
       setIsLoading(false);
@@ -306,6 +307,7 @@ export default function BudgetClient() {
       showDialog("デフォルト収支を保存しました✨");
     } catch (e) {
       console.error(e);
+      errorLog("デフォルト収支保存", e);
       showDialog("保存がうまくいかなかったようです。");
     } finally {
       hideSpinner();
@@ -363,6 +365,7 @@ export default function BudgetClient() {
       showDialog("削除しました。");
     } catch (e) {
       console.error(e);
+      errorLog("デフォルト収支項目削除", e);
       showDialog("削除がうまくいかなかったようです。");
     } finally {
       hideSpinner();
@@ -415,6 +418,7 @@ export default function BudgetClient() {
       showDialog("実際収支を保存しました✨");
     } catch (e) {
       console.error(e);
+      errorLog("実際収支保存", e);
       showDialog("保存がうまくいかなかったようです。");
     } finally {
       hideSpinner();
@@ -473,6 +477,7 @@ export default function BudgetClient() {
       showDialog("削除しました。");
     } catch (e) {
       console.error(e);
+      errorLog("実際収支項目削除", e);
       showDialog("削除がうまくいかなかったようです。");
     } finally {
       hideSpinner();
@@ -489,6 +494,7 @@ export default function BudgetClient() {
       showDialog("今月のデフォルト収支を初期設定しました！🏡");
     } catch (e) {
       console.error(e);
+      errorLog("デフォルト収支コピー", e);
       showDialog("データのコピーがうまくいかなかったようです。");
     } finally {
       hideSpinner();
@@ -578,6 +584,7 @@ export default function BudgetClient() {
       setTypes(newTypes);
     } catch (e) {
       console.error("Error saving master settings:", e);
+      errorLog("家計簿マスタ設定保存", e);
       throw e;
     }
   };
@@ -593,6 +600,7 @@ export default function BudgetClient() {
       showDialog("清算証明エビデンスを登録しました！📸");
     } catch (err) {
       console.error("Failed to upload budget settlement proof:", err);
+      errorLog("清算証明エビデンス画像アップロード", err);
       showDialog("画像のアップロード中に問題が発生したようです。");
     } finally {
       hideSpinner();
@@ -614,6 +622,7 @@ export default function BudgetClient() {
          showDialog("証明書の登録を解除しました。");
       } catch (err) {
          console.error("Failed to remove proof:", err);
+         errorLog("清算証明エビデンス画像削除", err);
          showDialog("解除処理中に問題が発生したようです。");
       } finally {
          hideSpinner();
@@ -649,6 +658,7 @@ export default function BudgetClient() {
       showDialog("添付ファイルを更新しました！📎");
     } catch (err) {
       console.error("Failed to upload/replace actual budget proof:", err);
+      errorLog("実際収支添付ファイルアップロード", err);
       showDialog("ファイルの添付中に問題が発生したようです。");
     } finally {
       hideSpinner();
@@ -671,6 +681,7 @@ export default function BudgetClient() {
         showDialog("添付ファイルを解除しました。");
       } catch (err) {
         console.error("Failed to remove actual budget proof file:", err);
+        errorLog("実際収支添付ファイル削除", err);
         showDialog("ファイルの解除中に問題が発生したようです。");
       } finally {
         hideSpinner();

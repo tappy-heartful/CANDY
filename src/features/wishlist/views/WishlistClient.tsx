@@ -6,7 +6,7 @@ import { Wishlist, Group, User as FirestoreUser } from "@/src/lib/firestore/type
 import { addWishlist, updateWishlist, deleteWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
 import { addGroup } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./Wishlist.module.css";
 import WishlistModal from "@/src/features/wishlist/components/WishlistModal";
@@ -51,6 +51,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       await updateWishlist(item.id, { isAchieved: !item.isAchieved });
       setItems(items.map(i => i.id === item.id ? { ...i, isAchieved: !i.isAchieved } : i));
     } catch (e) {
+      errorLog("Wishlist完了トグル", e);
       showDialog("更新に失敗しました");
     }
   };
@@ -106,6 +107,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       setIsModalOpen(false);
       setEditingItem(null);
     } catch (e) {
+      errorLog("Wishlist保存", e);
       showDialog("保存に失敗しました");
     } finally {
       setIsSubmitting(false);
@@ -122,6 +124,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       await deleteWishlist(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch (e) {
+      errorLog("Wishlist削除", e);
       showDialog("削除に失敗しました");
     } finally {
       hideSpinner();
@@ -142,6 +145,7 @@ export default function WishlistClient({ initialWishlist, initialGroups }: Wishl
       };
       setGroups((prev) => [...prev, newGroup]);
     } catch (e) {
+      errorLog("Wishlistグループ追加", e);
       showDialog("グループ追加に失敗しました");
     }
   };

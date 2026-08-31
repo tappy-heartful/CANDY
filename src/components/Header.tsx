@@ -12,6 +12,7 @@ import {
   hideSpinner,
   showDialog,
   writeLog,
+  errorLog,
 } from "@/src/lib/functions";
 import styles from "./Header.module.css";
 
@@ -56,7 +57,7 @@ export default function Header() {
       router.push("/login");
     } catch (error) {
       console.error("Logout Error:", error);
-      await writeLog({ dataId: uid, action: "ログアウト", status: "error", errorDetail: { message: (error as Error).message } });
+      await errorLog("ログアウト", error, uid);
       await showDialog("ログアウトに失敗しました", true);
     } finally {
       hideSpinner();
@@ -69,14 +70,14 @@ export default function Header() {
     if (navigator.share) {
       navigator.share({ title: document.title, url }).catch(async (error) => {
         console.error(error);
-        await writeLog({ dataId: uid, action: "シェア", status: "error", errorDetail: { message: (error as Error).message } });
+        await errorLog("シェア", error, uid);
       });
     } else {
       navigator.clipboard.writeText(url)
         .then(() => showDialog("URLをコピーしました", true))
         .catch(async (error) => {
           console.error(error);
-          await writeLog({ dataId: uid, action: "URLコピー", status: "error", errorDetail: { message: (error as Error).message } });
+          await errorLog("URLコピー", error, uid);
         });
     }
   };

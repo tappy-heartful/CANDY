@@ -6,7 +6,7 @@ import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import BackToHome from "@/src/components/Common/BackToHome";
 import { getNotificationSetting, saveNotificationSetting } from "@/src/features/settings/api/settings-client-service";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
 import styles from "./SettingsClient.module.css";
 
@@ -68,6 +68,7 @@ export default function SettingsClient() {
         });
       } catch (e) {
         console.error("Failed to load notification settings:", e);
+        errorLog("通知設定読み込み", e);
         showDialog("設定の読み込みに失敗しました。");
       } finally {
         setIsLoading(false);
@@ -140,6 +141,7 @@ export default function SettingsClient() {
       router.refresh();
     } catch (e) {
       console.error("Failed to save settings:", e);
+      errorLog("通知設定保存", e);
       hideSpinner();
       showDialog("設定の保存に失敗しました。");
     } finally {

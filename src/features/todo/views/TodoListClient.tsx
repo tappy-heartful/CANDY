@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Group, Todo, TodoStep, User as FirestoreUser } from "@/src/lib/firestore/types";
 import { addTodo, addTodoStep, addGroup, toggleTodoStep, updateTodo, deleteTodo, deleteTodoStep } from "@/src/features/todo/api/todo-client-service";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import styles from "./TodoList.module.css";
 import TodoModal from "../components/TodoModal";
@@ -75,6 +75,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       await updateTodo(todo.id, { isCompleted: !todo.isCompleted });
       setTodos(todos.map(t => t.id === todo.id ? { ...t, isCompleted: !t.isCompleted } : t));
     } catch (e) {
+      errorLog("TODO完了トグル", e);
       showDialog("更新に失敗しました");
     }
   };
@@ -152,6 +153,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       setEditingTodo(null);
     } catch (e) {
       console.error("Failed to save todo:", e);
+      errorLog("TODO保存", e);
       showDialog("保存に失敗しました");
     } finally {
       setIsSubmitting(false);
@@ -180,6 +182,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         ),
       );
     } catch (e) {
+      errorLog("TODOステップ追加", e);
       showDialog("追加に失敗しました");
     } finally {
       hideSpinner();
@@ -201,6 +204,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         ),
       );
     } catch (e) {
+      errorLog("TODOステップトグル", e);
       showDialog("更新に失敗しました");
     } finally {
       hideSpinner();
@@ -215,6 +219,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       await deleteTodo(todoId);
       setTodos((prev) => prev.filter((t) => t.id !== todoId));
     } catch (e) {
+      errorLog("TODO削除", e);
       showDialog("削除に失敗しました");
     } finally {
       hideSpinner();
@@ -236,6 +241,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
         ),
       );
     } catch (e) {
+      errorLog("TODOステップ削除", e);
       showDialog("ステップの削除に失敗しました");
     } finally {
       hideSpinner();
@@ -256,6 +262,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       };
       setGroups((prev) => [...prev, newGroup]);
     } catch (e) {
+      errorLog("TODOグループ追加", e);
       showDialog("グループ追加に失敗しました");
     }
   };

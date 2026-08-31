@@ -6,7 +6,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { useRouter } from "next/navigation";
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
-import { showDialog, showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import styles from "./Settlement.module.css";
 import EventModal from "../components/EventModal";
 import ExpenseItemModal from "../components/ExpenseItemModal";
@@ -86,6 +86,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       setPartnerData(partner);
     } catch (e) {
       console.error("Failed to load settlement detail:", e);
+      errorLog("清算イベント詳細・明細データ読み込み", e);
     } finally {
       setLoading(false);
     }
@@ -125,6 +126,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       setIsEventModalOpen(false);
     } catch (e) {
       console.error("Failed to update event:", e);
+      errorLog("清算イベント編集", e);
     } finally {
       setIsSubmitting(false);
     }
@@ -159,6 +161,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       await showDialog("送金完了画面（PayPay等）の画像を保存し、清算完了としました！🎉", true);
     } catch (err) {
       console.error("Failed to upload proof image:", err);
+      errorLog("送金完了エビデンス画像アップロード", err);
       await showDialog("画像のアップロードに失敗しました", true);
     } finally {
       hideSpinner();
@@ -195,6 +198,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       await showDialog("未清算状態に戻しました", true);
     } catch (err) {
       console.error("Failed to remove proof image:", err);
+      errorLog("送金完了エビデンス画像削除", err);
       await showDialog("削除に失敗しました", true);
     } finally {
       hideSpinner();
@@ -221,6 +225,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       });
     } catch (e) {
       console.error(e);
+      errorLog("清算完了トグル", e);
     } finally {
       hideSpinner();
     }
@@ -241,6 +246,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       router.push("/settlement");
     } catch (e) {
       console.error(e);
+      errorLog("清算イベント削除", e);
       hideSpinner();
     } finally {
       hideSpinner();
@@ -318,6 +324,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       await loadData();
     } catch (e) {
       console.error("Failed to save item:", e);
+      errorLog("清算明細保存", e);
     } finally {
       hideSpinner();
       setIsSubmitting(false);
@@ -341,6 +348,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       await loadData();
     } catch (e) {
       console.error(e);
+      errorLog("清算明細削除", e);
     } finally {
       hideSpinner();
     }
@@ -367,6 +375,7 @@ export default function SettlementDetailClient({ eventId }: SettlementDetailClie
       );
     } catch (e) {
       console.error("Failed to save preferred ratio:", e);
+      errorLog("希望ワリカン比率保存", e);
       hideSpinner();
       await showDialog("保存に失敗しました", true);
     } finally {

@@ -7,6 +7,7 @@ import CommonDialog from "@/src/components/CommonDialog";
 import PWARegistration from "@/src/components/PWARegistration";
 import Header from "@/src/components/Header";
 import Footer from "@/src/components/Footer";
+import ErrorLogger from "@/src/components/ErrorLogger";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <AuthProvider>
+          <ErrorLogger />
           <Header />
           {children}
           <Footer />
