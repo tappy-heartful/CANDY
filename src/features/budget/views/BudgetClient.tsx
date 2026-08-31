@@ -16,8 +16,10 @@ import {
   getActualBudgets,
   saveActualBudget,
   deleteActualBudget,
-  copyDefaultToActual
+  copyDefaultToActual,
+  updateBudgetMasterData
 } from "../api/budget-client-service";
+import BudgetMasterSettingsModal from "../components/BudgetMasterSettingsModal";
 
 export default function BudgetClient() {
   const { user, userData } = useAuth();
@@ -79,6 +81,9 @@ export default function BudgetClient() {
   // 詳細モーダル用
   const [selectedBudget, setSelectedBudget] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+
+  // マスタ設定モーダル用
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
   useEffect(() => {
     setBreadcrumbs([{ title: "家計簿" }]);
@@ -525,6 +530,21 @@ export default function BudgetClient() {
     setShowDetailModal(false);
   };
 
+  const handleSaveMasterSettings = async (newCategories: BudgetCategory[], newTypes: BudgetType[]) => {
+    try {
+      const updatedMaster = {
+        categories: newCategories,
+        types: newTypes
+      };
+      await updateBudgetMasterData(updatedMaster);
+      setCategories(newCategories);
+      setTypes(newTypes);
+    } catch (e) {
+      console.error("Error saving master settings:", e);
+      throw e;
+    }
+  };
+
   const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
     const sections = [
       { id: "fixed", title: "固定費 🏠" },
@@ -708,8 +728,13 @@ export default function BudgetClient() {
 
   return (
     <div className="page-container">
-      <div className="card-title-main">
-        <i className="fa-solid fa-wallet"></i> 二人の家計簿
+      <div className={styles.headerRow}>
+        <div className="card-title-main">
+          <i className="fa-solid fa-wallet"></i> 二人の家計簿
+        </div>
+        <button className={styles.settingsMenuBtn} onClick={() => setShowSettingsModal(true)}>
+          <i className="fa-solid fa-sliders"></i> 区分・種別の設定
+        </button>
       </div>
 
       {/* タブ切り替え */}
@@ -1505,6 +1530,14 @@ export default function BudgetClient() {
           </div>
         </div>
       )}
+      {/* 区分・種別設定モーダル */}
+      <BudgetMasterSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        categories={categories}
+        types={types}
+        onSave={handleSaveMasterSettings}
+      />
 
       <BackToHome />
     </div>

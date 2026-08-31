@@ -176,3 +176,12 @@ export async function copyDefaultToActual(coupleKey: string, year: number, month
     )
   );
 }
+
+/**
+ * 家計簿のマスタデータを更新する
+ */
+export async function updateBudgetMasterData(data: BudgetMasterData): Promise<void> {
+  const docRef = doc(db, "budgetSettings", "master");
+  await setDoc(docRef, data);
+}
+
