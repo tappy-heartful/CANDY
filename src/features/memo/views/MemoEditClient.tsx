@@ -219,7 +219,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="メモの内容を自由に書いてください"
-                rows={10}
+                rows={18}
               />
             </div>
 

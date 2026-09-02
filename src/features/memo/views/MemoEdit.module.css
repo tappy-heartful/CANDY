@@ -1,5 +1,5 @@
 .container {
-  max-width: 600px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 16px;
   animation: fadeIn 0.3s ease-out;
@@ -93,16 +93,19 @@
 
 .formTextarea {
   width: 100%;
-  padding: 14px 18px;
+  min-height: 400px;
+  padding: 16px 18px;
   border: 2px solid #e1bee7;
   border-radius: 14px;
   font-size: 15px;
+  line-height: 1.75;
   color: #333;
   outline: none;
   background: #fcfbfd;
   font-family: inherit;
   resize: vertical;
   transition: all 0.3s;
+  box-sizing: border-box;
 }
 
 .formTextarea:focus {
