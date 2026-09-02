@@ -138,7 +138,12 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-
+    // メモ機能
+    match /memos/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.uid == request.auth.uid || resource.data.partnerEditable == true);
+    }
 
     // ============================
 

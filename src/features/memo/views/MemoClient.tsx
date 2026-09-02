@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { getMemos, addMemo, updateMemo, deleteMemo } from "@/src/features/memo/api/memo-client-service";
+import { getMemos } from "@/src/features/memo/api/memo-client-service";
 import { User as FirestoreUser, Memo } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./Memo.module.css";
-
-type ModalMode = "closed" | "detail";
 
 export default function MemoClient() {
   const { user, userData } = useAuth();
@@ -22,10 +20,6 @@ export default function MemoClient() {
   const [coupleKey, setCoupleKey] = useState<string>("");
   const [memos, setMemos] = useState<Memo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // モーダル
-  const [modalMode, setModalMode] = useState<ModalMode>("closed");
-  const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
 
   useEffect(() => {
     setBreadcrumbs([{ title: "メモ" }]);
@@ -69,60 +63,20 @@ export default function MemoClient() {
 
   const isMyMemo = (memo: Memo) => memo.uid === user?.uid;
 
-  const canEdit = (memo: Memo) => {
-    if (isMyMemo(memo)) return true;
-    return memo.partnerEditable;
-  };
-
-  const canDelete = (memo: Memo) => isMyMemo(memo);
-
   const formatDate = (ts: number) => {
+    if (!ts) return "-";
     const d = new Date(ts);
     return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
-  // --- 画面遷移およびモーダル操作 ---
-  const openCreateModal = () => {
+  const handleCreateMemo = () => {
     router.push("/memo/new");
   };
 
-  const openDetailModal = (memo: Memo) => {
-    setSelectedMemo(memo);
-    setModalMode("detail");
+  const handleOpenMemo = (memoId: string) => {
+    router.push(`/memo/${memoId}`);
   };
 
-  const openEditModal = (memo: Memo) => {
-    router.push(`/memo/edit/${memo.id}`);
-  };
-
-  const closeModal = () => {
-    setModalMode("closed");
-    setSelectedMemo(null);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedMemo) return;
-    const confirmed = await showDialog(
-      "このメモを削除してもよろしいですか？"
-    );
-    if (!confirmed) return;
-
-    showSpinner();
-    try {
-      await deleteMemo(selectedMemo.id);
-      setMemos((prev) => prev.filter((m) => m.id !== selectedMemo.id));
-      closeModal();
-      showDialog("メモを削除しました。");
-    } catch (e) {
-      console.error(e);
-      errorLog("メモ削除", e);
-      showDialog("削除できませんでした。恐れ入りますが、もう一度お試しください。");
-    } finally {
-      hideSpinner();
-    }
-  };
-
-  // --- レンダリング ---
   if (isLoading) {
     return <div className="page-container" />;
   }
@@ -136,7 +90,7 @@ export default function MemoClient() {
             <i className={`fa-solid fa-note-sticky ${styles.titleIcon}`}></i>
             メモ
           </h1>
-          <button className={styles.addButton} onClick={openCreateModal}>
+          <button className={styles.addButton} onClick={handleCreateMemo}>
             <i className="fa-solid fa-plus"></i>
           </button>
         </div>
@@ -149,7 +103,7 @@ export default function MemoClient() {
               <br />
               新しくメモを書いてみましょう✨
             </p>
-            <button className={styles.emptyAction} onClick={openCreateModal}>
+            <button className={styles.emptyAction} onClick={handleCreateMemo}>
               <i className="fa-solid fa-plus"></i>
               メモを作成する
             </button>
@@ -162,7 +116,7 @@ export default function MemoClient() {
                 className={`${styles.memoCard} ${
                   isMyMemo(memo) ? styles.memoCardMine : styles.memoCardPartner
                 }`}
-                onClick={() => openDetailModal(memo)}
+                onClick={() => handleOpenMemo(memo.id)}
               >
                 <div className={styles.memoCardHeader}>
                   <span className={styles.memoCardTitle}>{memo.title}</span>
@@ -190,79 +144,6 @@ export default function MemoClient() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* モーダル: 詳細表示 */}
-        {modalMode === "detail" && selectedMemo && (
-          <div className={styles.modalOverlay} onClick={closeModal}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <div className={styles.modalHeader}>
-                <h2 className={styles.modalTitle}>
-                  <i className="fa-solid fa-note-sticky"></i>
-                  {selectedMemo.title}
-                </h2>
-                <button className={styles.modalClose} onClick={closeModal}>
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
-              </div>
-
-              <div className={styles.detailContent}>
-                {selectedMemo.content || "（内容はまだありません）"}
-              </div>
-
-              <div className={styles.detailMeta}>
-                <span className={styles.detailMetaItem}>
-                  <i className="fa-solid fa-user"></i>
-                  {isMyMemo(selectedMemo) ? myName : partnerName}
-                </span>
-                <span className={styles.detailMetaItem}>
-                  <i className="fa-regular fa-calendar"></i>
-                  作成: {formatDate(selectedMemo.createdAt)}
-                </span>
-                <span className={styles.detailMetaItem}>
-                  <i className="fa-regular fa-clock"></i>
-                  更新: {formatDate(selectedMemo.updatedAt)}
-                </span>
-                <span className={styles.detailMetaItem}>
-                  {selectedMemo.partnerEditable ? (
-                    <>
-                      <i className="fa-solid fa-unlock"></i>
-                      パートナー編集OK
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-lock"></i>
-                      作成者のみ編集可
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {canEdit(selectedMemo) ? (
-                <div className={styles.detailActions}>
-                  <button
-                    className={styles.editButton}
-                    onClick={() => openEditModal(selectedMemo)}
-                  >
-                    <i className="fa-solid fa-pen"></i> 編集する
-                  </button>
-                  {canDelete(selectedMemo) && (
-                    <button
-                      className={styles.deleteButton}
-                      onClick={handleDelete}
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className={styles.readonlyNotice}>
-                  <i className="fa-solid fa-lock"></i>
-                  こちらのメモは作成者のみが編集できるように設定されています
-                </div>
-              )}
-            </div>
           </div>
         )}
 

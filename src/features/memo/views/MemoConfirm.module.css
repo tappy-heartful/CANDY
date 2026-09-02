@@ -1,0 +1,208 @@
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.titleIcon {
+  color: #9B7CC3;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666666;
+  text-decoration: none;
+  background: #f0f0f4;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.backLink:hover {
+  background: #e2e2ec;
+  color: #333333;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(155, 124, 195, 0.08);
+  border: 1px solid rgba(155, 124, 195, 0.15);
+  margin-bottom: 24px;
+}
+
+.memoTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #2c2c34;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.metaContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0edf6;
+  font-size: 0.8125rem;
+  color: #666666;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.badgeMine {
+  background: #f3eafd;
+  color: #8352b5;
+}
+
+.badgePartner {
+  background: #fdf0ed;
+  color: #d9634d;
+}
+
+.badgeLocked {
+  background: #f2f2f4;
+  color: #777782;
+}
+
+.badgeEditable {
+  background: #eafaf1;
+  color: #27ae60;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #888899;
+}
+
+.contentBody {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: #3f3f4e;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 120px;
+}
+
+.emptyContent {
+  color: #a0a0b0;
+  font-style: italic;
+}
+
+.actionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mainActions {
+  display: flex;
+  gap: 12px;
+}
+
+.editButton {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #9B7CC3 0%, #8352b5 100%);
+  color: #ffffff;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(155, 124, 195, 0.3);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.editButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(155, 124, 195, 0.4);
+}
+
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fff0f0;
+  color: #e74c3c;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid #ffd2d2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background: #ffe2e2;
+  transform: translateY(-2px);
+}
+
+.readonlyNotice {
+  background: #f8f8fa;
+  border: 1px solid #ebebf0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.8125rem;
+  color: #777788;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 12px 12px 32px;
+  }
+  
+  .card {
+    padding: 18px;
+  }
+  
+  .mainActions {
+    flex-direction: column;
+  }
+}

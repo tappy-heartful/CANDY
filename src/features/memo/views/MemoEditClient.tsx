@@ -34,11 +34,19 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
 
   // パンくずリストの設定
   useEffect(() => {
-    setBreadcrumbs([
-      { title: "メモ", href: "/memo" },
-      { title: id ? "メモの編集" : "新しいメモ" }
-    ]);
-  }, [id, setBreadcrumbs]);
+    if (id) {
+      setBreadcrumbs([
+        { title: "メモ", href: "/memo" },
+        { title: memo?.title || "確認", href: `/memo/${id}` },
+        { title: "編集" }
+      ]);
+    } else {
+      setBreadcrumbs([
+        { title: "メモ", href: "/memo" },
+        { title: "新しいメモ" }
+      ]);
+    }
+  }, [id, memo, setBreadcrumbs]);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -118,6 +126,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
           partnerEditable,
         });
         showDialog("メモを保存しました✨");
+        router.push("/memo");
       } else {
         // 編集
         const updateData: Partial<Omit<Memo, "id" | "createdAt">> = {
@@ -130,9 +139,9 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
         }
         await updateMemo(id, updateData);
         showDialog("メモを更新しました✨");
+        router.push(`/memo/${id}`);
       }
       
-      router.push("/memo");
       router.refresh();
     } catch (e) {
       console.error(e);
@@ -183,8 +192,8 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
             <i className={`fa-solid ${id ? "fa-pen-to-square" : "fa-plus"} ${styles.titleIcon}`}></i>
             {id ? "メモの編集" : "新しいメモを作成"}
           </h1>
-          <Link href="/memo" className={styles.backLink}>
-            <i className="fa-solid fa-arrow-left"></i> 一覧に戻る
+          <Link href={id ? `/memo/${id}` : "/memo"} className={styles.backLink}>
+            <i className="fa-solid fa-arrow-left"></i> {id ? "確認に戻る" : "一覧に戻る"}
           </Link>
         </div>
 
