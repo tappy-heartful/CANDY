@@ -397,6 +397,7 @@ export interface ActualBudget {
   uid: string; // 対象者
   year: number; // 年 (例: 2026)
   month: number; // 月 (1〜12)
+  date?: string; // 日付 (例: "YYYY-MM-DD")
   category: string; // 区分ID
   type: string; // 種別ID
   name: string; // 項目名

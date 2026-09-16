@@ -150,6 +150,8 @@ export async function deleteActualBudget(id: string): Promise<void> {
 export async function copyDefaultToActual(coupleKey: string, year: number, month: number): Promise<void> {
   const defaults = await getDefaultBudgets(coupleKey, month);
   const now = Date.now();
+  const d = new Date(now);
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const colRef = collection(db, "actualBudgets");
 
   // すでに登録されている同一月の実際収支をすべて削除してからコピーする（重複防止）
@@ -164,6 +166,7 @@ export async function copyDefaultToActual(coupleKey: string, year: number, month
         uid: item.uid,
         year,
         month,
+        date: todayStr,
         category: item.category,
         type: item.type,
         name: item.name,

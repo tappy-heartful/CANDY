@@ -51,7 +51,30 @@
 .memoList {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+
+.dateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dateGroup:not(:first-child) {
+  margin-top: 10px;
+}
+
+.dateHeader {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a3e56;
+  padding: 4px 2px;
+}
+
+.dateGroupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .memoCard {

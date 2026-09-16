@@ -1667,6 +1667,135 @@
   }
 }
 
+/* 日時グループ見出し（PCテーブル） - 控えめなデザイン */
+.dateHeaderRow td {
+  background: #fcfbfe;
+  border-bottom: 1px solid #ede7f6;
+  padding: 6px 16px;
+}
 
+.dateHeaderContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
+.dateHeaderLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
+.dateHeaderLabel i {
+  color: #999;
+  font-size: 11px;
+}
+
+.dateHeaderSummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.dateDayExpense {
+  color: #777;
+}
+
+.dateDayExpense strong {
+  font-family: monospace;
+  font-weight: 600;
+  color: #c2185b;
+}
+
+.dateDayIncome {
+  color: #777;
+}
+
+.dateDayIncome strong {
+  font-family: monospace;
+  font-weight: 600;
+  color: #00796b;
+}
+
+/* 日時グループ見出し（モバイル） - 控えめなデザイン */
+.mobileDateGroup {
+  margin-bottom: 12px;
+}
+
+.mobileDateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fbfafd;
+  border-left: 2.5px solid #d1c4e9;
+  padding: 5px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+/* 種別グループ見出し（PCテーブル） */
+.typeHeaderRow td {
+  background: #fbf9fd;
+  border-bottom: 1px dashed #e8dff0;
+  padding: 8px 16px 8px 24px;
+}
+
+.typeHeaderContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeHeaderLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6a4c93;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.typeHeaderSummary {
+  font-size: 11px;
+  color: #777;
+}
+
+.typeHeaderSummary strong {
+  font-family: monospace;
+  color: #333;
+  font-weight: 700;
+}
+
+/* 種別グループ見出し（モバイル） */
+.mobileTypeGroup {
+  margin-bottom: 10px;
+}
+
+.mobileTypeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fdfafd;
+  border-left: 3px solid #b39ddb;
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+/* 必須バッジ */
+.requiredBadge {
+  font-size: 10px;
+  background: #ffebee;
+  color: #d32f2f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-weight: bold;
+}

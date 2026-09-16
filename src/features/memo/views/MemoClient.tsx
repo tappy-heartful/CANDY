@@ -69,6 +69,54 @@ export default function MemoClient() {
     return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
+  interface MemoDateGroup {
+    key: string;
+    label: string;
+    items: Memo[];
+  }
+
+  const formatDateHeader = (ts?: number) => {
+    if (!ts) return "日付未設定";
+    const d = new Date(ts);
+    const now = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const date = d.getDate();
+    const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+    if (y !== now.getFullYear()) {
+      return `${y}年${m}月${date}日(${dayOfWeek})`;
+    }
+    return `${m}月${date}日(${dayOfWeek})`;
+  };
+
+  const getDateKey = (ts?: number) => {
+    if (!ts) return "unknown";
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const groupMemosByDate = (memoList: Memo[]): MemoDateGroup[] => {
+    const groups: MemoDateGroup[] = [];
+    let currentKey = "";
+    let currentGroup: MemoDateGroup | null = null;
+
+    for (const memo of memoList) {
+      const ts = memo.updatedAt || memo.createdAt;
+      const key = getDateKey(ts);
+      if (key !== currentKey || !currentGroup) {
+        currentKey = key;
+        currentGroup = {
+          key,
+          label: formatDateHeader(ts),
+          items: []
+        };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(memo);
+    }
+    return groups;
+  };
+
   const handleCreateMemo = () => {
     router.push("/memo/new");
   };
@@ -110,37 +158,44 @@ export default function MemoClient() {
           </div>
         ) : (
           <div className={styles.memoList}>
-            {memos.map((memo) => (
-              <div
-                key={memo.id}
-                className={`${styles.memoCard} ${
-                  isMyMemo(memo) ? styles.memoCardMine : styles.memoCardPartner
-                }`}
-                onClick={() => handleOpenMemo(memo.id)}
-              >
-                <div className={styles.memoCardHeader}>
-                  <span className={styles.memoCardTitle}>{memo.title}</span>
-                  <div className={styles.memoCardBadges}>
-                    <span
-                      className={`${styles.badge} ${
-                        isMyMemo(memo) ? styles.badgeMine : styles.badgePartner
+            {groupMemosByDate(memos).map((group) => (
+              <div key={group.key} className={styles.dateGroup}>
+                <div className={styles.dateHeader}>{group.label}</div>
+                <div className={styles.dateGroupItems}>
+                  {group.items.map((memo) => (
+                    <div
+                      key={memo.id}
+                      className={`${styles.memoCard} ${
+                        isMyMemo(memo) ? styles.memoCardMine : styles.memoCardPartner
                       }`}
+                      onClick={() => handleOpenMemo(memo.id)}
                     >
-                      {isMyMemo(memo) ? myName : partnerName}
-                    </span>
-                    {!memo.partnerEditable && (
-                      <span className={`${styles.badge} ${styles.badgeLocked}`}>
-                        <i className="fa-solid fa-lock"></i>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {memo.content && (
-                  <div className={styles.memoCardPreview}>{memo.content}</div>
-                )}
-                <div className={styles.memoCardDate}>
-                  <i className="fa-regular fa-clock"></i>
-                  {formatDate(memo.updatedAt)}
+                      <div className={styles.memoCardHeader}>
+                        <span className={styles.memoCardTitle}>{memo.title}</span>
+                        <div className={styles.memoCardBadges}>
+                          <span
+                            className={`${styles.badge} ${
+                              isMyMemo(memo) ? styles.badgeMine : styles.badgePartner
+                            }`}
+                          >
+                            {isMyMemo(memo) ? myName : partnerName}
+                          </span>
+                          {!memo.partnerEditable && (
+                            <span className={`${styles.badge} ${styles.badgeLocked}`}>
+                              <i className="fa-solid fa-lock"></i>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {memo.content && (
+                        <div className={styles.memoCardPreview}>{memo.content}</div>
+                      )}
+                      <div className={styles.memoCardDate}>
+                        <i className="fa-regular fa-clock"></i>
+                        {formatDate(memo.updatedAt)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

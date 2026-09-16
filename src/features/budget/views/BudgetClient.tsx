@@ -37,6 +37,14 @@ export type BudgetSortOption =
   | "category_asc"
   | "category_desc";
 
+export const getTodayString = (): string => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const date = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${date}`;
+};
+
 export default function BudgetClient() {
   const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
@@ -86,6 +94,7 @@ export default function BudgetClient() {
 
   // 実際フォーム
   const [actId, setActId] = useState<string | undefined>(undefined);
+  const [actDate, setActDate] = useState<string>(getTodayString());
   const [actTargetUid, setActTargetUid] = useState<string>("");
   const [actCategory, setActCategory] = useState<string>("");
   const [actType, setActType] = useState<string>("");
@@ -157,6 +166,126 @@ export default function BudgetClient() {
     return `${m}/${date} ${hours}:${minutes}`;
   };
 
+  interface BudgetDateGroup {
+    key: string;
+    label: string;
+    dayExpense: number;
+    dayIncome: number;
+    items: any[];
+  }
+
+  interface BudgetTypeGroup {
+    typeId: string;
+    typeName: string;
+    totalAmount: number;
+    items: any[];
+  }
+
+  // アイテムの日付文字列 ("YYYY-MM-DD") を取得
+  const getItemDateStr = (item: any): string => {
+    if (item.date) return item.date;
+    const ts = item.updatedAt || item.createdAt;
+    if (!ts) return "";
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const date = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${date}`;
+  };
+
+  // アイテムの更新日時（ミリ秒）を取得
+  const getItemUpdatedAt = (item: any): number => {
+    return item.updatedAt || item.createdAt || 0;
+  };
+
+  // 日付見出し用のラベル（例: "9月16日 (水)"）を生成
+  const formatDateHeaderFromItem = (item: any): string => {
+    if (item.date) {
+      const parts = item.date.split("-");
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        const dateObj = new Date(y, m - 1, d);
+        const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
+        return `${m}月${d}日 (${dayOfWeek})`;
+      }
+    }
+    const ts = item.updatedAt || item.createdAt;
+    if (ts) {
+      const d = new Date(ts);
+      const m = d.getMonth() + 1;
+      const date = d.getDate();
+      const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+      return `${m}月${date}日 (${dayOfWeek})`;
+    }
+    return "日付未設定";
+  };
+
+  // テーブルやカード用の表示日付（例: "9/16" または "9/16 14:30"）
+  const formatItemDisplayDate = (item: any): string => {
+    if (item.date) {
+      const parts = item.date.split("-");
+      if (parts.length === 3) {
+        return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`;
+      }
+      return item.date;
+    }
+    return formatItemDate(item.updatedAt || item.createdAt);
+  };
+
+  const groupBudgetsByDate = (list: any[]): BudgetDateGroup[] => {
+    const groups: BudgetDateGroup[] = [];
+    let currentKey = "";
+    let currentGroup: BudgetDateGroup | null = null;
+
+    for (const item of list) {
+      const key = getItemDateStr(item) || "unknown";
+      if (key !== currentKey || !currentGroup) {
+        currentKey = key;
+        currentGroup = {
+          key,
+          label: formatDateHeaderFromItem(item),
+          dayExpense: 0,
+          dayIncome: 0,
+          items: []
+        };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(item);
+      if (item.category === "income") {
+        currentGroup.dayIncome += item.amount || 0;
+      } else {
+        currentGroup.dayExpense += item.amount || 0;
+      }
+    }
+    return groups;
+  };
+
+  const groupBudgetsByType = (list: any[], typesList: BudgetType[]): BudgetTypeGroup[] => {
+    const groups: BudgetTypeGroup[] = [];
+    let currentTypeId = "";
+    let currentGroup: BudgetTypeGroup | null = null;
+
+    for (const item of list) {
+      const typeId = item.type || "";
+      if (typeId !== currentTypeId || !currentGroup) {
+        currentTypeId = typeId;
+        const typeObj = typesList.find(t => t.id === typeId);
+        currentGroup = {
+          typeId,
+          typeName: typeObj?.name || typeId || "その他",
+          totalAmount: 0,
+          items: []
+        };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(item);
+      currentGroup.totalAmount += item.amount || 0;
+    }
+    return groups;
+  };
+
   const sortBudgetItems = (
     list: any[],
     option: BudgetSortOption,
@@ -166,26 +295,51 @@ export default function BudgetClient() {
     const categoryOrder = ["fixed", "variable", "income"];
 
     return [...list].sort((a, b) => {
+      const aDate = getItemDateStr(a);
+      const bDate = getItemDateStr(b);
+      const aTime = getItemUpdatedAt(a);
+      const bTime = getItemUpdatedAt(b);
+
+      // 日時降順比較: 日付降順 -> 日付が同じまたは無い場合は更新日時降順
+      const compareDateTimeDesc = () => {
+        if (aDate && bDate && aDate !== bDate) {
+          return bDate.localeCompare(aDate);
+        }
+        if (aDate && !bDate) return -1;
+        if (!aDate && bDate) return 1;
+        return bTime - aTime;
+      };
+
+      // 日時昇順比較: 日付昇順 -> 日付が同じまたは無い場合は更新日時昇順
+      const compareDateTimeAsc = () => {
+        if (aDate && bDate && aDate !== bDate) {
+          return aDate.localeCompare(bDate);
+        }
+        if (aDate && !bDate) return -1;
+        if (!aDate && bDate) return 1;
+        return aTime - bTime;
+      };
+
       switch (option) {
         case "date_desc": {
-          const diff = (b.createdAt || 0) - (a.createdAt || 0);
+          const diff = compareDateTimeDesc();
           if (diff !== 0) return diff;
           return (b.amount || 0) - (a.amount || 0);
         }
         case "date_asc": {
-          const diff = (a.createdAt || 0) - (b.createdAt || 0);
+          const diff = compareDateTimeAsc();
           if (diff !== 0) return diff;
           return (a.amount || 0) - (b.amount || 0);
         }
         case "amount_desc": {
           const diff = (b.amount || 0) - (a.amount || 0);
           if (diff !== 0) return diff;
-          return (b.createdAt || 0) - (a.createdAt || 0);
+          return compareDateTimeDesc();
         }
         case "amount_asc": {
           const diff = (a.amount || 0) - (b.amount || 0);
           if (diff !== 0) return diff;
-          return (b.createdAt || 0) - (a.createdAt || 0);
+          return compareDateTimeDesc();
         }
         case "category_asc": {
           const aCatIdx = categoryOrder.indexOf(a.category);
@@ -195,7 +349,7 @@ export default function BudgetClient() {
           const bTypeName = typesList.find(t => t.id === b.type)?.name || b.type || "";
           const typeComp = aTypeName.localeCompare(bTypeName);
           if (typeComp !== 0) return typeComp;
-          return (b.createdAt || 0) - (a.createdAt || 0);
+          return compareDateTimeDesc();
         }
         case "category_desc": {
           const aCatIdx = categoryOrder.indexOf(a.category);
@@ -205,10 +359,10 @@ export default function BudgetClient() {
           const bTypeName = typesList.find(t => t.id === b.type)?.name || b.type || "";
           const typeComp = bTypeName.localeCompare(aTypeName);
           if (typeComp !== 0) return typeComp;
-          return (b.createdAt || 0) - (a.createdAt || 0);
+          return compareDateTimeDesc();
         }
         default:
-          return (b.createdAt || 0) - (a.createdAt || 0);
+          return compareDateTimeDesc();
       }
     });
   };
@@ -440,7 +594,7 @@ export default function BudgetClient() {
   // 実際収支の保存
   const handleSaveActual = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!coupleKey || !actTargetUid || !actCategory || !actType || !actName || actAmount === "") {
+    if (!coupleKey || !actTargetUid || !actCategory || !actType || !actName || actAmount === "" || !actDate) {
       showDialog("入力項目に不足があるようです。ご確認ください。");
       return;
     }
@@ -467,6 +621,7 @@ export default function BudgetClient() {
         uid: actTargetUid,
         year: actualYear,
         month: actualMonth,
+        date: actDate,
         category: actCategory,
         type: actType,
         name: actName,
@@ -492,6 +647,7 @@ export default function BudgetClient() {
 
   const resetActForm = () => {
     setActId(undefined);
+    setActDate(getTodayString());
     setActName("");
     setActAmount("");
     setActMemo("");
@@ -505,6 +661,7 @@ export default function BudgetClient() {
 
   const handleEditActual = (item: ActualBudget) => {
     setActId(item.id);
+    setActDate(item.date || (item.createdAt ? new Date(item.createdAt).toISOString().split("T")[0] : getTodayString()));
     setActTargetUid(item.uid);
     setActCategory(item.category);
     setActType(item.type);
@@ -756,6 +913,7 @@ export default function BudgetClient() {
 
   const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
     const isCategorySort = sortOption === "category_asc" || sortOption === "category_desc";
+    const isDateSort = sortOption === "date_desc" || sortOption === "date_asc";
 
     const sections = sortOption === "category_desc"
       ? [
@@ -802,7 +960,7 @@ export default function BudgetClient() {
         <tr key={item.id} className={styles.budgetRow}>
           <td className={styles.categoryCell}>{categoryName}</td>
           <td className={styles.typeCell}>{typeName}</td>
-          <td className={styles.dateCell}>{formatItemDate(item.createdAt)}</td>
+          <td className={styles.dateCell}>{formatItemDisplayDate(item)}</td>
           <td className={styles.userCell}>
             <span className={item.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
               {itemUserName}
@@ -839,6 +997,7 @@ export default function BudgetClient() {
       const categoryName = categories.find(c => c.id === item.category)?.name || item.category;
       const typeName = types.find(t => t.id === item.type)?.name || item.type;
       const itemUserName = item.uid === user?.uid ? myName : partnerName;
+      const displayDate = formatItemDisplayDate(item);
 
       return (
         <div key={item.id} className={styles.mobileCard} onClick={() => openDetailModal(item)}>
@@ -854,9 +1013,9 @@ export default function BudgetClient() {
               {categoryName}
             </span>
             <span className={styles.mobileTypeName}>{typeName}</span>
-            {item.createdAt && (
+            {displayDate !== "-" && (
               <span className={styles.mobileDateText}>
-                <i className="fa-regular fa-clock"></i> {formatItemDate(item.createdAt)}
+                <i className="fa-regular fa-clock"></i> {displayDate}
               </span>
             )}
             {item.category !== "income" && (
@@ -918,6 +1077,7 @@ export default function BudgetClient() {
                 if (filtered.length === 0) return null;
 
                 const subtotals = getSubtotals(list, section.id);
+                const typeGroups = groupBudgetsByType(filtered, types);
 
                 return (
                   <Fragment key={section.id}>
@@ -925,7 +1085,23 @@ export default function BudgetClient() {
                       <td colSpan={9}>{section.title}</td>
                     </tr>
 
-                    {filtered.map(renderBudgetRow)}
+                    {typeGroups.map(tg => (
+                      <Fragment key={tg.typeId || "unknown"}>
+                        <tr className={styles.typeHeaderRow}>
+                          <td colSpan={9}>
+                            <div className={styles.typeHeaderContent}>
+                              <span className={styles.typeHeaderLabel}>
+                                <i className="fa-solid fa-tag"></i> {tg.typeName}
+                              </span>
+                              <span className={styles.typeHeaderSummary}>
+                                小計: <strong>{formatCurrency(tg.totalAmount)}</strong>
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {tg.items.map(renderBudgetRow)}
+                      </Fragment>
+                    ))}
 
                     <tr className={styles.subtotalRow}>
                       <td colSpan={3} className={styles.subtotalLabel}>小計</td>
@@ -940,6 +1116,50 @@ export default function BudgetClient() {
                   </Fragment>
                 );
               })
+            ) : isDateSort ? (
+              (() => {
+                const dateGroups = groupBudgetsByDate(sortedList);
+                return (
+                  <>
+                    {dateGroups.map(dg => (
+                      <Fragment key={dg.key}>
+                        <tr className={styles.dateHeaderRow}>
+                          <td colSpan={9}>
+                            <div className={styles.dateHeaderContent}>
+                              <span className={styles.dateHeaderLabel}>
+                                <i className="fa-regular fa-calendar-days"></i> {dg.label}
+                              </span>
+                              <span className={styles.dateHeaderSummary}>
+                                {dg.dayExpense > 0 && (
+                                  <span className={styles.dateDayExpense}>
+                                    支出: <strong>{formatCurrency(dg.dayExpense)}</strong>
+                                  </span>
+                                )}
+                                {dg.dayIncome > 0 && (
+                                  <span className={styles.dateDayIncome}>
+                                    収入: <strong>{formatCurrency(dg.dayIncome)}</strong>
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {dg.items.map(renderBudgetRow)}
+                      </Fragment>
+                    ))}
+
+                    <tr className={styles.subtotalRow}>
+                      <td colSpan={3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                      <td colSpan={6} className={styles.subtotalValue}>
+                        <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
+                        <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
+                        <span className={styles.subtotalPerson}>収入: <strong>{formatCurrency(subtotalsIncome.total)}</strong></span>
+                        <span className={styles.subtotalTotal}>総支出: <strong>{formatCurrency(subtotalsFixed.total + subtotalsVariable.total)}</strong></span>
+                      </td>
+                    </tr>
+                  </>
+                );
+              })()
             ) : (
               <>
                 {sortedList.map(renderBudgetRow)}
@@ -965,11 +1185,24 @@ export default function BudgetClient() {
               const filtered = sortedList.filter(item => item.category === section.id);
               if (filtered.length === 0) return null;
               const subtotals = getSubtotals(list, section.id);
+              const typeGroups = groupBudgetsByType(filtered, types);
 
               return (
                 <div key={section.id} className={styles.mobileSection}>
                   <div className={styles.mobileSectionTitle}>{section.title}</div>
-                  {filtered.map(renderMobileCard)}
+                  {typeGroups.map(tg => (
+                    <div key={tg.typeId || "unknown"} className={styles.mobileTypeGroup}>
+                      <div className={styles.mobileTypeHeader}>
+                        <span className={styles.typeHeaderLabel}>
+                          <i className="fa-solid fa-tag"></i> {tg.typeName}
+                        </span>
+                        <span className={styles.typeHeaderSummary}>
+                          {formatCurrency(tg.totalAmount)}
+                        </span>
+                      </div>
+                      {tg.items.map(renderMobileCard)}
+                    </div>
+                  ))}
                   <div className={styles.mobileSubtotalCard}>
                     <div className={styles.mobileSubtotalTitle}>小計</div>
                     <div className={styles.mobileSubtotalGrid}>
@@ -992,6 +1225,57 @@ export default function BudgetClient() {
                 </div>
               );
             })
+          ) : isDateSort ? (
+            (() => {
+              const dateGroups = groupBudgetsByDate(sortedList);
+              return (
+                <div className={styles.mobileSection}>
+                  {dateGroups.map(dg => (
+                    <div key={dg.key} className={styles.mobileDateGroup}>
+                      <div className={styles.mobileDateHeader}>
+                        <span className={styles.dateHeaderLabel}>
+                          <i className="fa-regular fa-calendar-days"></i> {dg.label}
+                        </span>
+                        <span className={styles.dateHeaderSummary}>
+                          {dg.dayExpense > 0 && (
+                            <span className={styles.dateDayExpense}>
+                              支出: <strong>{formatCurrency(dg.dayExpense)}</strong>
+                            </span>
+                          )}
+                          {dg.dayIncome > 0 && (
+                            <span className={styles.dateDayIncome}>
+                              収入: <strong>{formatCurrency(dg.dayIncome)}</strong>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {dg.items.map(renderMobileCard)}
+                    </div>
+                  ))}
+                  <div className={styles.mobileSubtotalCard}>
+                    <div className={styles.mobileSubtotalTitle}>区分別小計・合計</div>
+                    <div className={styles.mobileSubtotalGrid}>
+                      <div className={styles.mobileSubtotalPerson}>
+                        <span>固定費:</span>
+                        <strong>{formatCurrency(subtotalsFixed.total)}</strong>
+                      </div>
+                      <div className={styles.mobileSubtotalPerson}>
+                        <span>変動費:</span>
+                        <strong>{formatCurrency(subtotalsVariable.total)}</strong>
+                      </div>
+                      <div className={styles.mobileSubtotalPerson}>
+                        <span>収入:</span>
+                        <strong>{formatCurrency(subtotalsIncome.total)}</strong>
+                      </div>
+                    </div>
+                    <div className={styles.mobileSubtotalTotal}>
+                      <span>総支出:</span>
+                      <strong>{formatCurrency(subtotalsFixed.total + subtotalsVariable.total)}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <div className={styles.mobileSection}>
               {sortedList.map(renderMobileCard)}
@@ -1275,6 +1559,20 @@ export default function BudgetClient() {
                         </label>
                       )}
                     </div>
+                  </div>
+
+                  {/* 日付 */}
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>
+                      日付 <span className={styles.requiredBadge}>必須</span>
+                    </label>
+                    <input
+                      type="date"
+                      className={styles.appInput}
+                      value={actDate}
+                      onChange={(e) => setActDate(e.target.value)}
+                      required
+                    />
                   </div>
 
                   {/* 区分 */}
@@ -1762,6 +2060,12 @@ export default function BudgetClient() {
               </button>
             </div>
             <div className={styles.modalBody}>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>日付:</span>
+                <span className={styles.detailValue}>
+                  {selectedBudget.date || (selectedBudget.updatedAt || selectedBudget.createdAt ? formatItemDate(selectedBudget.updatedAt || selectedBudget.createdAt) : "-")}
+                </span>
+              </div>
               <div className={styles.detailRow}>
                 <span className={styles.detailLabel}>区分・種別:</span>
                 <span className={styles.detailValue}>
