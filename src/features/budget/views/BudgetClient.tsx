@@ -65,9 +65,6 @@ export default function BudgetClient() {
   // coupleKey
   const [coupleKey, setCoupleKey] = useState<string>("");
 
-  // デフォルト設定用のアクティブな月 (1〜12)
-  const [defaultMonth, setDefaultMonth] = useState<number>(new Date().getMonth() + 1);
-
   // デフォルト収支データ
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([]);
 
@@ -79,8 +76,6 @@ export default function BudgetClient() {
   const [dfName, setDfName] = useState<string>("");
   const [dfAmount, setDfAmount] = useState<number | "">("");
   const [dfMemo, setDfMemo] = useState<string>("");
-  const [dfMonths, setDfMonths] = useState<number[]>([]);
-  const [dfOriginalMonth, setDfOriginalMonth] = useState<number | null>(null);
   const [dfSplitMode, setDfSplitMode] = useState<"equal" | "custom">("equal");
   const [dfMyRatio, setDfMyRatio] = useState<number | "">(50);
   const [dfPartnerRatio, setDfPartnerRatio] = useState<number | "">(50);
@@ -150,6 +145,13 @@ export default function BudgetClient() {
       }
     }
   }, [actCategory, types]);
+
+  // デフォルト収支タブ選択時は日時のソートを適用せず、区分種別の昇順にする
+  useEffect(() => {
+    if (activeTab === "default" && (sortOption === "date_desc" || sortOption === "date_asc")) {
+      setSortOption("category_asc");
+    }
+  }, [activeTab, sortOption]);
 
   const myName = userData?.nickname || "自分";
   const partnerName = partnerUser?.nickname || "パートナー";
@@ -367,9 +369,9 @@ export default function BudgetClient() {
     });
   };
 
-  const loadDefaultBudgets = async (cKey: string, month: number) => {
+  const loadDefaultBudgets = async (cKey: string) => {
     if (!cKey) return;
-    const data = await getDefaultBudgets(cKey, month);
+    const data = await getDefaultBudgets(cKey);
     setDefaultBudgets(data);
   };
 
@@ -409,10 +411,9 @@ export default function BudgetClient() {
 
       setDfTargetUid(user.uid);
       setActTargetUid(user.uid);
-      setDfMonths([defaultMonth]);
 
       await Promise.all([
-        loadDefaultBudgets(cKey, defaultMonth),
+        loadDefaultBudgets(cKey),
         loadActualBudgets(cKey, actualYear, actualMonth),
         loadSettlementProof(cKey, actualYear, actualMonth)
       ]);
@@ -429,19 +430,6 @@ export default function BudgetClient() {
   useEffect(() => {
     loadMasterAndPartner();
   }, [user]);
-
-  // デフォルト月の切り替え
-  const handleDefaultMonthChange = async (month: number) => {
-    setDefaultMonth(month);
-    if (!dfId) {
-      setDfMonths([month]);
-    }
-    if (coupleKey) {
-      showSpinner();
-      await loadDefaultBudgets(coupleKey, month);
-      hideSpinner();
-    }
-  };
 
   // 年月の切り替え
   const handleActualMonthChange = async (year: number, month: number) => {
@@ -481,7 +469,7 @@ export default function BudgetClient() {
   // デフォルト収支の保存
   const handleSaveDefault = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!coupleKey || !dfTargetUid || !dfCategory || !dfType || !dfName || dfAmount === "" || dfMonths.length === 0) {
+    if (!coupleKey || !dfTargetUid || !dfCategory || !dfType || !dfName || dfAmount === "") {
       showDialog("入力項目に不足があるようです。ご確認ください。");
       return;
     }
@@ -503,26 +491,20 @@ export default function BudgetClient() {
 
     try {
       showSpinner();
-      const savePromises = dfMonths.map((m) => {
-        const isOriginal = dfId && m === dfOriginalMonth;
-        return saveDefaultBudget({
-          id: isOriginal ? dfId : undefined,
-          coupleKey,
-          uid: dfTargetUid,
-          month: m,
-          category: dfCategory,
-          type: dfType,
-          name: dfName,
-          amount: Number(dfAmount),
-          memo: dfMemo,
-          splitRatio
-        });
+      await saveDefaultBudget({
+        id: dfId,
+        coupleKey,
+        uid: dfTargetUid,
+        category: dfCategory,
+        type: dfType,
+        name: dfName,
+        amount: Number(dfAmount),
+        memo: dfMemo,
+        splitRatio
       });
 
-      await Promise.all(savePromises);
-
       resetDfForm();
-      await loadDefaultBudgets(coupleKey, defaultMonth);
+      await loadDefaultBudgets(coupleKey);
       showDialog("デフォルト収支を保存しました✨");
     } catch (e) {
       console.error(e);
@@ -538,8 +520,6 @@ export default function BudgetClient() {
     setDfName("");
     setDfAmount("");
     setDfMemo("");
-    setDfMonths([defaultMonth]);
-    setDfOriginalMonth(null);
     setDfSplitMode("equal");
     setDfMyRatio(50);
     setDfPartnerRatio(50);
@@ -553,8 +533,6 @@ export default function BudgetClient() {
     setDfName(item.name);
     setDfAmount(item.amount);
     setDfMemo(item.memo || "");
-    setDfMonths([item.month]);
-    setDfOriginalMonth(item.month);
 
     const ratio = item.splitRatio ?? 50;
     if (ratio === 50) {
@@ -580,7 +558,7 @@ export default function BudgetClient() {
     try {
       showSpinner();
       await deleteDefaultBudget(id);
-      await loadDefaultBudgets(coupleKey, defaultMonth);
+      await loadDefaultBudgets(coupleKey);
       showDialog("削除しました。");
     } catch (e) {
       console.error(e);
@@ -917,14 +895,14 @@ export default function BudgetClient() {
 
     const sections = sortOption === "category_desc"
       ? [
-          { id: "income", title: "収入 💰" },
-          { id: "variable", title: "変動費 🛒" },
-          { id: "fixed", title: "固定費 🏠" }
+          { id: "income", title: "収入" },
+          { id: "variable", title: "変動費" },
+          { id: "fixed", title: "固定費" }
         ]
       : [
-          { id: "fixed", title: "固定費 🏠" },
-          { id: "variable", title: "変動費 🛒" },
-          { id: "income", title: "収入 💰" }
+          { id: "fixed", title: "固定費" },
+          { id: "variable", title: "変動費" },
+          { id: "income", title: "収入" }
         ];
 
     const sortedList = sortBudgetItems(list, sortOption, categories, types);
@@ -934,7 +912,7 @@ export default function BudgetClient() {
       return (
         <div className={styles.emptyNotice}>
           {isDefault ? (
-            <p>この月のデフォルト設定はまだ登録されていないようです。フォームから最初の収支見込みを追加してみましょう！🌱</p>
+            <p>デフォルト収支はまだ登録されていないようです。下のフォームから毎月の基準となる収支見込みを追加してみましょう！🌱</p>
           ) : (
             <div className={styles.initialActionBlock}>
               <p>今月の実際の収支がまだ登録されていません。まずは下のボタンからデフォルトの収支を読み込んでみましょう！🌱</p>
@@ -960,7 +938,7 @@ export default function BudgetClient() {
         <tr key={item.id} className={styles.budgetRow}>
           <td className={styles.categoryCell}>{categoryName}</td>
           <td className={styles.typeCell}>{typeName}</td>
-          <td className={styles.dateCell}>{formatItemDisplayDate(item)}</td>
+          {!isDefault && <td className={styles.dateCell}>{formatItemDisplayDate(item)}</td>}
           <td className={styles.userCell}>
             <span className={item.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
               {itemUserName}
@@ -1013,7 +991,7 @@ export default function BudgetClient() {
               {categoryName}
             </span>
             <span className={styles.mobileTypeName}>{typeName}</span>
-            {displayDate !== "-" && (
+            {!isDefault && displayDate !== "-" && (
               <span className={styles.mobileDateText}>
                 <i className="fa-regular fa-clock"></i> {displayDate}
               </span>
@@ -1045,12 +1023,16 @@ export default function BudgetClient() {
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as BudgetSortOption)}
             >
-              <option value="date_desc">日時の降順（新しい順）</option>
-              <option value="date_asc">日時の昇順（古い順）</option>
-              <option value="amount_desc">金額の降順（高い順）</option>
-              <option value="amount_asc">金額の昇順（安い順）</option>
+              {!isDefault && (
+                <>
+                  <option value="date_desc">日時の降順（新しい順）</option>
+                  <option value="date_asc">日時の昇順（古い順）</option>
+                </>
+              )}
               <option value="category_asc">区分種別の昇順</option>
               <option value="category_desc">区分種別の降順</option>
+              <option value="amount_desc">金額の降順（高い順）</option>
+              <option value="amount_asc">金額の昇順（安い順）</option>
             </select>
           </div>
         </div>
@@ -1061,7 +1043,7 @@ export default function BudgetClient() {
             <tr>
               <th>区分</th>
               <th>種別</th>
-              <th>日時</th>
+              {!isDefault && <th>日時</th>}
               <th>人</th>
               <th>名前</th>
               <th>金額</th>
@@ -1082,21 +1064,14 @@ export default function BudgetClient() {
                 return (
                   <Fragment key={section.id}>
                     <tr className={styles.sectionHeaderRow}>
-                      <td colSpan={9}>{section.title}</td>
+                      <td colSpan={isDefault ? 8 : 9}>{section.title}</td>
                     </tr>
 
                     {typeGroups.map(tg => (
                       <Fragment key={tg.typeId || "unknown"}>
                         <tr className={styles.typeHeaderRow}>
-                          <td colSpan={9}>
-                            <div className={styles.typeHeaderContent}>
-                              <span className={styles.typeHeaderLabel}>
-                                <i className="fa-solid fa-tag"></i> {tg.typeName}
-                              </span>
-                              <span className={styles.typeHeaderSummary}>
-                                小計: <strong>{formatCurrency(tg.totalAmount)}</strong>
-                              </span>
-                            </div>
+                          <td colSpan={isDefault ? 8 : 9}>
+                            <span className={styles.typeHeaderLabel}>{tg.typeName}</span>
                           </td>
                         </tr>
                         {tg.items.map(renderBudgetRow)}
@@ -1104,7 +1079,7 @@ export default function BudgetClient() {
                     ))}
 
                     <tr className={styles.subtotalRow}>
-                      <td colSpan={3} className={styles.subtotalLabel}>小計</td>
+                      <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>小計</td>
                       <td colSpan={6} className={styles.subtotalValue}>
                         <span className={styles.subtotalPerson}>{myName}: <strong>{formatCurrency(subtotals.my)}</strong></span>
                         {partnerUser && (
@@ -1124,24 +1099,8 @@ export default function BudgetClient() {
                     {dateGroups.map(dg => (
                       <Fragment key={dg.key}>
                         <tr className={styles.dateHeaderRow}>
-                          <td colSpan={9}>
-                            <div className={styles.dateHeaderContent}>
-                              <span className={styles.dateHeaderLabel}>
-                                <i className="fa-regular fa-calendar-days"></i> {dg.label}
-                              </span>
-                              <span className={styles.dateHeaderSummary}>
-                                {dg.dayExpense > 0 && (
-                                  <span className={styles.dateDayExpense}>
-                                    支出: <strong>{formatCurrency(dg.dayExpense)}</strong>
-                                  </span>
-                                )}
-                                {dg.dayIncome > 0 && (
-                                  <span className={styles.dateDayIncome}>
-                                    収入: <strong>{formatCurrency(dg.dayIncome)}</strong>
-                                  </span>
-                                )}
-                              </span>
-                            </div>
+                          <td colSpan={isDefault ? 8 : 9}>
+                            <span className={styles.dateHeaderLabel}>{dg.label}</span>
                           </td>
                         </tr>
                         {dg.items.map(renderBudgetRow)}
@@ -1149,7 +1108,7 @@ export default function BudgetClient() {
                     ))}
 
                     <tr className={styles.subtotalRow}>
-                      <td colSpan={3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                      <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
                       <td colSpan={6} className={styles.subtotalValue}>
                         <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
                         <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
@@ -1165,7 +1124,7 @@ export default function BudgetClient() {
                 {sortedList.map(renderBudgetRow)}
 
                 <tr className={styles.subtotalRow}>
-                  <td colSpan={3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                  <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
                   <td colSpan={6} className={styles.subtotalValue}>
                     <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
                     <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
@@ -1192,14 +1151,7 @@ export default function BudgetClient() {
                   <div className={styles.mobileSectionTitle}>{section.title}</div>
                   {typeGroups.map(tg => (
                     <div key={tg.typeId || "unknown"} className={styles.mobileTypeGroup}>
-                      <div className={styles.mobileTypeHeader}>
-                        <span className={styles.typeHeaderLabel}>
-                          <i className="fa-solid fa-tag"></i> {tg.typeName}
-                        </span>
-                        <span className={styles.typeHeaderSummary}>
-                          {formatCurrency(tg.totalAmount)}
-                        </span>
-                      </div>
+                      <div className={styles.mobileTypeHeader}>{tg.typeName}</div>
                       {tg.items.map(renderMobileCard)}
                     </div>
                   ))}
@@ -1232,23 +1184,7 @@ export default function BudgetClient() {
                 <div className={styles.mobileSection}>
                   {dateGroups.map(dg => (
                     <div key={dg.key} className={styles.mobileDateGroup}>
-                      <div className={styles.mobileDateHeader}>
-                        <span className={styles.dateHeaderLabel}>
-                          <i className="fa-regular fa-calendar-days"></i> {dg.label}
-                        </span>
-                        <span className={styles.dateHeaderSummary}>
-                          {dg.dayExpense > 0 && (
-                            <span className={styles.dateDayExpense}>
-                              支出: <strong>{formatCurrency(dg.dayExpense)}</strong>
-                            </span>
-                          )}
-                          {dg.dayIncome > 0 && (
-                            <span className={styles.dateDayIncome}>
-                              収入: <strong>{formatCurrency(dg.dayIncome)}</strong>
-                            </span>
-                          )}
-                        </span>
-                      </div>
+                      <div className={styles.mobileDateHeader}>{dg.label}</div>
                       {dg.items.map(renderMobileCard)}
                     </div>
                   ))}
@@ -1344,7 +1280,7 @@ export default function BudgetClient() {
       {/* 収支サマリーカード */}
       <div className={styles.summaryCard}>
         <div className={styles.summaryTitle}>
-          <i className="fa-solid fa-chart-pie"></i> {activeTab === "actual" ? `${actualYear}年${actualMonth}月` : `${defaultMonth}月`} の収支要約
+          <i className="fa-solid fa-chart-pie"></i> {activeTab === "actual" ? `${actualYear}年${actualMonth}月` : "デフォルト"} の収支要約
         </div>
         <div className={styles.summaryGrid}>
           <div className={styles.summaryItem}>
@@ -1788,19 +1724,6 @@ export default function BudgetClient() {
 
       {activeTab === "default" && (
         <div className={styles.contentBlock}>
-          {/* 月選択タブ (1〜12月) */}
-          <div className={styles.monthSelectorScroll}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-              <button
-                key={m}
-                className={`${styles.monthTabBtn} ${defaultMonth === m ? styles.monthTabActive : ""}`}
-                onClick={() => handleDefaultMonthChange(m)}
-              >
-                {m}月
-              </button>
-            ))}
-          </div>
-
           {/* 表表示 */}
           {renderBudgetTable(defaultBudgets, handleDeleteDefaultItem, handleEditDefault, true)}
 
@@ -1837,60 +1760,6 @@ export default function BudgetClient() {
                         {partnerName}
                       </label>
                     )}
-                  </div>
-                </div>
-
-                {/* 対象月 */}
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>対象月 (複数選択可)</label>
-                  <div className={styles.checkboxGroup}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
-                      const isOriginal = dfId && m === dfOriginalMonth;
-                      const isChecked = dfMonths.includes(m);
-                      return (
-                        <label key={m} className={`${styles.checkboxLabel} ${isOriginal ? styles.disabledLabel : ""}`}>
-                          <input
-                            type="checkbox"
-                            value={m}
-                            checked={isChecked}
-                            disabled={!!isOriginal}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setDfMonths([...dfMonths, m].sort((a, b) => a - b));
-                              } else {
-                                setDfMonths(dfMonths.filter((x) => x !== m));
-                              }
-                            }}
-                          />
-                          {m}月
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className={styles.checkboxActions}>
-                    <button
-                      type="button"
-                      className={styles.miniBtn}
-                      onClick={() => {
-                        const allMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-                        setDfMonths(allMonths);
-                      }}
-                    >
-                      すべて選択
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.miniBtn}
-                      onClick={() => {
-                        if (dfOriginalMonth !== null) {
-                          setDfMonths([dfOriginalMonth]);
-                        } else {
-                          setDfMonths([]);
-                        }
-                      }}
-                    >
-                      選択解除
-                    </button>
                   </div>
                 </div>
 
@@ -2060,12 +1929,14 @@ export default function BudgetClient() {
               </button>
             </div>
             <div className={styles.modalBody}>
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>日付:</span>
-                <span className={styles.detailValue}>
-                  {selectedBudget.date || (selectedBudget.updatedAt || selectedBudget.createdAt ? formatItemDate(selectedBudget.updatedAt || selectedBudget.createdAt) : "-")}
-                </span>
-              </div>
+              {activeTab === "actual" && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>日付:</span>
+                  <span className={styles.detailValue}>
+                    {selectedBudget.date || (selectedBudget.updatedAt || selectedBudget.createdAt ? formatItemDate(selectedBudget.updatedAt || selectedBudget.createdAt) : "-")}
+                  </span>
+                </div>
+              )}
               <div className={styles.detailRow}>
                 <span className={styles.detailLabel}>区分・種別:</span>
                 <span className={styles.detailValue}>

@@ -44,15 +44,14 @@ export async function getBudgetMasterData(): Promise<BudgetMasterData> {
 }
 
 /**
- * デフォルト収支の一覧を取得する
+ * デフォルト収支の一覧を取得する（単一化対応）
  */
-export async function getDefaultBudgets(coupleKey: string, month: number): Promise<DefaultBudget[]> {
+export async function getDefaultBudgets(coupleKey: string, _month?: number): Promise<DefaultBudget[]> {
   try {
     const colRef = collection(db, "defaultBudgets");
     const q = query(
       colRef,
-      where("coupleKey", "==", coupleKey),
-      where("month", "==", month)
+      where("coupleKey", "==", coupleKey)
     );
     const snap = await getDocs(q);
     return snap.docs.map(doc => toPlainObject(doc) as DefaultBudget);
@@ -148,7 +147,7 @@ export async function deleteActualBudget(id: string): Promise<void> {
  * デフォルト収支設定から実際収支をコピーして作成する
  */
 export async function copyDefaultToActual(coupleKey: string, year: number, month: number): Promise<void> {
-  const defaults = await getDefaultBudgets(coupleKey, month);
+  const defaults = await getDefaultBudgets(coupleKey);
   const now = Date.now();
   const d = new Date(now);
   const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

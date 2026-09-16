@@ -380,7 +380,7 @@ export interface DefaultBudget {
   id: string;
   coupleKey: string; // 共通キー (uid1_uid2 など)
   uid: string; // 対象者 (たぴ / まい)
-  month: number; // 1〜12 (対象月)
+  month?: number; // 廃止 (互換用)
   category: string; // 区分ID ("fixed", "variable", "income")
   type: string; // 種別ID
   name: string; // 項目名

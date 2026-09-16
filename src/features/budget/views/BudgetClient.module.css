@@ -408,12 +408,12 @@
 }
 
 .sectionHeaderRow td {
-  background: linear-gradient(90deg, #fbf6fc, white);
-  font-weight: bold;
-  color: #8e24aa;
+  background: transparent;
+  font-weight: 700;
+  color: #4a3e56;
   font-size: 14px;
-  border-bottom: 1px solid #e1bee7;
-  padding: 12px 16px;
+  border-bottom: 1px solid #ede7f6;
+  padding: 12px 16px 6px;
 }
 
 .budgetRow:hover {
@@ -819,12 +819,10 @@
 
 .mobileSectionTitle {
   font-size: 14px;
-  font-weight: bold;
-  color: #8e24aa;
-  padding: 8px 12px;
-  background: #fbf6fc;
-  border-radius: 10px;
-  margin-bottom: 8px;
+  font-weight: 700;
+  color: #4a3e56;
+  padding: 4px 2px;
+  margin-bottom: 6px;
 }
 
 .mobileCard {
@@ -1667,126 +1665,56 @@
   }
 }
 
-/* 日時グループ見出し（PCテーブル） - 控えめなデザイン */
+/* 日時グループ見出し（PCテーブル） - メモ一覧風のシンプルな太字 */
 .dateHeaderRow td {
-  background: #fcfbfe;
+  background: transparent;
   border-bottom: 1px solid #ede7f6;
-  padding: 6px 16px;
-}
-
-.dateHeaderContent {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  padding: 10px 16px 6px;
 }
 
 .dateHeaderLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a3e56;
 }
 
-.dateHeaderLabel i {
-  color: #999;
-  font-size: 11px;
-}
-
-.dateHeaderSummary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 11px;
-}
-
-.dateDayExpense {
-  color: #777;
-}
-
-.dateDayExpense strong {
-  font-family: monospace;
-  font-weight: 600;
-  color: #c2185b;
-}
-
-.dateDayIncome {
-  color: #777;
-}
-
-.dateDayIncome strong {
-  font-family: monospace;
-  font-weight: 600;
-  color: #00796b;
-}
-
-/* 日時グループ見出し（モバイル） - 控えめなデザイン */
+/* 日時グループ見出し（モバイル） - メモ一覧風のシンプルな太字 */
 .mobileDateGroup {
   margin-bottom: 12px;
 }
 
 .mobileDateHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fbfafd;
-  border-left: 2.5px solid #d1c4e9;
-  padding: 5px 10px;
-  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a3e56;
+  padding: 4px 2px;
   margin-bottom: 6px;
 }
 
-/* 種別グループ見出し（PCテーブル） */
+/* 種別グループ見出し（PCテーブル） - メモ一覧風のシンプルな太字 */
 .typeHeaderRow td {
-  background: #fbf9fd;
-  border-bottom: 1px dashed #e8dff0;
-  padding: 8px 16px 8px 24px;
-}
-
-.typeHeaderContent {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  background: transparent;
+  border-bottom: 1px dashed #ede7f6;
+  padding: 8px 16px 4px 20px;
 }
 
 .typeHeaderLabel {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: #6a4c93;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  color: #4a3e56;
 }
 
-.typeHeaderSummary {
-  font-size: 11px;
-  color: #777;
-}
-
-.typeHeaderSummary strong {
-  font-family: monospace;
-  color: #333;
-  font-weight: 700;
-}
-
-/* 種別グループ見出し（モバイル） */
+/* 種別グループ見出し（モバイル） - メモ一覧風のシンプルな太字 */
 .mobileTypeGroup {
   margin-bottom: 10px;
 }
 
 .mobileTypeHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fdfafd;
-  border-left: 3px solid #b39ddb;
-  padding: 6px 12px;
-  border-radius: 6px;
-  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a3e56;
+  padding: 4px 2px;
+  margin-bottom: 4px;
 }
 
 /* 必須バッジ */
