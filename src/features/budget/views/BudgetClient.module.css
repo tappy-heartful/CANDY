@@ -1225,10 +1225,18 @@
   align-items: center;
   margin-bottom: 24px;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .headerRow :global(.card-title-main) {
   margin-bottom: 0 !important;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .settingsMenuBtn {
@@ -1254,9 +1262,29 @@
   transform: translateY(-1px);
 }
 
-@media (max-width: 480px) {
+.settingsMenuBtnActive {
+  background: #7b5ba0;
+  border-color: #7b5ba0;
+  color: white;
+  box-shadow: 0 2px 8px rgba(123, 91, 160, 0.25);
+}
+
+.settingsMenuBtnActive:hover {
+  background: #6a4c93;
+  border-color: #6a4c93;
+  color: white;
+}
+
+@media (max-width: 600px) {
   .headerRow {
-    flex-direction: row;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
   }
   .settingsMenuBtn {
     padding: 8px 12px;

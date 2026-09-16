@@ -4,7 +4,7 @@ import { useEffect, useState, Fragment, useRef } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
+import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./BudgetClient.module.css";
@@ -17,6 +17,10 @@ import {
   saveActualBudget,
   deleteActualBudget,
   copyDefaultToActual,
+  getMonthlyBudgets,
+  saveMonthlyBudget,
+  deleteMonthlyBudget,
+  copyDefaultToMonthlyBudget,
   updateBudgetMasterData,
   getBudgetSettlementProof,
   uploadBudgetSettlementProof,
@@ -57,7 +61,7 @@ export default function BudgetClient() {
   const [sortOption, setSortOption] = useState<BudgetSortOption>("date_desc");
 
   // 画面タブ
-  const [activeTab, setActiveTab] = useState<"actual" | "default">("actual");
+  const [activeTab, setActiveTab] = useState<"actual" | "monthly" | "default">("actual");
 
   // ロード状態
   const [isLoading, setIsLoading] = useState(true);
@@ -100,6 +104,22 @@ export default function BudgetClient() {
   const [actSplitMode, setActSplitMode] = useState<"equal" | "custom">("equal");
   const [actMyRatio, setActMyRatio] = useState<number | "">(50);
   const [actPartnerRatio, setActPartnerRatio] = useState<number | "">(50);
+
+  // 毎月の予算データ
+  const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyBudget[]>([]);
+
+  // 毎月の予算フォーム
+  const [mbId, setMbId] = useState<string | undefined>(undefined);
+  const [mbTargetUid, setMbTargetUid] = useState<string>("");
+  const [mbCategory, setMbCategory] = useState<string>("");
+  const [mbType, setMbType] = useState<string>("");
+  const [mbName, setMbName] = useState<string>("");
+  const [mbAmount, setMbAmount] = useState<number | "">("");
+  const [mbMemo, setMbMemo] = useState<string>("");
+  const [showMbForm, setShowMbForm] = useState<boolean>(false);
+  const [mbSplitMode, setMbSplitMode] = useState<"equal" | "custom">("equal");
+  const [mbMyRatio, setMbMyRatio] = useState<number | "">(50);
+  const [mbPartnerRatio, setMbPartnerRatio] = useState<number | "">(50);
 
   // 詳細モーダル用
   const [selectedBudget, setSelectedBudget] = useState<any | null>(null);
@@ -146,9 +166,20 @@ export default function BudgetClient() {
     }
   }, [actCategory, types]);
 
-  // デフォルト収支タブ選択時は日時のソートを適用せず、区分種別の昇順にする
   useEffect(() => {
-    if (activeTab === "default" && (sortOption === "date_desc" || sortOption === "date_asc")) {
+    if (mbCategory) {
+      const filtered = types.filter(t => t.categoryId === mbCategory);
+      if (filtered.length > 0) {
+        setMbType(filtered[0].id);
+      } else {
+        setMbType("");
+      }
+    }
+  }, [mbCategory, types]);
+
+  // デフォルト収支タブまたは毎月予算タブ選択時は日時のソートを適用せず、区分種別の昇順にする
+  useEffect(() => {
+    if ((activeTab === "default" || activeTab === "monthly") && (sortOption === "date_desc" || sortOption === "date_asc")) {
       setSortOption("category_asc");
     }
   }, [activeTab, sortOption]);
@@ -381,6 +412,12 @@ export default function BudgetClient() {
     setActualBudgets(data);
   };
 
+  const loadMonthlyBudgets = async (cKey: string, year: number, month: number) => {
+    if (!cKey) return;
+    const data = await getMonthlyBudgets(cKey, year, month);
+    setMonthlyBudgets(data);
+  };
+
   const loadSettlementProof = async (cKey: string, year: number, month: number) => {
     if (!cKey) return;
     const proof = await getBudgetSettlementProof(cKey, year, month);
@@ -398,6 +435,7 @@ export default function BudgetClient() {
       if (master.categories.length > 0) {
         setDfCategory(master.categories[0].id);
         setActCategory(master.categories[0].id);
+        setMbCategory(master.categories[0].id);
       }
 
       const partner = await getPartnerData(user.uid);
@@ -411,10 +449,12 @@ export default function BudgetClient() {
 
       setDfTargetUid(user.uid);
       setActTargetUid(user.uid);
+      setMbTargetUid(user.uid);
 
       await Promise.all([
         loadDefaultBudgets(cKey),
         loadActualBudgets(cKey, actualYear, actualMonth),
+        loadMonthlyBudgets(cKey, actualYear, actualMonth),
         loadSettlementProof(cKey, actualYear, actualMonth)
       ]);
     } catch (e) {
@@ -439,6 +479,7 @@ export default function BudgetClient() {
       showSpinner();
       await Promise.all([
         loadActualBudgets(coupleKey, year, month),
+        loadMonthlyBudgets(coupleKey, year, month),
         loadSettlementProof(coupleKey, year, month)
       ]);
       hideSpinner();
@@ -701,6 +742,126 @@ export default function BudgetClient() {
     }
   };
 
+  // 毎月の予算の保存
+  const handleSaveMonthly = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!coupleKey || !mbTargetUid || !mbCategory || !mbType || !mbName || mbAmount === "") {
+      showDialog("入力項目に不足があるようです。ご確認ください。");
+      return;
+    }
+
+    let splitRatio = 50;
+    if (mbCategory !== "income") {
+      if (mbSplitMode === "equal") {
+        splitRatio = 50;
+      } else {
+        const myRatio = Number(mbMyRatio) || 0;
+        const partnerRatio = Number(mbPartnerRatio) || 0;
+        if (myRatio + partnerRatio !== 100) {
+          showDialog("負担割合の合計が100%になるように設定してください。");
+          return;
+        }
+        splitRatio = mbTargetUid === user?.uid ? myRatio : partnerRatio;
+      }
+    }
+    try {
+      showSpinner();
+      await saveMonthlyBudget({
+        id: mbId,
+        coupleKey,
+        uid: mbTargetUid,
+        year: actualYear,
+        month: actualMonth,
+        category: mbCategory,
+        type: mbType,
+        name: mbName,
+        amount: Number(mbAmount),
+        memo: mbMemo,
+        splitRatio
+      });
+      resetMbForm();
+      setShowMbForm(false);
+      await loadMonthlyBudgets(coupleKey, actualYear, actualMonth);
+      showDialog("毎月の予算を保存しました✨");
+    } catch (e) {
+      console.error(e);
+      errorLog("毎月の予算保存", e);
+      showDialog("保存がうまくいかなかったようです。");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  const resetMbForm = () => {
+    setMbId(undefined);
+    setMbName("");
+    setMbAmount("");
+    setMbMemo("");
+    setMbSplitMode("equal");
+    setMbMyRatio(50);
+    setMbPartnerRatio(50);
+  };
+
+  const handleEditMonthly = (item: MonthlyBudget) => {
+    setMbId(item.id);
+    setMbTargetUid(item.uid);
+    setMbCategory(item.category);
+    setMbType(item.type);
+    setMbName(item.name);
+    setMbAmount(item.amount);
+    setMbMemo(item.memo || "");
+
+    const ratio = item.splitRatio ?? 50;
+    if (ratio === 50) {
+      setMbSplitMode("equal");
+      setMbMyRatio(50);
+      setMbPartnerRatio(50);
+    } else {
+      setMbSplitMode("custom");
+      if (item.uid === user?.uid) {
+        setMbMyRatio(ratio);
+        setMbPartnerRatio(100 - ratio);
+      } else {
+        setMbMyRatio(100 - ratio);
+        setMbPartnerRatio(ratio);
+      }
+    }
+
+    setShowMbForm(true);
+  };
+
+  const handleDeleteMonthlyItem = async (id: string) => {
+    try {
+      showSpinner();
+      await deleteMonthlyBudget(id);
+      await loadMonthlyBudgets(coupleKey, actualYear, actualMonth);
+      showDialog("削除しました。");
+    } catch (e) {
+      console.error(e);
+      errorLog("毎月の予算項目削除", e);
+      showDialog("削除がうまくいかなかったようです。");
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  // デフォルト収支から毎月の予算へ読み込む
+  const handleCopyDefaultToMonthly = async () => {
+    if (!coupleKey) return;
+    try {
+      showSpinner();
+      await copyDefaultToMonthlyBudget(coupleKey, actualYear, actualMonth);
+      await loadMonthlyBudgets(coupleKey, actualYear, actualMonth);
+      showDialog("今月のデフォルト収支から予算を設定しました！🏡");
+    } catch (e) {
+      console.error(e);
+      errorLog("デフォルト収支から予算へコピー", e);
+      showDialog("データのコピーがうまくいかなかったようです。");
+    } finally {
+      hideSpinner();
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return `¥${amount.toLocaleString()}`;
   };
@@ -889,9 +1050,15 @@ export default function BudgetClient() {
     }
   };
 
-  const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
+  const renderBudgetTable = (
+    list: any[],
+    onDelete: (id: string) => void,
+    onEdit: (item: any) => void,
+    mode: "actual" | "monthly" | "default"
+  ) => {
+    const hideDate = mode !== "actual";
     const isCategorySort = sortOption === "category_asc" || sortOption === "category_desc";
-    const isDateSort = sortOption === "date_desc" || sortOption === "date_asc";
+    const isDateSort = !hideDate && (sortOption === "date_desc" || sortOption === "date_asc");
 
     const sections = sortOption === "category_desc"
       ? [
@@ -911,8 +1078,15 @@ export default function BudgetClient() {
     if (!hasData) {
       return (
         <div className={styles.emptyNotice}>
-          {isDefault ? (
+          {mode === "default" ? (
             <p>デフォルト収支はまだ登録されていないようです。下のフォームから毎月の基準となる収支見込みを追加してみましょう！🌱</p>
+          ) : mode === "monthly" ? (
+            <div className={styles.initialActionBlock}>
+              <p>今月の予算がまだ登録されていません。まずは下のボタンからデフォルトの収支を読み込んでみましょう！🌱</p>
+              <button className={styles.copyBtn} onClick={handleCopyDefaultToMonthly}>
+                <i className="fa-solid fa-cloud-arrow-down"></i> デフォルト収支から読み込む
+              </button>
+            </div>
           ) : (
             <div className={styles.initialActionBlock}>
               <p>今月の実際の収支がまだ登録されていません。まずは下のボタンからデフォルトの収支を読み込んでみましょう！🌱</p>
@@ -938,7 +1112,7 @@ export default function BudgetClient() {
         <tr key={item.id} className={styles.budgetRow}>
           <td className={styles.categoryCell}>{categoryName}</td>
           <td className={styles.typeCell}>{typeName}</td>
-          {!isDefault && <td className={styles.dateCell}>{formatItemDisplayDate(item)}</td>}
+          {!hideDate && <td className={styles.dateCell}>{formatItemDisplayDate(item)}</td>}
           <td className={styles.userCell}>
             <span className={item.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
               {itemUserName}
@@ -991,7 +1165,7 @@ export default function BudgetClient() {
               {categoryName}
             </span>
             <span className={styles.mobileTypeName}>{typeName}</span>
-            {!isDefault && displayDate !== "-" && (
+            {!hideDate && displayDate !== "-" && (
               <span className={styles.mobileDateText}>
                 <i className="fa-regular fa-clock"></i> {displayDate}
               </span>
@@ -1023,7 +1197,7 @@ export default function BudgetClient() {
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as BudgetSortOption)}
             >
-              {!isDefault && (
+              {!hideDate && (
                 <>
                   <option value="date_desc">日時の降順（新しい順）</option>
                   <option value="date_asc">日時の昇順（古い順）</option>
@@ -1043,7 +1217,7 @@ export default function BudgetClient() {
             <tr>
               <th>区分</th>
               <th>種別</th>
-              {!isDefault && <th>日時</th>}
+              {!hideDate && <th>日時</th>}
               <th>人</th>
               <th>名前</th>
               <th>金額</th>
@@ -1064,13 +1238,13 @@ export default function BudgetClient() {
                 return (
                   <Fragment key={section.id}>
                     <tr className={styles.sectionHeaderRow}>
-                      <td colSpan={isDefault ? 8 : 9}>{section.title}</td>
+                      <td colSpan={hideDate ? 8 : 9}>{section.title}</td>
                     </tr>
 
                     {typeGroups.map(tg => (
                       <Fragment key={tg.typeId || "unknown"}>
                         <tr className={styles.typeHeaderRow}>
-                          <td colSpan={isDefault ? 8 : 9}>
+                          <td colSpan={hideDate ? 8 : 9}>
                             <span className={styles.typeHeaderLabel}>{tg.typeName}</span>
                           </td>
                         </tr>
@@ -1079,7 +1253,7 @@ export default function BudgetClient() {
                     ))}
 
                     <tr className={styles.subtotalRow}>
-                      <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>小計</td>
+                      <td colSpan={hideDate ? 2 : 3} className={styles.subtotalLabel}>小計</td>
                       <td colSpan={6} className={styles.subtotalValue}>
                         <span className={styles.subtotalPerson}>{myName}: <strong>{formatCurrency(subtotals.my)}</strong></span>
                         {partnerUser && (
@@ -1099,7 +1273,7 @@ export default function BudgetClient() {
                     {dateGroups.map(dg => (
                       <Fragment key={dg.key}>
                         <tr className={styles.dateHeaderRow}>
-                          <td colSpan={isDefault ? 8 : 9}>
+                          <td colSpan={hideDate ? 8 : 9}>
                             <span className={styles.dateHeaderLabel}>{dg.label}</span>
                           </td>
                         </tr>
@@ -1108,7 +1282,7 @@ export default function BudgetClient() {
                     ))}
 
                     <tr className={styles.subtotalRow}>
-                      <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                      <td colSpan={hideDate ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
                       <td colSpan={6} className={styles.subtotalValue}>
                         <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
                         <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
@@ -1124,7 +1298,7 @@ export default function BudgetClient() {
                 {sortedList.map(renderBudgetRow)}
 
                 <tr className={styles.subtotalRow}>
-                  <td colSpan={isDefault ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                  <td colSpan={hideDate ? 2 : 3} className={styles.subtotalLabel}>区分別小計・合計</td>
                   <td colSpan={6} className={styles.subtotalValue}>
                     <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
                     <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
@@ -1247,7 +1421,7 @@ export default function BudgetClient() {
     return <div className="page-container" />;
   }
 
-  const activeBudgets = activeTab === "actual" ? actualBudgets : defaultBudgets;
+  const activeBudgets = activeTab === "actual" ? actualBudgets : activeTab === "monthly" ? monthlyBudgets : defaultBudgets;
   const summary = getOverallSummary(activeBudgets);
 
   return (
@@ -1256,31 +1430,60 @@ export default function BudgetClient() {
         <div className="card-title-main">
           <i className="fa-solid fa-wallet"></i> 二人の家計簿
         </div>
-        <button className={styles.settingsMenuBtn} onClick={() => setShowSettingsModal(true)}>
-          <i className="fa-solid fa-sliders"></i> 区分・種別の設定
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.settingsMenuBtn} onClick={() => setShowSettingsModal(true)}>
+            <i className="fa-solid fa-sliders"></i> 区分・種別の設定
+          </button>
+          <button
+            className={`${styles.settingsMenuBtn} ${activeTab === "default" ? styles.settingsMenuBtnActive : ""}`}
+            onClick={() => {
+              setActiveTab("default");
+              if (sortOption === "date_desc" || sortOption === "date_asc") {
+                setSortOption("category_asc");
+              }
+            }}
+          >
+            <i className="fa-solid fa-gear"></i> デフォルト収支設定
+          </button>
+        </div>
       </div>
 
       {/* タブ切り替え */}
       <div className={styles.tabContainer}>
         <button
           className={`${styles.tabBtn} ${activeTab === "actual" ? styles.tabActive : ""}`}
-          onClick={() => setActiveTab("actual")}
+          onClick={() => {
+            setActiveTab("actual");
+            if (sortOption !== "date_desc" && sortOption !== "date_asc") {
+              setSortOption("date_desc");
+            }
+          }}
         >
           <i className="fa-solid fa-calendar-days"></i> 毎月の収支登録
         </button>
         <button
-          className={`${styles.tabBtn} ${activeTab === "default" ? styles.tabActive : ""}`}
-          onClick={() => setActiveTab("default")}
+          className={`${styles.tabBtn} ${activeTab === "monthly" ? styles.tabActive : ""}`}
+          onClick={() => {
+            setActiveTab("monthly");
+            if (sortOption === "date_desc" || sortOption === "date_asc") {
+              setSortOption("category_asc");
+            }
+          }}
         >
-          <i className="fa-solid fa-gear"></i> デフォルト収支設定
+          <i className="fa-solid fa-scale-balanced"></i> 毎月の予算設定
         </button>
       </div>
 
       {/* 収支サマリーカード */}
       <div className={styles.summaryCard}>
         <div className={styles.summaryTitle}>
-          <i className="fa-solid fa-chart-pie"></i> {activeTab === "actual" ? `${actualYear}年${actualMonth}月` : "デフォルト"} の収支要約
+          <i className="fa-solid fa-chart-pie"></i> {
+            activeTab === "actual"
+              ? `${actualYear}年${actualMonth}月 の収支要約`
+              : activeTab === "monthly"
+              ? `${actualYear}年${actualMonth}月 の予算要約`
+              : "デフォルト の収支要約"
+          }
         </div>
         <div className={styles.summaryGrid}>
           <div className={styles.summaryItem}>
@@ -1292,7 +1495,7 @@ export default function BudgetClient() {
             <span className={`${styles.summaryVal} ${styles.expenseVal}`}>{formatCurrency(summary.expense)}</span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>余剰金</span>
+            <span className={styles.summaryLabel}>{activeTab === "monthly" ? "予算余剰金" : "余剰金"}</span>
             <span className={`${styles.summaryVal} ${summary.balance >= 0 ? styles.plusVal : styles.minusVal}`}>
               {formatCurrency(summary.balance)}
             </span>
@@ -1718,14 +1921,253 @@ export default function BudgetClient() {
       )}
 
           {/* 表表示 */}
-          {renderBudgetTable(actualBudgets, handleDeleteActualItem, handleEditActual, false)}
+          {renderBudgetTable(actualBudgets, handleDeleteActualItem, handleEditActual, "actual")}
+        </div>
+      )}
+
+      {activeTab === "monthly" && (
+        <div className={styles.contentBlock}>
+          {/* 月選択 */}
+          <div className={styles.monthSelector}>
+            <button className={styles.monthNavBtn} onClick={handlePrevMonth}>
+              <i className="fa-solid fa-chevron-left"></i> 前月
+            </button>
+            <span className={styles.currentMonthDisplay}>
+              {actualYear}年 {actualMonth}月
+            </span>
+            <button className={styles.monthNavBtn} onClick={handleNextMonth}>
+              翌月 <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          {/* 新規登録フォームトグルボタン */}
+          {!showMbForm && (
+            <div className={styles.actionHeader}>
+              <button className={styles.addBtn} onClick={() => {
+                resetMbForm();
+                setShowMbForm(true);
+              }}>
+                <i className="fa-solid fa-plus"></i> 新しい予算を登録
+              </button>
+              <button className={styles.copyBtnSecondary} onClick={handleCopyDefaultToMonthly} title="デフォルト収支の内容をこの月の予算に反映します">
+                <i className="fa-solid fa-cloud-arrow-down"></i> デフォルトから読み込む
+              </button>
+            </div>
+          )}
+
+          {/* 毎月の予算登録モーダル */}
+          {showMbForm && (
+            <div className={styles.modalOverlay} onClick={() => {
+              setShowMbForm(false);
+              resetMbForm();
+            }}>
+              <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h2 className={styles.modalTitle}>
+                    <i className="fa-solid fa-pen-to-square"></i> {mbId ? `${actualYear}年${actualMonth}月の予算を編集` : `${actualYear}年${actualMonth}月の新しい予算を登録`}
+                  </h2>
+                  <button className={styles.modalClose} type="button" onClick={() => {
+                    setShowMbForm(false);
+                    resetMbForm();
+                  }}>
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveMonthly}>
+                  <div className={styles.formModalBody}>
+                    {/* 人 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>人</label>
+                      <div className={styles.radioGroup}>
+                        <label className={styles.radioLabel}>
+                          <input
+                            type="radio"
+                            name="mbTargetUid"
+                            value={user?.uid}
+                            checked={mbTargetUid === user?.uid}
+                            onChange={() => setMbTargetUid(user?.uid || "")}
+                          />
+                          {myName}
+                        </label>
+                        {partnerUser && (
+                          <label className={styles.radioLabel}>
+                            <input
+                              type="radio"
+                              name="mbTargetUid"
+                              value={partnerUser.id}
+                              checked={mbTargetUid === partnerUser.id}
+                              onChange={() => setMbTargetUid(partnerUser.id)}
+                            />
+                            {partnerName}
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 区分 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>区分</label>
+                      <select
+                        className={styles.appSelect}
+                        value={mbCategory}
+                        onChange={(e) => setMbCategory(e.target.value)}
+                      >
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 種別 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>種別</label>
+                      <select
+                        className={styles.appSelect}
+                        value={mbType}
+                        onChange={(e) => setMbType(e.target.value)}
+                      >
+                        {types.filter(t => t.categoryId === mbCategory).map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 名前 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>名前</label>
+                      <input
+                        type="text"
+                        className={styles.appInput}
+                        placeholder="例: 食費、日用品、家賃"
+                        value={mbName}
+                        onChange={(e) => setMbName(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    {/* 金額 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>金額 (円)</label>
+                      <input
+                        type="number"
+                        className={styles.appInput}
+                        placeholder="例: 10000"
+                        value={mbAmount}
+                        onChange={(e) => setMbAmount(e.target.value !== "" ? Number(e.target.value) : "")}
+                        required
+                      />
+                    </div>
+
+                    {/* 備考 */}
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>備考</label>
+                      <input
+                        type="text"
+                        className={styles.appInput}
+                        placeholder="例: 予算の上限など"
+                        value={mbMemo}
+                        onChange={(e) => setMbMemo(e.target.value)}
+                      />
+                    </div>
+
+                    {/* 負担設定 */}
+                    {mbCategory !== "income" && (
+                      <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
+                        <label className={styles.formLabel}>負担設定</label>
+                        <div className={styles.splitModeSelector}>
+                          <label className={styles.radioLabelInline}>
+                            <input
+                              type="radio"
+                              name="mbSplitMode"
+                              value="equal"
+                              checked={mbSplitMode === "equal"}
+                              onChange={() => setMbSplitMode("equal")}
+                            />
+                            折半 (5:5)
+                          </label>
+                          <label className={styles.radioLabelInline}>
+                            <input
+                              type="radio"
+                              name="mbSplitMode"
+                              value="custom"
+                              checked={mbSplitMode === "custom"}
+                              onChange={() => setMbSplitMode("custom")}
+                            />
+                            比率を指定
+                          </label>
+                        </div>
+                        {mbSplitMode === "custom" && (
+                          <div className={styles.ratioInputs}>
+                            <div className={styles.ratioInputWrapper}>
+                              <span>{myName}:</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                className={styles.ratioInput}
+                                value={mbMyRatio}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? "" : Number(e.target.value);
+                                  setMbMyRatio(val);
+                                  if (val !== "" && val >= 0 && val <= 100) {
+                                    setMbPartnerRatio(100 - val);
+                                  }
+                                }}
+                              />
+                              <span>%</span>
+                            </div>
+                            {partnerUser && (
+                              <div className={styles.ratioInputWrapper}>
+                                <span>{partnerName}:</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  className={styles.ratioInput}
+                                  value={mbPartnerRatio}
+                                  onChange={(e) => {
+                                    const val = e.target.value === "" ? "" : Number(e.target.value);
+                                    setMbPartnerRatio(val);
+                                    if (val !== "" && val >= 0 && val <= 100) {
+                                      setMbMyRatio(100 - val);
+                                    }
+                                  }}
+                                />
+                                <span>%</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.modalActions}>
+                    <button type="submit" className={styles.submitBtn}>
+                      <i className="fa-solid fa-check"></i> 保存する
+                    </button>
+                    <button type="button" className={styles.cancelBtn} onClick={() => {
+                      resetMbForm();
+                      setShowMbForm(false);
+                    }}>
+                      キャンセル
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* 表表示 */}
+          {renderBudgetTable(monthlyBudgets, handleDeleteMonthlyItem, handleEditMonthly, "monthly")}
         </div>
       )}
 
       {activeTab === "default" && (
         <div className={styles.contentBlock}>
           {/* 表表示 */}
-          {renderBudgetTable(defaultBudgets, handleDeleteDefaultItem, handleEditDefault, true)}
+          {renderBudgetTable(defaultBudgets, handleDeleteDefaultItem, handleEditDefault, "default")}
 
           {/* デフォルト収支登録フォーム */}
           <div className={styles.formCard}>
@@ -2020,17 +2462,22 @@ export default function BudgetClient() {
                 closeDetailModal();
                 if (activeTab === "actual") {
                   handleEditActual(selectedBudget);
+                } else if (activeTab === "monthly") {
+                  handleEditMonthly(selectedBudget);
                 } else {
                   handleEditDefault(selectedBudget);
                 }
               }}>
                 <i className="fa-solid fa-pen"></i> 編集する
               </button>
-              <button className={styles.modalDeleteBtn} onClick={() => {
-                if (window.confirm("この項目を削除してもよろしいですか？")) {
+              <button className={styles.modalDeleteBtn} onClick={async () => {
+                const confirmed = await showDialog("この項目を削除してもよろしいですか？");
+                if (confirmed) {
                   closeDetailModal();
                   if (activeTab === "actual") {
                     handleDeleteActualItem(selectedBudget.id);
+                  } else if (activeTab === "monthly") {
+                    handleDeleteMonthlyItem(selectedBudget.id);
                   } else {
                     handleDeleteDefaultItem(selectedBudget.id);
                   }

@@ -411,6 +411,22 @@ export interface ActualBudget {
   updatedAt: number;
 }
 
+export interface MonthlyBudget {
+  id: string;
+  coupleKey: string; // 共通キー
+  uid: string; // 対象者
+  year: number; // 年 (例: 2026)
+  month: number; // 月 (1〜12)
+  category: string; // 区分ID
+  type: string; // 種別ID
+  name: string; // 項目名
+  amount: number; // 金額
+  memo?: string; // 備考
+  splitRatio?: number; // 負担割合（支払者・対象者の負担率 %、0〜100、デフォルト50）
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ==========================================
 // メモ機能用データ型定義
 // ==========================================

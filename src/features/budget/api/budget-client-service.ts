@@ -1,6 +1,6 @@
 import { db, storage } from "@/src/lib/firebase";
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { BudgetMasterData, DefaultBudget, ActualBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
+import { BudgetMasterData, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
 import { toPlainObject } from "@/src/lib/firestore/utils";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -166,6 +166,90 @@ export async function copyDefaultToActual(coupleKey: string, year: number, month
         year,
         month,
         date: todayStr,
+        category: item.category,
+        type: item.type,
+        name: item.name,
+        amount: item.amount,
+        memo: item.memo || "",
+        splitRatio: item.splitRatio ?? 50,
+        createdAt: now,
+        updatedAt: now
+      })
+    )
+  );
+}
+
+/**
+ * 毎月の予算の一覧を取得する
+ */
+export async function getMonthlyBudgets(coupleKey: string, year: number, month: number): Promise<MonthlyBudget[]> {
+  try {
+    const colRef = collection(db, "monthlyBudgets");
+    const q = query(
+      colRef,
+      where("coupleKey", "==", coupleKey),
+      where("year", "==", year),
+      where("month", "==", month)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => toPlainObject(doc) as MonthlyBudget);
+  } catch (error) {
+    console.error("Error getting monthly budgets:", error);
+    return [];
+  }
+}
+
+/**
+ * 毎月の予算を保存する
+ */
+export async function saveMonthlyBudget(data: Omit<MonthlyBudget, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<void> {
+  const now = Date.now();
+  const cleaned = cleanUndefined(data);
+  if (data.id) {
+    const docRef = doc(db, "monthlyBudgets", data.id);
+    await setDoc(docRef, {
+      ...cleaned,
+      updatedAt: now
+    }, { merge: true });
+  } else {
+    const { id, ...rest } = cleaned;
+    const colRef = collection(db, "monthlyBudgets");
+    await addDoc(colRef, {
+      ...rest,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+}
+
+/**
+ * 毎月の予算を削除する
+ */
+export async function deleteMonthlyBudget(id: string): Promise<void> {
+  const docRef = doc(db, "monthlyBudgets", id);
+  await deleteDoc(docRef);
+}
+
+/**
+ * デフォルト収支設定から毎月の予算をコピーして初期設定する
+ */
+export async function copyDefaultToMonthlyBudget(coupleKey: string, year: number, month: number): Promise<void> {
+  const defaults = await getDefaultBudgets(coupleKey);
+  const now = Date.now();
+  const colRef = collection(db, "monthlyBudgets");
+
+  // すでに登録されている同一月の予算をすべて削除してからコピー（重複防止）
+  const existing = await getMonthlyBudgets(coupleKey, year, month);
+  await Promise.all(existing.map(item => deleteDoc(doc(db, "monthlyBudgets", item.id))));
+
+  // コピー処理
+  await Promise.all(
+    defaults.map(item =>
+      addDoc(colRef, {
+        coupleKey,
+        uid: item.uid,
+        year,
+        month,
         category: item.category,
         type: item.type,
         name: item.name,
