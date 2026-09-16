@@ -126,7 +126,9 @@ export default function HomeClient() {
       const allTodos = await getTodosForCalendar();
       const userTodos = allTodos.filter(t => {
         if (t.isCompleted) return false;
-        if (t.type !== "couple" && t.uid !== userId) return false;
+        const isCouple = (t.type || "").trim().toLowerCase() === "couple";
+        const isMe = t.uid === userId;
+        if (!isCouple && !isMe) return false;
         return true;
       });
 
@@ -220,16 +222,20 @@ export default function HomeClient() {
               if (e.endTime < currentHourMin) return false;
             }
             // 相手のみのイベントを除外（自分または2人のみ表示）
-            if (e.type !== "couple" && e.uid !== user.uid) return false;
+            const isCouple = (e.type || "").trim().toLowerCase() === "couple";
+            const isMe = e.uid === user.uid;
+            if (!isCouple && !isMe) return false;
 
             return true;
           });
 
           validEvents.sort((a, b) => {
-            if (a.isAllDay && !b.isAllDay) return 1;
-            if (!a.isAllDay && b.isAllDay) return -1;
-
+            // まず日付順で比較
             if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+
+            // 同一日なら終日予定を先にする
+            if (a.isAllDay && !b.isAllDay) return -1;
+            if (!a.isAllDay && b.isAllDay) return 1;
 
             if (a.startTime && b.startTime) {
               return a.startTime.localeCompare(b.startTime);
@@ -652,29 +658,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <DailyStatusCard
-            user={userData as FirestoreUser}
-            status={myDailyStatus}
-            isMe={true}
-            currentUser={userData as FirestoreUser}
-            partnerUser={partnerData}
-            onEdit={() => setIsDailyStatusModalOpen(true)}
-            onOpenHistory={() => router.push('/status-history')}
-            onStatusUpdate={handleStatusUpdate}
-          />
-          <DailyStatusCard
-            user={partnerData}
-            status={partnerDailyStatus}
-            isMe={false}
-            currentUser={userData as FirestoreUser}
-            partnerUser={partnerData}
-            onOpenHistory={() => router.push('/status-history')}
-            onSavePartnerComment={handleSavePartnerComment}
-            onStatusUpdate={handleStatusUpdate}
-          />
-        </div>
-
         {user && (
           <CalendarView
             currentUserId={user.uid}
@@ -695,7 +678,7 @@ export default function HomeClient() {
                 <div className={styles.notificationHeader}>
                   <i className={`fa-regular fa-calendar ${styles.notificationIcon}`} style={{ color: '#F7A8C4' }}></i>
                   <span className={styles.notificationText}>
-                    {userData?.nickname || "自分"}の直近のイベント
+                    直近のイベント
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
@@ -714,9 +697,10 @@ export default function HomeClient() {
                     else if (diffDays === 1) countdownText = "✨ 明日！";
 
                     // バッジ判定
+                    const isCouple = (e.type || "").trim().toLowerCase() === 'couple';
                     let badgeClass = styles.badgeCouple;
                     let typeLabel = "2人";
-                    if (e.type !== 'couple') {
+                    if (!isCouple) {
                       if (e.uid === user?.uid) {
                         badgeClass = styles.badgeMe;
                         typeLabel = userData?.nickname || "自分";
@@ -764,14 +748,15 @@ export default function HomeClient() {
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-triangle-exclamation ${styles.notificationIcon}`} style={{ color: '#c62828' }}></i>
                   <span className={styles.notificationText} style={{ color: '#c62828' }}>
-                    {userData?.nickname || "自分"}の期限切れのTODO
+                    期限切れのTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
                   {overdueTodos.map(t => {
+                    const isCouple = (t.type || "").trim().toLowerCase() === 'couple';
                     let badgeClass = styles.badgeCouple;
                     let typeLabel = "2人";
-                    if (t.type !== 'couple') {
+                    if (!isCouple) {
                       if (t.uid === user?.uid) {
                         badgeClass = styles.badgeMe;
                         typeLabel = userData?.nickname || "自分";
@@ -842,14 +827,15 @@ export default function HomeClient() {
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-list-check ${styles.notificationIcon}`} style={{ color: '#A0E7D2' }}></i>
                   <span className={styles.notificationText}>
-                    {userData?.nickname || "自分"}の直近のTODO
+                    直近のTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
                   {upcomingTodos.map(t => {
+                    const isCouple = (t.type || "").trim().toLowerCase() === 'couple';
                     let badgeClass = styles.badgeCouple;
                     let typeLabel = "2人";
-                    if (t.type !== 'couple') {
+                    if (!isCouple) {
                       if (t.uid === user?.uid) {
                         badgeClass = styles.badgeMe;
                         typeLabel = userData?.nickname || "自分";
@@ -925,14 +911,15 @@ export default function HomeClient() {
                 <div className={styles.notificationHeader}>
                   <i className={`fa-solid fa-calendar-minus ${styles.notificationIcon}`} style={{ color: '#9B7CC3' }}></i>
                   <span className={styles.notificationText}>
-                    {userData?.nickname || "自分"}の期限なしのTODO
+                    期限なしのTODO
                   </span>
                 </div>
                 <div className={styles.notificationItems}>
                   {noDeadlineTodos.map(t => {
+                    const isCouple = (t.type || "").trim().toLowerCase() === 'couple';
                     let badgeClass = styles.badgeCouple;
                     let typeLabel = "2人";
-                    if (t.type !== 'couple') {
+                    if (!isCouple) {
                       if (t.uid === user?.uid) {
                         badgeClass = styles.badgeMe;
                         typeLabel = userData?.nickname || "自分";
@@ -1030,6 +1017,29 @@ export default function HomeClient() {
           partnerId={partnerData?.id || null}
           currentUserId={user?.uid || ""}
         />
+
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <DailyStatusCard
+            user={userData as FirestoreUser}
+            status={myDailyStatus}
+            isMe={true}
+            currentUser={userData as FirestoreUser}
+            partnerUser={partnerData}
+            onEdit={() => setIsDailyStatusModalOpen(true)}
+            onOpenHistory={() => router.push('/status-history')}
+            onStatusUpdate={handleStatusUpdate}
+          />
+          <DailyStatusCard
+            user={partnerData}
+            status={partnerDailyStatus}
+            isMe={false}
+            currentUser={userData as FirestoreUser}
+            partnerUser={partnerData}
+            onOpenHistory={() => router.push('/status-history')}
+            onSavePartnerComment={handleSavePartnerComment}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        </div>
 
         {!loading && recentWishlist.length > 0 && (
           <div className={styles.notificationList} style={{ marginTop: '24px', marginBottom: '24px' }}>

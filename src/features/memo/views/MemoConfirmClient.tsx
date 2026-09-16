@@ -16,6 +16,11 @@ interface MemoConfirmClientProps {
   id: string;
 }
 
+const isUrlLine = (line: string): boolean => {
+  const trimmed = line.trim();
+  return /^https?:\/\//i.test(trimmed);
+};
+
 export default function MemoConfirmClient({ id }: MemoConfirmClientProps) {
   const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
@@ -36,7 +41,7 @@ export default function MemoConfirmClient({ id }: MemoConfirmClientProps) {
       setPartnerUser(partner);
 
       if (!memoData) {
-        showDialog("対象のメモを確認できませんでした。");
+        await showDialog("対象のメモを確認できませんでした。", true);
         router.push("/memo");
         return;
       }
@@ -49,7 +54,7 @@ export default function MemoConfirmClient({ id }: MemoConfirmClientProps) {
     } catch (e) {
       console.error(e);
       errorLog("メモ詳細読み込み", e);
-      showDialog("データの読み込み中に問題が発生したようです。");
+      await showDialog("データの読み込み中に問題が発生したようです。", true);
       router.push("/memo");
     } finally {
       setIsLoading(false);
@@ -84,13 +89,15 @@ export default function MemoConfirmClient({ id }: MemoConfirmClientProps) {
     showSpinner();
     try {
       await deleteMemo(memo.id);
-      showDialog("メモを削除しました。");
+      hideSpinner();
+      await showDialog("メモを削除しました。", true);
       router.push("/memo");
       router.refresh();
     } catch (e) {
       console.error(e);
       errorLog("メモ確認画面削除", e);
-      showDialog("削除できませんでした。恐れ入りますが、もう一度お試しください。");
+      hideSpinner();
+      await showDialog("削除できませんでした。恐れ入りますが、もう一度お試しください。", true);
     } finally {
       hideSpinner();
     }
@@ -145,7 +152,29 @@ export default function MemoConfirmClient({ id }: MemoConfirmClientProps) {
 
           <div className={styles.contentBody}>
             {memo.content ? (
-              memo.content
+              memo.content.split(/\r?\n/).map((line, index) => {
+                const trimmed = line.trim();
+                if (isUrlLine(trimmed)) {
+                  return (
+                    <div key={index} className={styles.linkLine}>
+                      <a
+                        href={trimmed}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.urlLink}
+                      >
+                        <i className={`fa-solid fa-arrow-up-right-from-square ${styles.linkIcon}`}></i>
+                        <span className={styles.linkText}>{trimmed}</span>
+                      </a>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={index} className={styles.textLine}>
+                    {line || <br />}
+                  </div>
+                );
+              })
             ) : (
               <span className={styles.emptyContent}>（メモの本文はありません）</span>
             )}

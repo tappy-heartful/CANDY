@@ -46,7 +46,7 @@ export default function MemoClient() {
     } catch (e) {
       console.error(e);
       errorLog("メモデータ読み込み", e);
-      showDialog("データの読み込み中に問題が発生したようです。");
+      await showDialog("データの読み込み中に問題が発生したようです。", true);
     } finally {
       setIsLoading(false);
       hideSpinner();

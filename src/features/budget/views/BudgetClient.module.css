@@ -1564,6 +1564,109 @@
   }
 }
 
+/* ソートコントロールUI */
+.tableControls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.sortContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #ece4f5;
+  box-shadow: 0 2px 8px rgba(155, 124, 195, 0.08);
+}
+
+.sortLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7b5ba0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sortSelect {
+  border: 1px solid #dcd1eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4a3e56;
+  background: #fdfbfe;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.sortSelect:focus {
+  border-color: #9B7CC3;
+  box-shadow: 0 0 0 2px rgba(155, 124, 195, 0.2);
+}
+
+/* 区分バッジ */
+.mobileCategoryBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f0edf6;
+  color: #6a4c93;
+}
+
+.cat_fixed {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.cat_variable {
+  background: #fef0e6;
+  color: #d9634d;
+}
+
+.cat_income {
+  background: #eafaf1;
+  color: #27ae60;
+}
+
+.dateCell {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.mobileDateText {
+  font-size: 11px;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: monospace;
+}
+
+@media (max-width: 600px) {
+  .tableControls {
+    justify-content: stretch;
+  }
+  .sortContainer {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .sortSelect {
+    flex: 1;
+    max-width: 65%;
+  }
+}
+
 
 
 

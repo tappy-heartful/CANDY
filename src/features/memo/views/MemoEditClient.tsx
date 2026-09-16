@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { getMemo, addMemo, updateMemo, deleteMemo } from "@/src/features/memo/api/memo-client-service";
+import { getMemo, addMemo, updateMemo } from "@/src/features/memo/api/memo-client-service";
 import { User as FirestoreUser, Memo } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
@@ -74,7 +74,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
           const isAllowed = isOwner || data.partnerEditable;
           
           if (!isAllowed) {
-            showDialog("こちらのメモを編集する権限がないようです。");
+            await showDialog("こちらのメモを編集する権限がないようです。", true);
             router.push("/memo");
             return;
           }
@@ -84,7 +84,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
           setContent(data.content);
           setPartnerEditable(data.partnerEditable);
         } else {
-          showDialog("対象のメモを確認できませんでした。");
+          await showDialog("対象のメモを確認できませんでした。", true);
           router.push("/memo");
           return;
         }
@@ -92,7 +92,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
     } catch (e) {
       console.error(e);
       errorLog("メモ詳細・パートナー読み込み", e);
-      showDialog("データの読み込み中に問題が発生したようです。");
+      await showDialog("データの読み込み中に問題が発生したようです。", true);
     } finally {
       setIsLoading(false);
       hideSpinner();
@@ -108,7 +108,7 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      showDialog("タイトルを入力してください。");
+      await showDialog("タイトルを入力してください。", true);
       return;
     }
     if (!coupleKey || !user) return;
@@ -125,7 +125,8 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
           uid: user.uid,
           partnerEditable,
         });
-        showDialog("メモを保存しました✨");
+        hideSpinner();
+        await showDialog("メモを保存しました✨", true);
         router.push("/memo");
       } else {
         // 編集
@@ -138,7 +139,8 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
           updateData.partnerEditable = partnerEditable;
         }
         await updateMemo(id, updateData);
-        showDialog("メモを更新しました✨");
+        hideSpinner();
+        await showDialog("メモを更新しました✨", true);
         router.push(`/memo/${id}`);
       }
       
@@ -146,36 +148,10 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
     } catch (e) {
       console.error(e);
       errorLog("メモ保存", e);
-      showDialog("保存できませんでした。恐れ入りますが、もう一度お試しいただけますか？");
+      hideSpinner();
+      await showDialog("保存できませんでした。恐れ入りますが、もう一度お試しいただけますか？", true);
     } finally {
       setIsSubmitting(false);
-      hideSpinner();
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!id || !memo) return;
-    
-    // 作成者本人のみ削除可能
-    if (!isMyMemo) {
-      showDialog("削除権限はありません。作成者のみ削除可能です。");
-      return;
-    }
-
-    const confirmed = await showDialog("このメモを削除してもよろしいですか？");
-    if (!confirmed) return;
-
-    showSpinner();
-    try {
-      await deleteMemo(id);
-      showDialog("メモを削除しました。");
-      router.push("/memo");
-      router.refresh();
-    } catch (e) {
-      console.error(e);
-      errorLog("メモ編集画面削除", e);
-      showDialog("削除できませんでした。恐れ入りますが、もう一度お試しください。");
-    } finally {
       hideSpinner();
     }
   };
@@ -262,16 +238,6 @@ export default function MemoEditClient({ id }: MemoEditClientProps) {
                   </>
                 )}
               </button>
-              
-              {id && isMyMemo && (
-                <button
-                  type="button"
-                  className={styles.deleteButton}
-                  onClick={handleDelete}
-                >
-                  <i className="fa-solid fa-trash"></i> 削除する
-                </button>
-              )}
             </div>
           </form>
         </div>

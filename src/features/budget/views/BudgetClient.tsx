@@ -29,6 +29,14 @@ import BudgetMasterSettingsModal from "../components/BudgetMasterSettingsModal";
 import BudgetAnalysis from "../components/BudgetAnalysis";
 
 
+export type BudgetSortOption =
+  | "date_desc"
+  | "date_asc"
+  | "amount_desc"
+  | "amount_asc"
+  | "category_asc"
+  | "category_desc";
+
 export default function BudgetClient() {
   const { user, userData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
@@ -36,6 +44,9 @@ export default function BudgetClient() {
   const [partnerUser, setPartnerUser] = useState<FirestoreUser | null>(null);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [types, setTypes] = useState<BudgetType[]>([]);
+
+  // ソート設定（デフォルトは日時の降順）
+  const [sortOption, setSortOption] = useState<BudgetSortOption>("date_desc");
 
   // 画面タブ
   const [activeTab, setActiveTab] = useState<"actual" | "default">("actual");
@@ -136,28 +147,82 @@ export default function BudgetClient() {
   const myPictureUrl = userData?.pictureUrl || "/default-avatar.png";
   const partnerPictureUrl = partnerUser?.pictureUrl || "/default-avatar.png";
 
-  const sortBudgets = (list: any[]) => {
+  const formatItemDate = (ts?: number) => {
+    if (!ts) return "-";
+    const d = new Date(ts);
+    const m = d.getMonth() + 1;
+    const date = d.getDate();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${m}/${date} ${hours}:${minutes}`;
+  };
+
+  const sortBudgetItems = (
+    list: any[],
+    option: BudgetSortOption,
+    categoriesList: BudgetCategory[],
+    typesList: BudgetType[]
+  ) => {
     const categoryOrder = ["fixed", "variable", "income"];
+
     return [...list].sort((a, b) => {
-      const aIdx = categoryOrder.indexOf(a.category);
-      const bIdx = categoryOrder.indexOf(b.category);
-      if (aIdx !== bIdx) return aIdx - bIdx;
-      // 種別でソート
-      if (a.type !== b.type) return a.type.localeCompare(b.type);
-      return a.createdAt - b.createdAt;
+      switch (option) {
+        case "date_desc": {
+          const diff = (b.createdAt || 0) - (a.createdAt || 0);
+          if (diff !== 0) return diff;
+          return (b.amount || 0) - (a.amount || 0);
+        }
+        case "date_asc": {
+          const diff = (a.createdAt || 0) - (b.createdAt || 0);
+          if (diff !== 0) return diff;
+          return (a.amount || 0) - (b.amount || 0);
+        }
+        case "amount_desc": {
+          const diff = (b.amount || 0) - (a.amount || 0);
+          if (diff !== 0) return diff;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+        case "amount_asc": {
+          const diff = (a.amount || 0) - (b.amount || 0);
+          if (diff !== 0) return diff;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+        case "category_asc": {
+          const aCatIdx = categoryOrder.indexOf(a.category);
+          const bCatIdx = categoryOrder.indexOf(b.category);
+          if (aCatIdx !== bCatIdx) return aCatIdx - bCatIdx;
+          const aTypeName = typesList.find(t => t.id === a.type)?.name || a.type || "";
+          const bTypeName = typesList.find(t => t.id === b.type)?.name || b.type || "";
+          const typeComp = aTypeName.localeCompare(bTypeName);
+          if (typeComp !== 0) return typeComp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+        case "category_desc": {
+          const aCatIdx = categoryOrder.indexOf(a.category);
+          const bCatIdx = categoryOrder.indexOf(b.category);
+          if (aCatIdx !== bCatIdx) return bCatIdx - aCatIdx;
+          const aTypeName = typesList.find(t => t.id === a.type)?.name || a.type || "";
+          const bTypeName = typesList.find(t => t.id === b.type)?.name || b.type || "";
+          const typeComp = bTypeName.localeCompare(aTypeName);
+          if (typeComp !== 0) return typeComp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+        default:
+          return (b.createdAt || 0) - (a.createdAt || 0);
+      }
     });
   };
 
   const loadDefaultBudgets = async (cKey: string, month: number) => {
     if (!cKey) return;
     const data = await getDefaultBudgets(cKey, month);
-    setDefaultBudgets(sortBudgets(data));
+    setDefaultBudgets(data);
   };
 
   const loadActualBudgets = async (cKey: string, year: number, month: number) => {
     if (!cKey) return;
     const data = await getActualBudgets(cKey, year, month);
-    setActualBudgets(sortBudgets(data));
+    setActualBudgets(data);
   };
 
   const loadSettlementProof = async (cKey: string, year: number, month: number) => {
@@ -690,13 +755,22 @@ export default function BudgetClient() {
   };
 
   const renderBudgetTable = (list: any[], onDelete: (id: string) => void, onEdit: (item: any) => void, isDefault: boolean) => {
-    const sections = [
-      { id: "fixed", title: "固定費 🏠" },
-      { id: "variable", title: "変動費 🛒" },
-      { id: "income", title: "収入 💰" }
-    ];
+    const isCategorySort = sortOption === "category_asc" || sortOption === "category_desc";
 
-    const hasData = list.length > 0;
+    const sections = sortOption === "category_desc"
+      ? [
+          { id: "income", title: "収入 💰" },
+          { id: "variable", title: "変動費 🛒" },
+          { id: "fixed", title: "固定費 🏠" }
+        ]
+      : [
+          { id: "fixed", title: "固定費 🏠" },
+          { id: "variable", title: "変動費 🛒" },
+          { id: "income", title: "収入 💰" }
+        ];
+
+    const sortedList = sortBudgetItems(list, sortOption, categories, types);
+    const hasData = sortedList.length > 0;
 
     if (!hasData) {
       return (
@@ -715,14 +789,120 @@ export default function BudgetClient() {
       );
     }
 
+    const subtotalsFixed = getSubtotals(list, "fixed");
+    const subtotalsVariable = getSubtotals(list, "variable");
+    const subtotalsIncome = getSubtotals(list, "income");
+
+    const renderBudgetRow = (item: any) => {
+      const categoryName = categories.find(c => c.id === item.category)?.name || item.category;
+      const typeName = types.find(t => t.id === item.type)?.name || item.type;
+      const itemUserName = item.uid === user?.uid ? myName : partnerName;
+
+      return (
+        <tr key={item.id} className={styles.budgetRow}>
+          <td className={styles.categoryCell}>{categoryName}</td>
+          <td className={styles.typeCell}>{typeName}</td>
+          <td className={styles.dateCell}>{formatItemDate(item.createdAt)}</td>
+          <td className={styles.userCell}>
+            <span className={item.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
+              {itemUserName}
+            </span>
+          </td>
+          <td className={styles.nameCell}>{item.name}</td>
+          <td className={styles.amountCell}>{formatCurrency(item.amount)}</td>
+          <td className={styles.ratioCell}>
+            {item.category === "income" ? "-" : (
+              item.splitRatio === undefined || item.splitRatio === 50 ? "折半" :
+              item.uid === user?.uid ? `自分:${item.splitRatio}% / 相手:${100 - item.splitRatio}%` :
+              `自分:${100 - item.splitRatio}% / 相手:${item.splitRatio}%`
+            )}
+          </td>
+          <td className={styles.memoCell}>{item.memo || "-"}</td>
+          <td className={styles.actionCell}>
+            <button className={styles.editRowBtn} onClick={() => onEdit(item)} title="編集">
+              <i className="fa-solid fa-pen"></i>
+            </button>
+            <button className={styles.deleteRowBtn} onClick={async () => {
+              const confirmed = await showDialog("この項目を削除してもよろしいですか？");
+              if (confirmed) {
+                onDelete(item.id);
+              }
+            }} title="削除">
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      );
+    };
+
+    const renderMobileCard = (item: any) => {
+      const categoryName = categories.find(c => c.id === item.category)?.name || item.category;
+      const typeName = types.find(t => t.id === item.type)?.name || item.type;
+      const itemUserName = item.uid === user?.uid ? myName : partnerName;
+
+      return (
+        <div key={item.id} className={styles.mobileCard} onClick={() => openDetailModal(item)}>
+          <div className={styles.mobileCardMain}>
+            <span className={styles.mobileCardName}>{item.name}</span>
+            <span className={styles.mobileCardAmount}>{formatCurrency(item.amount)}</span>
+          </div>
+          <div className={styles.mobileCardSub}>
+            <span className={item.uid === user?.uid ? styles.mobileUserBadgeMe : styles.mobileUserBadgePartner}>
+              {itemUserName}
+            </span>
+            <span className={`${styles.mobileCategoryBadge} ${styles[`cat_${item.category}`] || ""}`}>
+              {categoryName}
+            </span>
+            <span className={styles.mobileTypeName}>{typeName}</span>
+            {item.createdAt && (
+              <span className={styles.mobileDateText}>
+                <i className="fa-regular fa-clock"></i> {formatItemDate(item.createdAt)}
+              </span>
+            )}
+            {item.category !== "income" && (
+              <span className={styles.mobileCardRatio}>
+                負担: {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" : 
+                  item.uid === user?.uid ? `自分:${item.splitRatio}%` :
+                  `相手:${item.splitRatio}%`
+                }
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    };
+
     return (
       <div className={styles.tableWrapper}>
+        {/* ソートコントロール */}
+        <div className={styles.tableControls}>
+          <div className={styles.sortContainer}>
+            <label htmlFor="budget-sort-select" className={styles.sortLabel}>
+              <i className="fa-solid fa-arrow-down-wide-short"></i> 並び替え:
+            </label>
+            <select
+              id="budget-sort-select"
+              className={styles.sortSelect}
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as BudgetSortOption)}
+            >
+              <option value="date_desc">日時の降順（新しい順）</option>
+              <option value="date_asc">日時の昇順（古い順）</option>
+              <option value="amount_desc">金額の降順（高い順）</option>
+              <option value="amount_asc">金額の昇順（安い順）</option>
+              <option value="category_asc">区分種別の昇順</option>
+              <option value="category_desc">区分種別の降順</option>
+            </select>
+          </div>
+        </div>
+
         {/* PC用テーブル */}
         <table className={styles.budgetTable}>
           <thead>
             <tr>
               <th>区分</th>
               <th>種別</th>
+              <th>日時</th>
               <th>人</th>
               <th>名前</th>
               <th>金額</th>
@@ -732,132 +912,112 @@ export default function BudgetClient() {
             </tr>
           </thead>
           <tbody>
-            {sections.map(section => {
-              const filtered = list.filter(item => item.category === section.id);
-              if (filtered.length === 0) return null;
+            {isCategorySort ? (
+              sections.map(section => {
+                const filtered = sortedList.filter(item => item.category === section.id);
+                if (filtered.length === 0) return null;
 
-              const subtotals = getSubtotals(list, section.id);
+                const subtotals = getSubtotals(list, section.id);
 
-              return (
-                <Fragment key={section.id}>
-                  <tr className={styles.sectionHeaderRow}>
-                    <td colSpan={8}>{section.title}</td>
-                  </tr>
+                return (
+                  <Fragment key={section.id}>
+                    <tr className={styles.sectionHeaderRow}>
+                      <td colSpan={9}>{section.title}</td>
+                    </tr>
 
-                  {filtered.map(item => {
-                    const categoryName = categories.find(c => c.id === item.category)?.name || item.category;
-                    const typeName = types.find(t => t.id === item.type)?.name || item.type;
-                    const itemUserName = item.uid === user?.uid ? myName : partnerName;
+                    {filtered.map(renderBudgetRow)}
 
-                    return (
-                      <tr key={item.id} className={styles.budgetRow}>
-                        <td className={styles.categoryCell}>{categoryName}</td>
-                        <td className={styles.typeCell}>{typeName}</td>
-                        <td className={styles.userCell}>
-                          <span className={item.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
-                            {itemUserName}
-                          </span>
-                        </td>
-                        <td className={styles.nameCell}>{item.name}</td>
-                        <td className={styles.amountCell}>{formatCurrency(item.amount)}</td>
-                        <td className={styles.ratioCell}>
-                          {item.category === "income" ? "-" : (
-                            item.splitRatio === undefined || item.splitRatio === 50 ? "折半" :
-                            item.uid === user?.uid ? `自分:${item.splitRatio}% / 相手:${100 - item.splitRatio}%` :
-                            `自分:${100 - item.splitRatio}% / 相手:${item.splitRatio}%`
-                          )}
-                        </td>
-                        <td className={styles.memoCell}>{item.memo || "-"}</td>
-                        <td className={styles.actionCell}>
-                          <button className={styles.editRowBtn} onClick={() => onEdit(item)}>
-                            <i className="fa-solid fa-pen"></i>
-                          </button>
-                          <button className={styles.deleteRowBtn} onClick={() => {
-                            if (window.confirm("この項目を削除してもよろしいですか？")) {
-                              onDelete(item.id);
-                            }
-                          }}>
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                    <tr className={styles.subtotalRow}>
+                      <td colSpan={3} className={styles.subtotalLabel}>小計</td>
+                      <td colSpan={6} className={styles.subtotalValue}>
+                        <span className={styles.subtotalPerson}>{myName}: <strong>{formatCurrency(subtotals.my)}</strong></span>
+                        {partnerUser && (
+                          <span className={styles.subtotalPerson}>{partnerName}: <strong>{formatCurrency(subtotals.partner)}</strong></span>
+                        )}
+                        <span className={styles.subtotalTotal}>合計: <strong>{formatCurrency(subtotals.total)}</strong></span>
+                      </td>
+                    </tr>
+                  </Fragment>
+                );
+              })
+            ) : (
+              <>
+                {sortedList.map(renderBudgetRow)}
 
-                  <tr className={styles.subtotalRow}>
-                    <td colSpan={2} className={styles.subtotalLabel}>小計</td>
-                    <td colSpan={6} className={styles.subtotalValue}>
-                      <span className={styles.subtotalPerson}>{myName}: <strong>{formatCurrency(subtotals.my)}</strong></span>
-                      {partnerUser && (
-                        <span className={styles.subtotalPerson}>{partnerName}: <strong>{formatCurrency(subtotals.partner)}</strong></span>
-                      )}
-                      <span className={styles.subtotalTotal}>合計: <strong>{formatCurrency(subtotals.total)}</strong></span>
-                    </td>
-                  </tr>
-                </Fragment>
-              );
-            })}
+                <tr className={styles.subtotalRow}>
+                  <td colSpan={3} className={styles.subtotalLabel}>区分別小計・合計</td>
+                  <td colSpan={6} className={styles.subtotalValue}>
+                    <span className={styles.subtotalPerson}>固定費: <strong>{formatCurrency(subtotalsFixed.total)}</strong></span>
+                    <span className={styles.subtotalPerson}>変動費: <strong>{formatCurrency(subtotalsVariable.total)}</strong></span>
+                    <span className={styles.subtotalPerson}>収入: <strong>{formatCurrency(subtotalsIncome.total)}</strong></span>
+                    <span className={styles.subtotalTotal}>総支出: <strong>{formatCurrency(subtotalsFixed.total + subtotalsVariable.total)}</strong></span>
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
 
         {/* スマホ用カードリスト */}
         <div className={styles.mobileList}>
-          {sections.map(section => {
-            const filtered = list.filter(item => item.category === section.id);
-            if (filtered.length === 0) return null;
-            const subtotals = getSubtotals(list, section.id);
+          {isCategorySort ? (
+            sections.map(section => {
+              const filtered = sortedList.filter(item => item.category === section.id);
+              if (filtered.length === 0) return null;
+              const subtotals = getSubtotals(list, section.id);
 
-            return (
-              <div key={section.id} className={styles.mobileSection}>
-                <div className={styles.mobileSectionTitle}>{section.title}</div>
-                {filtered.map(item => {
-                  const typeName = types.find(t => t.id === item.type)?.name || item.type;
-                  const itemUserName = item.uid === user?.uid ? myName : partnerName;
-                  return (
-                    <div key={item.id} className={styles.mobileCard} onClick={() => openDetailModal(item)}>
-                      <div className={styles.mobileCardMain}>
-                        <span className={styles.mobileCardName}>{item.name}</span>
-                        <span className={styles.mobileCardAmount}>{formatCurrency(item.amount)}</span>
-                      </div>
-                      <div className={styles.mobileCardSub}>
-                        <span className={item.uid === user?.uid ? styles.mobileUserBadgeMe : styles.mobileUserBadgePartner}>
-                          {itemUserName}
-                        </span>
-                        <span className={styles.mobileTypeName}>{typeName}</span>
-                        {item.category !== "income" && (
-                          <span className={styles.mobileCardRatio}>
-                            負担: {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" : 
-                              item.uid === user?.uid ? `自分:${item.splitRatio}%` :
-                              `相手:${item.splitRatio}%`
-                            }
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className={styles.mobileSubtotalCard}>
-                  <div className={styles.mobileSubtotalTitle}>小計</div>
-                  <div className={styles.mobileSubtotalGrid}>
-                    <div className={styles.mobileSubtotalPerson}>
-                      <span>{myName}:</span>
-                      <strong>{formatCurrency(subtotals.my)}</strong>
-                    </div>
-                    {partnerUser && (
+              return (
+                <div key={section.id} className={styles.mobileSection}>
+                  <div className={styles.mobileSectionTitle}>{section.title}</div>
+                  {filtered.map(renderMobileCard)}
+                  <div className={styles.mobileSubtotalCard}>
+                    <div className={styles.mobileSubtotalTitle}>小計</div>
+                    <div className={styles.mobileSubtotalGrid}>
                       <div className={styles.mobileSubtotalPerson}>
-                        <span>{partnerName}:</span>
-                        <strong>{formatCurrency(subtotals.partner)}</strong>
+                        <span>{myName}:</span>
+                        <strong>{formatCurrency(subtotals.my)}</strong>
                       </div>
-                    )}
-                  </div>
-                  <div className={styles.mobileSubtotalTotal}>
-                    <span>合計:</span>
-                    <strong>{formatCurrency(subtotals.total)}</strong>
+                      {partnerUser && (
+                        <div className={styles.mobileSubtotalPerson}>
+                          <span>{partnerName}:</span>
+                          <strong>{formatCurrency(subtotals.partner)}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.mobileSubtotalTotal}>
+                      <span>合計:</span>
+                      <strong>{formatCurrency(subtotals.total)}</strong>
+                    </div>
                   </div>
                 </div>
+              );
+            })
+          ) : (
+            <div className={styles.mobileSection}>
+              {sortedList.map(renderMobileCard)}
+              <div className={styles.mobileSubtotalCard}>
+                <div className={styles.mobileSubtotalTitle}>区分別小計・合計</div>
+                <div className={styles.mobileSubtotalGrid}>
+                  <div className={styles.mobileSubtotalPerson}>
+                    <span>固定費:</span>
+                    <strong>{formatCurrency(subtotalsFixed.total)}</strong>
+                  </div>
+                  <div className={styles.mobileSubtotalPerson}>
+                    <span>変動費:</span>
+                    <strong>{formatCurrency(subtotalsVariable.total)}</strong>
+                  </div>
+                  <div className={styles.mobileSubtotalPerson}>
+                    <span>収入:</span>
+                    <strong>{formatCurrency(subtotalsIncome.total)}</strong>
+                  </div>
+                </div>
+                <div className={styles.mobileSubtotalTotal}>
+                  <span>総支出:</span>
+                  <strong>{formatCurrency(subtotalsFixed.total + subtotalsVariable.total)}</strong>
+                </div>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       </div>
     );

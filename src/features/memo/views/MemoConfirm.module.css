@@ -115,9 +115,54 @@
   font-size: 0.95rem;
   line-height: 1.75;
   color: #3f3f4e;
+  min-height: 120px;
+}
+
+.textLine {
   white-space: pre-wrap;
   word-break: break-word;
-  min-height: 120px;
+  min-height: 1.75em;
+}
+
+.linkLine {
+  margin: 6px 0;
+  display: flex;
+}
+
+.urlLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 14px;
+  background: #f8f5fc;
+  border: 1px solid rgba(155, 124, 195, 0.28);
+  border-radius: 10px;
+  color: #7a4bb7;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  word-break: break-all;
+}
+
+.urlLink:hover {
+  background: #f0e9f8;
+  border-color: #9B7CC3;
+  color: #5d3393;
+  text-decoration: underline;
+}
+
+.linkIcon {
+  flex-shrink: 0;
+  font-size: 0.825rem;
+  color: #9B7CC3;
+}
+
+.linkText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
 }
 
 .emptyContent {
