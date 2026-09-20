@@ -143,39 +143,62 @@ export default function BudgetClient() {
     setBreadcrumbs([{ title: "家計簿" }]);
   }, [setBreadcrumbs]);
 
-  // 区分が変わったときに、選択可能な種別の1つ目を自動セットする
+  // 変動費と日用品のデフォルトIDを取得するヘルパー
+  const getDefaultVariableAndDailyGoods = (
+    catList: BudgetCategory[],
+    typeList: BudgetType[]
+  ): { categoryId: string; typeId: string } => {
+    const variableCat = catList.find(c => c.id === "variable" || c.name.includes("変動費")) || catList[0];
+    const categoryId = variableCat ? variableCat.id : "";
+    const catTypes = typeList.filter(t => t.categoryId === categoryId);
+    const dailyGoods = catTypes.find(t => t.name.includes("日用品")) || catTypes[0];
+    const typeId = dailyGoods ? dailyGoods.id : "";
+    return { categoryId, typeId };
+  };
+
+  // 区分が変わったときに、選択可能な種別を自動セットする
   useEffect(() => {
     if (dfCategory) {
       const filtered = types.filter(t => t.categoryId === dfCategory);
       if (filtered.length > 0) {
-        setDfType(filtered[0].id);
+        if (!filtered.some(t => t.id === dfType)) {
+          setDfType(filtered[0].id);
+        }
       } else {
         setDfType("");
       }
     }
-  }, [dfCategory, types]);
+  }, [dfCategory, types, dfType]);
 
   useEffect(() => {
     if (actCategory) {
       const filtered = types.filter(t => t.categoryId === actCategory);
       if (filtered.length > 0) {
-        setActType(filtered[0].id);
+        if (!filtered.some(t => t.id === actType)) {
+          const isVariable = actCategory === "variable" || categories.find(c => c.id === actCategory)?.name.includes("変動費");
+          const target = isVariable ? (filtered.find(t => t.name.includes("日用品")) || filtered[0]) : filtered[0];
+          setActType(target.id);
+        }
       } else {
         setActType("");
       }
     }
-  }, [actCategory, types]);
+  }, [actCategory, types, categories, actType]);
 
   useEffect(() => {
     if (mbCategory) {
       const filtered = types.filter(t => t.categoryId === mbCategory);
       if (filtered.length > 0) {
-        setMbType(filtered[0].id);
+        if (!filtered.some(t => t.id === mbType)) {
+          const isVariable = mbCategory === "variable" || categories.find(c => c.id === mbCategory)?.name.includes("変動費");
+          const target = isVariable ? (filtered.find(t => t.name.includes("日用品")) || filtered[0]) : filtered[0];
+          setMbType(target.id);
+        }
       } else {
         setMbType("");
       }
     }
-  }, [mbCategory, types]);
+  }, [mbCategory, types, categories, mbType]);
 
   // デフォルト収支タブまたは毎月予算タブ選択時は日時のソートを適用せず、区分種別の昇順にする
   useEffect(() => {
@@ -434,8 +457,11 @@ export default function BudgetClient() {
 
       if (master.categories.length > 0) {
         setDfCategory(master.categories[0].id);
-        setActCategory(master.categories[0].id);
-        setMbCategory(master.categories[0].id);
+        const { categoryId: defaultVarCat, typeId: defaultDailyType } = getDefaultVariableAndDailyGoods(master.categories, master.types);
+        setActCategory(defaultVarCat || master.categories[0].id);
+        setActType(defaultDailyType);
+        setMbCategory(defaultVarCat || master.categories[0].id);
+        setMbType(defaultDailyType);
       }
 
       const partner = await getPartnerData(user.uid);
@@ -667,6 +693,9 @@ export default function BudgetClient() {
   const resetActForm = () => {
     setActId(undefined);
     setActDate(getTodayString());
+    const { categoryId, typeId } = getDefaultVariableAndDailyGoods(categories, types);
+    setActCategory(categoryId);
+    setActType(typeId);
     setActName("");
     setActAmount("");
     setActMemo("");
@@ -794,6 +823,9 @@ export default function BudgetClient() {
 
   const resetMbForm = () => {
     setMbId(undefined);
+    const { categoryId, typeId } = getDefaultVariableAndDailyGoods(categories, types);
+    setMbCategory(categoryId);
+    setMbType(typeId);
     setMbName("");
     setMbAmount("");
     setMbMemo("");
