@@ -89,12 +89,14 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
     steps?: TodoStep[];
+    isCompleted?: boolean;
   }) => {
     if (!data.title || !user) return;
     setIsSubmitting(true);
     showSpinner();
     try {
       if (editingTodo) {
+        const nextIsCompleted = data.isCompleted !== undefined ? data.isCompleted : editingTodo.isCompleted;
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
@@ -103,6 +105,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
+          isCompleted: nextIsCompleted,
         });
         setTodos((prev) =>
           prev.map((t) =>
@@ -116,6 +119,7 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
                   date: data.date || "",
                   dateMode: data.dateMode || "due",
                   steps: data.steps || [],
+                  isCompleted: nextIsCompleted,
                 }
               : t
           )
@@ -155,6 +159,59 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
       console.error("Failed to save todo:", e);
       errorLog("TODO保存", e);
       showDialog("保存に失敗しました");
+    } finally {
+      setIsSubmitting(false);
+      hideSpinner();
+    }
+  };
+
+  const handleCopyTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    uid: string;
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => {
+    if (!data.title || !user) return;
+    setIsSubmitting(true);
+    showSpinner();
+    try {
+      const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+      const addedTodos: Todo[] = [];
+      for (const d of dates) {
+        const docRef = await addTodo({
+          title: data.title,
+          type: data.type,
+          uid: data.uid,
+          groupId: data.groupId,
+          dateMode: d.dateMode,
+          date: d.date,
+          steps: data.steps || [],
+        });
+        addedTodos.push({
+          id: docRef.id,
+          title: data.title,
+          type: data.type,
+          uid: data.uid,
+          groupId: data.groupId,
+          dateMode: d.dateMode,
+          date: d.date,
+          isCompleted: false,
+          steps: data.steps || [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+      setTodos((prev) => [...addedTodos, ...prev]);
+      setIsModalOpen(false);
+      setEditingTodo(null);
+    } catch (e) {
+      console.error("Failed to copy todo:", e);
+      errorLog("TODOコピー", e);
+      showDialog("コピーに失敗しました");
     } finally {
       setIsSubmitting(false);
       hideSpinner();
@@ -525,6 +582,9 @@ export default function TodoListClient({ initialTodos, initialGroups }: TodoList
           setEditingTodo(null);
         }}
         onSave={handleSaveTodo}
+        onDelete={handleDeleteTodo}
+        onToggleComplete={handleToggleComplete}
+        onCopy={handleCopyTodo}
         isSubmitting={isSubmitting}
         onAddGroup={handleAddGroup}
       />

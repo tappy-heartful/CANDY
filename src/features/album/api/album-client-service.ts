@@ -56,7 +56,8 @@ export async function createAlbum(
   municipalityName?: string,
   dateMode?: "single" | "range",
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  showOnHome: boolean = true
 ): Promise<string> {
   const ref = collection(db, "albums");
   const docRef = await addDoc(ref, {
@@ -69,6 +70,7 @@ export async function createAlbum(
     dateMode: dateMode || "single",
     startDate: startDate || null,
     endDate: endDate || null,
+    showOnHome,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   });
@@ -85,7 +87,8 @@ export async function updateAlbum(
   municipalityName?: string,
   dateMode?: "single" | "range",
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  showOnHome?: boolean
 ) {
   const ref = doc(db, "albums", albumId);
   return await updateDoc(ref, {
@@ -97,6 +100,7 @@ export async function updateAlbum(
     dateMode: dateMode || "single",
     startDate: startDate || null,
     endDate: endDate || null,
+    ...(showOnHome !== undefined ? { showOnHome } : {}),
     updatedAt: Date.now(),
   });
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Group, Todo, TodoStep } from "@/src/lib/firestore/types";
+import { showDialog } from "@/src/lib/functions";
 import styles from "../views/TodoList.module.css";
 
 interface TodoModalProps {
@@ -21,11 +22,22 @@ interface TodoModalProps {
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
     steps?: TodoStep[];
+    isCompleted?: boolean;
   }) => Promise<void>;
   isSubmitting: boolean;
   onAddGroup?: () => void;
   onDelete?: (todoId: string) => Promise<void>;
   onToggleComplete?: (todo: Todo) => Promise<void>;
+  onCopy?: (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    uid: string;
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => Promise<void>;
 }
 
 interface DateSetting {
@@ -48,7 +60,8 @@ export default function TodoModal({
   isSubmitting,
   onAddGroup,
   onDelete,
-  onToggleComplete
+  onToggleComplete,
+  onCopy,
 }: TodoModalProps) {
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
@@ -56,8 +69,10 @@ export default function TodoModal({
   const [uid, setUid] = useState("");
   const [dateSettings, setDateSettings] = useState<DateSetting[]>([]);
   const [steps, setSteps] = useState<TodoStep[]>([]);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
   const prevGroupsLength = useRef(groups.length);
   const isInitialized = useRef(false);
@@ -73,6 +88,7 @@ export default function TodoModal({
           { id: Math.random().toString(), date: todo.date || "", dateMode: todo.dateMode || "due" }
         ]);
         setSteps(todo.steps || []);
+        setIsCompleted(!!todo.isCompleted);
       } else {
         setTitle("");
         setGroupId(groups.length > 0 ? groups[0].id : "");
@@ -82,6 +98,7 @@ export default function TodoModal({
           { id: Math.random().toString(), date: defaultDate || "", dateMode: "due" }
         ]);
         setSteps([]);
+        setIsCompleted(false);
       }
       prevGroupsLength.current = groups.length;
       isInitialized.current = groups.length > 0;
@@ -170,6 +187,7 @@ export default function TodoModal({
         uid: uid || currentUserId,
         date: firstSetting.date,
         dateMode: firstSetting.dateMode as "due" | "on",
+        isCompleted,
         steps: cleanSteps
       });
     } else {
@@ -182,8 +200,45 @@ export default function TodoModal({
           date: s.date,
           dateMode: s.dateMode as "due" | "on"
         })),
+        isCompleted,
         steps: cleanSteps
       });
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!title.trim()) {
+      showDialog("タイトルを入力してください");
+      return;
+    }
+    const confirmed = await showDialog("このTODOをコピーして新しく作成しますか？");
+    if (!confirmed) return;
+
+    if (onCopy) {
+      setIsCopying(true);
+      try {
+        const cleanSteps = steps
+          .filter((s) => s.title.trim() !== "")
+          .map((s) => ({ ...s, isCompleted: false }));
+
+        const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
+
+        await onCopy({
+          title: title.trim(),
+          groupId,
+          type,
+          uid: uid || currentUserId,
+          date: firstSetting.date,
+          dateMode: firstSetting.dateMode as "due" | "on",
+          dates: dateSettings.map((s) => ({
+            date: s.date,
+            dateMode: s.dateMode as "due" | "on",
+          })),
+          steps: cleanSteps,
+        });
+      } finally {
+        setIsCopying(false);
+      }
     }
   };
 
@@ -197,6 +252,34 @@ export default function TodoModal({
           {todo ? "TODOを編集" : "新しいTODO"}
         </div>
         <div className={styles.modalBody}>
+          {todo && (
+            <div className={styles.formGroup}>
+              <label className={styles.inputLabel}>状態</label>
+              <div className={styles.radioGroup}>
+                <label className={styles.radioLabel}>
+                  <input
+                    type="radio"
+                    name="todoStatus"
+                    value="uncompleted"
+                    checked={!isCompleted}
+                    onChange={() => setIsCompleted(false)}
+                  />
+                  未完了
+                </label>
+                <label className={styles.radioLabel}>
+                  <input
+                    type="radio"
+                    name="todoStatus"
+                    value="completed"
+                    checked={isCompleted}
+                    onChange={() => setIsCompleted(true)}
+                  />
+                  完了
+                </label>
+              </div>
+            </div>
+          )}
+
           <div className={styles.formGroup}>
             <label className={styles.inputLabel}>タイトル</label>
             <input
@@ -361,29 +444,35 @@ export default function TodoModal({
 
         <div className={styles.modalFooter}>
           <div className={styles.footerRow}>
-            {todo && onToggleComplete && (
+            {todo && onCopy && (
               <button
                 type="button"
-                className={todo.isCompleted ? styles.btnToggleUncomplete : styles.btnToggleComplete}
-                onClick={async () => {
-                  setIsToggling(true);
-                  await onToggleComplete(todo);
-                  setIsToggling(false);
-                }}
-                disabled={isSubmitting || isDeleting || isToggling}
+                className={styles.btnCopy}
+                onClick={handleCopy}
+                disabled={isSubmitting || isDeleting || isCopying}
+                title="TODOをコピーして新規作成"
               >
-                {todo.isCompleted ? "未完了にする" : "完了にする"}
+                <i className="fa-solid fa-copy"></i> {isCopying ? "コピー中..." : "コピー"}
               </button>
             )}
             <button
+              type="button"
               className={styles.btnSave}
               onClick={handleSave}
-              disabled={isSubmitting || isDeleting || isToggling}
+              disabled={isSubmitting || isDeleting || isCopying}
             >
-              {isSubmitting ? "保存中..." : "保存する"}
+              {isSubmitting ? "保存中..." : "保存"}
             </button>
           </div>
           <div className={styles.footerRow}>
+            <button
+              type="button"
+              className={styles.btnCancel}
+              onClick={onClose}
+              disabled={isSubmitting || isDeleting || isCopying}
+            >
+              閉じる
+            </button>
             {todo && onDelete && (
               <button
                 type="button"
@@ -393,19 +482,12 @@ export default function TodoModal({
                   await onDelete(todo.id);
                   setIsDeleting(false);
                 }}
-                disabled={isSubmitting || isDeleting || isToggling}
+                disabled={isSubmitting || isDeleting || isCopying}
                 title="TODOを削除"
               >
-                <i className="fa-solid fa-trash-can"></i>
+                <i className="fa-solid fa-trash-can"></i> 削除
               </button>
             )}
-            <button
-              className={styles.btnCancel}
-              onClick={onClose}
-              disabled={isSubmitting || isDeleting || isToggling}
-            >
-              キャンセル
-            </button>
           </div>
         </div>
       </div>

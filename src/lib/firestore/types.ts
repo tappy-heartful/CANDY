@@ -136,6 +136,7 @@ export interface Album {
   dateMode?: "single" | "range";
   startDate?: string;
   endDate?: string;
+  showOnHome?: boolean;
 }
 
 export interface Photo {

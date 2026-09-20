@@ -100,6 +100,28 @@ function AlbumCard({ album }: { album: Album }) {
             {totalCount}
           </span>
         )}
+        {album.showOnHome === false && (
+          <span
+            style={{
+              position: "absolute",
+              top: "8px",
+              left: "8px",
+              background: "rgba(0, 0, 0, 0.6)",
+              color: "white",
+              padding: "3px 8px",
+              borderRadius: "10px",
+              fontSize: "10px",
+              fontWeight: "bold",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              backdropFilter: "blur(4px)",
+            }}
+            title="ホーム画面の写真スライドショーには表示されません"
+          >
+            <i className="fa-solid fa-eye-slash"></i> ホーム非表示
+          </span>
+        )}
       </div>
       <div className={styles.albumInfo}>
         <h3 className={styles.albumName}>{album.name}</h3>
@@ -167,6 +189,7 @@ export default function AlbumListClient() {
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
+  const [showOnHome, setShowOnHome] = useState(true);
 
   useEffect(() => {
     if (isModalOpen && prefectures.length === 0) {
@@ -227,7 +250,8 @@ export default function AlbumListClient() {
         muni?.name || undefined,
         dateMode,
         startDate,
-        dateMode === "range" ? endDate : undefined
+        dateMode === "range" ? endDate : undefined,
+        showOnHome
       );
       setNewAlbumName("");
       setSelectedPrefCode("");
@@ -236,6 +260,7 @@ export default function AlbumListClient() {
       setDateMode("single");
       setStartDate(getTodayString());
       setEndDate(getTodayString());
+      setShowOnHome(true);
       setIsModalOpen(false);
       // 再取得
       await fetchAlbums();
@@ -451,6 +476,32 @@ export default function AlbumListClient() {
                 </select>
               </div>
 
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>ホーム表示</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="newAlbumShowOnHome"
+                      value="true"
+                      checked={showOnHome}
+                      onChange={() => setShowOnHome(true)}
+                    />
+                    <span>表示する</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="newAlbumShowOnHome"
+                      value="false"
+                      checked={!showOnHome}
+                      onChange={() => setShowOnHome(false)}
+                    />
+                    <span>表示しない</span>
+                  </label>
+                </div>
+              </div>
+
               <div className={styles.dialogButtons}>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnCancel}`}
@@ -462,6 +513,7 @@ export default function AlbumListClient() {
                     setDateMode("single");
                     setStartDate(getTodayString());
                     setEndDate(getTodayString());
+                    setShowOnHome(true);
                     setIsModalOpen(false);
                   }}
                   disabled={isSubmitting}

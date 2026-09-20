@@ -913,6 +913,27 @@ export default function CalendarView({
     }
   };
 
+  const handleCopyEvent = async (eventData: Partial<CalendarEvent>) => {
+    showSpinner();
+    try {
+      const docRef = await addEvent(eventData);
+      const newEventItem = {
+        id: docRef.id,
+        ...eventData,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      } as CalendarEvent;
+      setEvents((prev) => [...prev, newEventItem]);
+      setIsModalOpen(false);
+      setActiveModalEvent(null);
+    } catch (e) {
+      console.error("Copy error:", e);
+      showDialog("予定のコピーに失敗しました");
+    } finally {
+      hideSpinner();
+    }
+  };
+
   const handleToggleTodo = async (id: string, currentStatus: boolean) => {
     showSpinner();
     try {
@@ -949,11 +970,13 @@ export default function CalendarView({
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
     steps?: TodoStep[];
+    isCompleted?: boolean;
   }) => {
     setIsTodoSubmitting(true);
     showSpinner();
     try {
       if (editingTodo) {
+        const nextIsCompleted = data.isCompleted !== undefined ? data.isCompleted : editingTodo.isCompleted;
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
@@ -962,6 +985,7 @@ export default function CalendarView({
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
+          isCompleted: nextIsCompleted,
         });
         setTodos((prev) =>
           prev.map((t) =>
@@ -975,6 +999,7 @@ export default function CalendarView({
                   date: data.date || "",
                   dateMode: data.dateMode || "due",
                   steps: data.steps || [],
+                  isCompleted: nextIsCompleted,
                 }
               : t
           )
@@ -1032,6 +1057,57 @@ export default function CalendarView({
     } catch (e) {
       console.error("Failed to delete todo:", e);
       showDialog("TODOの削除に失敗しました");
+    } finally {
+      hideSpinner();
+      setIsTodoSubmitting(false);
+    }
+  };
+
+  const handleCopyTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    uid: string;
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => {
+    setIsTodoSubmitting(true);
+    showSpinner();
+    try {
+      const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+      const addedTodos: Todo[] = [];
+      for (const d of dates) {
+        const docRef = await addTodo({
+          title: data.title,
+          type: data.type,
+          uid: data.uid,
+          groupId: data.groupId,
+          dateMode: d.dateMode,
+          date: d.date,
+          steps: data.steps || [],
+        });
+        addedTodos.push({
+          id: docRef.id,
+          title: data.title,
+          type: data.type,
+          uid: data.uid,
+          groupId: data.groupId,
+          dateMode: d.dateMode,
+          date: d.date,
+          isCompleted: false,
+          steps: data.steps || [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } as Todo);
+      }
+      setTodos((prev) => [...addedTodos, ...prev]);
+      setIsTodoModalOpen(false);
+      setEditingTodo(null);
+    } catch (e) {
+      console.error("Failed to copy todo:", e);
+      showDialog("TODOのコピーに失敗しました");
     } finally {
       hideSpinner();
       setIsTodoSubmitting(false);
@@ -1975,6 +2051,7 @@ export default function CalendarView({
           }}
           onSave={handleSaveEvent}
           onDelete={handleDeleteEvent}
+          onCopy={handleCopyEvent}
         />
       )}
 
@@ -1995,6 +2072,7 @@ export default function CalendarView({
           onSave={handleSaveTodo}
           onDelete={handleDeleteTodo}
           onToggleComplete={handleToggleCompleteTodo}
+          onCopy={handleCopyTodo}
           isSubmitting={isTodoSubmitting}
         />
       )}

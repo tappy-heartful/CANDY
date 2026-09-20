@@ -98,6 +98,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
+  const [showOnHome, setShowOnHome] = useState(true);
 
   // 選択モード関連
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -133,6 +134,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         const albumData = { id: snap.id, ...snap.data() } as Album;
         setAlbum(albumData);
         setRenameValue(albumData.name);
+        setShowOnHome(albumData.showOnHome !== false);
 
         // パンくずリストを設定
         setBreadcrumbs([
@@ -265,7 +267,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
         muni?.name || undefined,
         dateMode,
         startDate,
-        dateMode === "range" ? endDate : undefined
+        dateMode === "range" ? endDate : undefined,
+        showOnHome
       );
       setIsRenameModalOpen(false);
       await fetchData();
@@ -629,6 +632,12 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                   {album.prefectureName || ""} {album.municipalityName || ""}
                 </span>
               )}
+              {album.showOnHome === false && (
+                <span style={{ fontSize: "11px", color: "#888", background: "#f1f3f5", padding: "2px 8px", borderRadius: "8px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <i className="fa-solid fa-eye-slash" style={{ fontSize: "10px" }}></i>
+                  ホーム非表示
+                </span>
+              )}
             </div>
           </div>
 
@@ -653,6 +662,13 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                   <button
                     className={styles.menuItem}
                     onClick={() => {
+                      setRenameValue(album.name);
+                      setSelectedPrefCode(album.prefectureCode || "");
+                      setSelectedMuniCode(album.municipalityCode || "");
+                      setDateMode(album.dateMode || "single");
+                      setStartDate(album.startDate || getTodayString());
+                      setEndDate(album.endDate || album.startDate || getTodayString());
+                      setShowOnHome(album.showOnHome !== false);
                       setIsRenameModalOpen(true);
                       setIsMenuOpen(false);
                     }}
@@ -1123,6 +1139,32 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                 </select>
               </div>
 
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>ホーム表示</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="editAlbumShowOnHome"
+                      value="true"
+                      checked={showOnHome}
+                      onChange={() => setShowOnHome(true)}
+                    />
+                    <span>表示する</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="editAlbumShowOnHome"
+                      value="false"
+                      checked={!showOnHome}
+                      onChange={() => setShowOnHome(false)}
+                    />
+                    <span>表示しない</span>
+                  </label>
+                </div>
+              </div>
+
               <div className={styles.dialogButtons}>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnCancel}`}
@@ -1133,6 +1175,7 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                     setDateMode(album.dateMode || "single");
                     setStartDate(album.startDate || getTodayString());
                     setEndDate(album.endDate || album.startDate || getTodayString());
+                    setShowOnHome(album.showOnHome !== false);
                     setIsRenameModalOpen(false);
                   }}
                   disabled={isRenaming}
@@ -1150,7 +1193,8 @@ export default function AlbumDetailClient({ albumId }: AlbumDetailClientProps) {
                       selectedMuniCode === (album.municipalityCode || "") &&
                       dateMode === (album.dateMode || "single") &&
                       startDate === (album.startDate || "") &&
-                      (dateMode === "single" || endDate === (album.endDate || album.startDate || "")))
+                      (dateMode === "single" || endDate === (album.endDate || album.startDate || "")) &&
+                      showOnHome === (album.showOnHome !== false))
                   }
                 >
                   {isRenaming ? "変更中..." : "変更する"}

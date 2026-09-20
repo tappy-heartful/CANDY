@@ -597,23 +597,47 @@
 }
 .btnCancel, .btnSave {
   flex: 1;
-  padding: 14px;
+  padding: 13px 10px;
   border-radius: 16px;
-  border: none;
   font-weight: 900;
   font-size: 15px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 .btnCancel {
-  background: #eee;
+  background: white;
   color: #666;
+  border: 1px solid #ddd;
+}
+.btnCancel:hover {
+  background: #f5f5f5;
+}
+.btnCancel:active {
+  transform: scale(0.95);
+}
+.btnCancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .btnSave {
+  border: none;
   background: #9B7CC3;
   color: white;
 }
+.btnSave:hover {
+  background: #896ab1;
+}
+.btnSave:active {
+  transform: scale(0.95);
+}
 .btnSave:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @keyframes highlightFlash {
@@ -730,7 +754,35 @@
   background: #ffebee;
   color: #ef5350;
   border: 1px solid #ef5350;
-  padding: 14px;
+  padding: 13px 10px;
+  border-radius: 16px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+  flex: 1;
+  box-sizing: border-box;
+}
+.btnDelete:hover {
+  background: #ffcdd2;
+}
+.btnDelete:active {
+  transform: scale(0.95);
+}
+.btnDelete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnCopy {
+  background: #f3e5f5;
+  color: #9B7CC3;
+  border: 1px solid #9B7CC3;
+  padding: 14px 10px;
   border-radius: 16px;
   font-weight: 900;
   font-size: 15px;
@@ -738,14 +790,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   transition: all 0.2s;
-  flex: 0 0 60px;
+  flex: 1;
 }
-.btnDelete:hover {
-  background: #ffcdd2;
+.btnCopy:hover {
+  background: #ebdaf0;
 }
-.btnDelete:disabled {
+.btnCopy:active {
+  transform: scale(0.95);
+}
+.btnCopy:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btnToggleComplete {

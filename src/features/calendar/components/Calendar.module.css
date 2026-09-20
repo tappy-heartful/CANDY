@@ -551,61 +551,111 @@
 
 .modalFooter {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
 }
 
-.btnSave {
-  flex: 2;
-  padding: 12px;
+.footerRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.btnSave,
+.btnCancel,
+.btnDelete,
+.btnCopy {
+  flex: 1;
+  padding: 13px 10px;
   border-radius: 16px;
-  border: none;
   font-weight: 900;
+  font-size: 15px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.btnSave {
+  border: none;
   color: white;
   background: #A0E7D2;
-  transition: transform 0.1s;
-  text-align: center;
+}
+
+.btnSave:hover {
+  background: #8de0c8;
 }
 
 .btnSave:active {
   transform: scale(0.95);
 }
 
+.btnSave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btnCancel {
-  flex: 1;
-  padding: 12px;
-  border-radius: 16px;
-  border: 2px solid #ddd;
-  font-weight: 900;
-  cursor: pointer;
+  border: 1px solid #ddd;
   color: #666;
   background: white;
-  transition: transform 0.1s;
-  text-align: center;
+}
+
+.btnCancel:hover {
+  background: #f5f5f5;
 }
 
 .btnCancel:active {
   transform: scale(0.95);
 }
 
+.btnCancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btnDelete {
-  flex: 1;
-  padding: 12px;
-  border-radius: 16px;
-  border: none;
-  font-weight: 900;
-  cursor: pointer;
-  color: white;
-  background: #F7A8C4;
-  transition: transform 0.1s;
-  text-align: center;
+  border: 1px solid #ef5350;
+  color: #ef5350;
+  background: #ffebee;
+}
+
+.btnDelete:hover {
+  background: #ffcdd2;
 }
 
 .btnDelete:active {
   transform: scale(0.95);
+}
+
+.btnDelete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnCopy {
+  border: 1px solid #9B7CC3;
+  color: #9B7CC3;
+  background: #f3e5f5;
+}
+
+.btnCopy:hover {
+  background: #ebdaf0;
+}
+
+.btnCopy:active {
+  transform: scale(0.95);
+}
+
+.btnCopy:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .readOnlyNote {

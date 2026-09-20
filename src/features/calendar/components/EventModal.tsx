@@ -14,6 +14,7 @@ interface EventModalProps {
   onClose: () => void;
   onSave: (eventData: Partial<CalendarEvent>, targetRange?: "only" | "all") => Promise<void>;
   onDelete?: (id: string, targetRange?: "only" | "all") => Promise<void>;
+  onCopy?: (eventData: Partial<CalendarEvent>) => Promise<void>;
 }
 
 const calculateDefaultEndDate = (start: string, unit: "day" | "week" | "month" | "year"): string => {
@@ -41,6 +42,7 @@ export default function EventModal({
   onClose,
   onSave,
   onDelete,
+  onCopy,
 }: EventModalProps) {
   const isEdit = !!event?.id;
   const isEditable = true;
@@ -67,6 +69,7 @@ export default function EventModal({
 
   // 保存・削除時の適用範囲確認ポップアップの表示制御
   const [confirmMode, setConfirmMode] = useState<"save" | "delete" | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
 
   useEffect(() => {
     const today = getJSTDate();
@@ -168,6 +171,36 @@ export default function EventModal({
     const confirmed = await showDialog("本当にこの予定を削除しますか？");
     if (confirmed) {
       await onDelete(event.id);
+    }
+  };
+
+  const handleCopyClick = async () => {
+    if (!title.trim()) {
+      showDialog("タイトルを入力してください");
+      return;
+    }
+    const confirmed = await showDialog("この予定をコピーして新しく作成しますか？");
+    if (!confirmed) return;
+
+    if (onCopy) {
+      setIsCopying(true);
+      try {
+        await onCopy({
+          title: title.trim(),
+          type,
+          uid,
+          isAllDay,
+          startDate,
+          startTime: isAllDay ? "" : startTime,
+          endDate: isAllDay ? startDate : endDate,
+          endTime: isAllDay ? "" : endTime,
+          note: note.trim(),
+          link: link.trim(),
+          isRecurring: false,
+        });
+      } finally {
+        setIsCopying(false);
+      }
     }
   };
 
@@ -510,19 +543,40 @@ export default function EventModal({
           </div>
 
           <div className={styles.modalFooter}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>
-              閉じる
-            </button>
-            {isEdit && isEditable && onDelete && (
-              <button type="button" className={styles.btnDelete} onClick={handleDeleteClick}>
-                削除
+            <div className={styles.footerRow}>
+              {isEdit && isEditable && onCopy && (
+                <button
+                  type="button"
+                  className={styles.btnCopy}
+                  onClick={handleCopyClick}
+                  disabled={isCopying}
+                  title="予定をコピーして新規作成"
+                >
+                  <i className="fa-solid fa-copy"></i> コピー
+                </button>
+              )}
+              {isEditable && (
+                <button type="submit" className={styles.btnSave} disabled={isCopying}>
+                  保存
+                </button>
+              )}
+            </div>
+            <div className={styles.footerRow}>
+              <button type="button" className={styles.btnCancel} onClick={onClose} disabled={isCopying}>
+                閉じる
               </button>
-            )}
-            {isEditable && (
-              <button type="submit" className={styles.btnSave}>
-                保存する
-              </button>
-            )}
+              {isEdit && isEditable && onDelete && (
+                <button
+                  type="button"
+                  className={styles.btnDelete}
+                  onClick={handleDeleteClick}
+                  disabled={isCopying}
+                  title="予定を削除"
+                >
+                  <i className="fa-solid fa-trash-can"></i> 削除
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>

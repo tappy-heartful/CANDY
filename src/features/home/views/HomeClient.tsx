@@ -10,7 +10,7 @@ import { getPartnerData, updateProfile } from "@/src/features/user/api/user-clie
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { notifyDailyStatusSaved, notifyDailyStatusCommented } from "@/src/features/home/api/daily-status-server-actions";
 import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
-import { getGroups, updateTodo, deleteTodo } from "@/src/features/todo/api/todo-client-service";
+import { getGroups, addTodo, updateTodo, deleteTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
 import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep } from "@/src/lib/firestore/types";
@@ -249,8 +249,13 @@ export default function HomeClient() {
           setTodoGroups(tGroups);
 
           // 最近の写真とアルバム名のマッピングを設定
-          // 最新の50枚の中からランダムに最大8枚を抽出
-          const shuffledPics = [...recentPics].sort(() => 0.5 - Math.random()).slice(0, 8);
+          // ホームに表示設定（showOnHome !== false）のアルバムのみを対象
+          const allowedAlbumIds = new Set(
+            albums.filter((alb) => alb.showOnHome !== false).map((alb) => alb.id)
+          );
+          const eligiblePics = recentPics.filter((p) => allowedAlbumIds.has(p.albumId));
+          // 対象写真の中からランダムに最大8枚を抽出
+          const shuffledPics = [...eligiblePics].sort(() => 0.5 - Math.random()).slice(0, 8);
           setRecentPhotos(shuffledPics);
           const mapping: Record<string, string> = {};
           albums.forEach((alb) => {
@@ -285,11 +290,13 @@ export default function HomeClient() {
     dateMode?: "due" | "on";
     dates?: { date: string; dateMode: "due" | "on" }[];
     steps?: TodoStep[];
+    isCompleted?: boolean;
   }) => {
     if (!data.title || !user) return;
     setIsTodoSubmitting(true);
     try {
       if (editingTodo) {
+        const nextIsCompleted = data.isCompleted !== undefined ? data.isCompleted : editingTodo.isCompleted;
         await updateTodo(editingTodo.id, {
           title: data.title,
           groupId: data.groupId,
@@ -298,6 +305,7 @@ export default function HomeClient() {
           date: data.date || "",
           dateMode: data.dateMode || "due",
           steps: data.steps || [],
+          isCompleted: nextIsCompleted,
         });
         await refreshTodos(user.uid);
       }
@@ -331,6 +339,42 @@ export default function HomeClient() {
       }
     } catch (e) {
       showDialog("削除に失敗しました");
+    }
+  };
+
+  const handleCopyTodo = async (data: {
+    title: string;
+    groupId: string;
+    type: "personal" | "couple";
+    uid: string;
+    date?: string;
+    dateMode?: "due" | "on";
+    dates?: { date: string; dateMode: "due" | "on" }[];
+    steps?: TodoStep[];
+  }) => {
+    if (!data.title || !user) return;
+    setIsTodoSubmitting(true);
+    try {
+      const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+      for (const d of dates) {
+        await addTodo({
+          title: data.title,
+          type: data.type,
+          uid: data.uid,
+          groupId: data.groupId,
+          dateMode: d.dateMode,
+          date: d.date,
+          steps: data.steps || [],
+        });
+      }
+      await refreshTodos(user.uid);
+      setIsTodoModalOpen(false);
+      setEditingTodo(null);
+    } catch (e) {
+      console.error("Failed to copy todo on home screen:", e);
+      showDialog("TODOのコピーに失敗しました");
+    } finally {
+      setIsTodoSubmitting(false);
     }
   };
 
@@ -1205,6 +1249,9 @@ export default function HomeClient() {
               setEditingTodo(null);
             }}
             onSave={handleSaveTodo}
+            onDelete={handleDeleteTodo}
+            onToggleComplete={handleToggleCompleteTodo}
+            onCopy={handleCopyTodo}
             isSubmitting={isTodoSubmitting}
           />
         )}
