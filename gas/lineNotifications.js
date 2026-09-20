@@ -122,6 +122,56 @@ function checkAllNotifications() {
 }
 
 /**
+ * イベントが通知対象かどうか、および「2人」「自分」の属性を判定する
+ */
+function checkEventRelation(e, userId, partnerUid) {
+  const typeStr = (e.type || "").toString().trim().toLowerCase();
+  const isCoupleType = typeStr === "couple";
+  const isMe = e.uid === userId;
+  const isPartner = partnerUid && e.uid === partnerUid;
+
+  // 1. type が 明示的に couple の場合
+  if (isCoupleType) {
+    return { isTarget: true, isCouple: true, label: "【2人】" };
+  }
+  // 2. 自分が作成したイベント
+  if (isMe) {
+    return { isTarget: true, isCouple: false, label: "【自分】" };
+  }
+  // 3. パートナーが作成し、かつ type が明示的に personal でない場合（type未指定等の救済）
+  if (isPartner && typeStr !== "personal") {
+    return { isTarget: true, isCouple: true, label: "【2人】" };
+  }
+
+  return { isTarget: false, isCouple: false, label: "" };
+}
+
+/**
+ * TODOが通知対象かどうか、および「2人」「自分」の属性を判定する
+ */
+function checkTodoRelation(t, userId, partnerUid) {
+  const typeStr = (t.type || "").toString().trim().toLowerCase();
+  const isCoupleType = typeStr === "couple";
+  const isMe = t.uid === userId;
+  const isPartner = partnerUid && t.uid === partnerUid;
+
+  // 1. type が 明示的に couple の場合
+  if (isCoupleType) {
+    return { isTarget: true, isCouple: true, label: "【2人】" };
+  }
+  // 2. 自分が担当または作成したTODO
+  if (isMe) {
+    return { isTarget: true, isCouple: false, label: "【自分】" };
+  }
+  // 3. パートナーが作成し、かつ type が明示的に personal でない場合（type未指定等の救済）
+  if (isPartner && typeStr !== "personal") {
+    return { isTarget: true, isCouple: true, label: "【2人】" };
+  }
+
+  return { isTarget: false, isCouple: false, label: "" };
+}
+
+/**
  * 毎朝の定期通知を対象ユーザーに送信する
  */
 function sendDailyMorningNotifications(targets, events, todos, anniversaries, lineMessagingIds) {
@@ -137,38 +187,89 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
       const partnerUid = user.partnerUid || null;
 
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
-      const userEvents = events.filter(e => e.type === 'couple' || e.uid === user.id);
+      const userEvents = events
+        .map(e => {
+          const relation = checkEventRelation(e, user.id, partnerUid);
+          return relation.isTarget ? { ...e, isCouple: relation.isCouple, label: relation.label } : null;
+        })
+        .filter(Boolean);
 
       // 今日のイベント
-      const todaysEvents = userEvents.filter(e => e.startDate <= todayStr && e.endDate >= todayStr);
+      const todaysEvents = userEvents
+        .filter(e => e.startDate <= todayStr && e.endDate >= todayStr)
+        .sort((a, b) => {
+          // 終日優先、同一なら時間順、同一なら2人を優先
+          if (a.isAllDay && !b.isAllDay) return -1;
+          if (!a.isAllDay && b.isAllDay) return 1;
+          const timeA = a.startTime || "24:00";
+          const timeB = b.startTime || "24:00";
+          if (timeA !== timeB) return timeA.localeCompare(timeB);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
 
       // 直近の未来イベント（明日以降開始）をソート
       const nextEvents = userEvents
         .filter(e => e.startDate > todayStr)
-        .sort((a, b) => a.startDate.localeCompare(b.startDate) || (a.startTime || "24:00").localeCompare(b.startTime || "24:00"))
+        .sort((a, b) => {
+          if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+          const timeA = a.startTime || "24:00";
+          const timeB = b.startTime || "24:00";
+          if (timeA !== timeB) return timeA.localeCompare(timeB);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        })
         .slice(0, 3);
 
       // 未完了のTODO（カップル用 or 自身）
-      const allUserTodos = todos.filter(t => (t.type === 'couple' || t.uid === user.id) && !t.isCompleted);
+      const allUserTodos = todos
+        .filter(t => !t.isCompleted)
+        .map(t => {
+          const relation = checkTodoRelation(t, user.id, partnerUid);
+          return relation.isTarget ? { ...t, isCouple: relation.isCouple, label: relation.label } : null;
+        })
+        .filter(Boolean);
 
       // 1. 期限切れのTODO (日付があり、今日より前)
       const overdueTodos = allUserTodos
         .filter(t => t.date && t.date < todayStr)
-        .sort((a, b) => a.date.localeCompare(b.date));
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
 
       // 2. 本日のTODO (日付があり、今日)
-      const todaysTodos = allUserTodos.filter(t => t.date === todayStr);
+      const todaysTodos = allUserTodos
+        .filter(t => t.date === todayStr)
+        .sort((a, b) => {
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
 
       // 3. 直近の未来TODO (日付があり、明日以降、最大3件)
       const nextTodos = allUserTodos
         .filter(t => t.date && t.date > todayStr)
-        .sort((a, b) => a.date.localeCompare(b.date))
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        })
         .slice(0, 3);
 
       // 4. 期限なしのTODO (日付なし、または空文字列)
       const noDeadlineTodos = allUserTodos
         .filter(t => !t.date || t.date === "")
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        .sort((a, b) => {
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        });
 
       // 直近の記念日（今年または来年で最も近いもの3件）
       const userAnniversaries = anniversaries
@@ -191,14 +292,14 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
       if (todaysEvents.length > 0) {
         todaysEvents.forEach(e => {
           const timeStr = e.isAllDay ? "終日" : (e.startTime ? `${e.startTime}〜` : "時間未定");
-          message += `・本日 ${timeStr} ${e.title}\n`;
+          message += `・本日 ${timeStr} ${e.label}${e.title}\n`;
           hasEvents = true;
         });
       }
       if (nextEvents.length > 0) {
         nextEvents.forEach(e => {
           const diffDays = calculateDiffDays(todayStr, e.startDate);
-          message += `・${e.title} (あと${diffDays}日)\n`;
+          message += `・${e.label}${e.title} (あと${diffDays}日)\n`;
           hasEvents = true;
         });
       }
@@ -216,7 +317,7 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
         message += `【期限切れ】\n`;
         overdueTodos.forEach(t => {
           const diffDays = calculateDiffDays(t.date, todayStr);
-          message += `・${t.title} (${diffDays}日前)\n`;
+          message += `・${t.label}${t.title} (${diffDays}日前)\n`;
         });
         hasTodos = true;
       }
@@ -225,13 +326,13 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
       const activeLines = [];
       if (todaysTodos.length > 0) {
         todaysTodos.forEach(t => {
-          activeLines.push(`・本日 ${t.title}`);
+          activeLines.push(`・本日 ${t.label}${t.title}`);
         });
       }
       if (nextTodos.length > 0) {
         nextTodos.forEach(t => {
           const diffDays = calculateDiffDays(todayStr, t.date);
-          activeLines.push(`・${t.title} (あと${diffDays}日)`);
+          activeLines.push(`・${t.label}${t.title} (あと${diffDays}日)`);
         });
       }
 
@@ -249,7 +350,7 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
       if (noDeadlineTodos.length > 0) {
         message += `【期限なし】\n`;
         noDeadlineTodos.forEach(t => {
-          message += `・${t.title}\n`;
+          message += `・${t.label}${t.title}\n`;
         });
         hasTodos = true;
       }
@@ -288,6 +389,7 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
       if (!lineUid) return;
 
       const nickname = user.nickname || "あなた";
+      const partnerUid = user.partnerUid || null;
 
       // 設定の取得
       const setting = settingsMap[user.id] || {};
@@ -306,20 +408,23 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
         const lastTargetTime = new Date(lastCheck.getTime() + minutes * 60 * 1000);
 
         // 対象時間内に開始されるイベントをフィルタリング (終日イベントは除外)
-        const userReminders = events.filter(e => {
-          if (e.isAllDay || !e.startTime) return false;
+        const userReminders = events.map(e => {
+          if (e.isAllDay || !e.startTime) return null;
           
-          const isRelated = e.type === 'couple' || e.uid === user.id;
-          if (!isRelated) return false;
+          const relation = checkEventRelation(e, user.id, partnerUid);
+          if (!relation.isTarget) return null;
 
           // イベント開始時刻を Date オブジェクトにパース (JST基準)
           const eventTime = parseJSTDateTime(e.startDate, e.startTime);
-          if (!eventTime) return false;
+          if (!eventTime) return null;
 
           const eventTimeMs = eventTime.getTime();
           // 前回のターゲット時刻より後、かつ今回のターゲット時刻までに開始されるものを抽出
-          return eventTimeMs > lastTargetTime.getTime() && eventTimeMs <= currentTargetTime.getTime();
-        });
+          if (eventTimeMs > lastTargetTime.getTime() && eventTimeMs <= currentTargetTime.getTime()) {
+            return { ...e, isCouple: relation.isCouple, label: relation.label };
+          }
+          return null;
+        }).filter(Boolean);
 
         if (userReminders.length > 0) {
           const hour = Number(Utilities.formatDate(now, "Asia/Tokyo", "H"));
@@ -335,7 +440,7 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
             const timeText = minutes === 0 ? "まもなく" : `${minutes}分後に`;
             message += `${nickname}ちゃん、${timeText}以下の予定があるよ！準備はできたかな？🍬\n\n`;
             message += `⏰ ${e.startTime}〜\n`;
-            message += `📝 ${e.title}\n`;
+            message += `📝 ${e.label}${e.title}\n`;
             if (e.note) {
               message += `💡 メモ: ${e.note}\n`;
             }
