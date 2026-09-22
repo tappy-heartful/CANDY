@@ -27,8 +27,18 @@ const cuteMessages = [
   "今日も一日、〇〇ちゃんにいいことがたくさん起きますように🍀",
 ];
 
+const nightCuteMessages = [
+  "今日も一日本当にお疲れさま✨ ゆっくり休んでね🛌",
+  "〇〇ちゃん、今日も一日がんばってえらかったね！ぎゅーっ🫂💕",
+  "あったかいお布団でいい夢見てね🌙 いつもありがとう🌸",
+  "今日も〇〇ちゃんの笑顔が見られて幸せだったよ🍀 おやすみ✨",
+  "明日も素敵な一日になりますように。ゆっくり心と体を休めてね🍵",
+  "〇〇ちゃんが安心して眠れますように。いつでも味方だよ🌙",
+  "今日もお疲れさま！明日に備えてリラックスしてね🍮💤",
+];
+
 /**
- * すべての通知（朝のメッセージ＆予定リマインダー）を監視・送信する統合関数
+ * すべての通知（朝のメッセージ＆夜のお休み通知＆予定リマインダー）を監視・送信する統合関数
  * GASのエディタでこの関数に対して「時間主導型」-「分ベースのタイマー」-「1分おき」のトリガーを設定してください。
  */
 function checkAllNotifications() {
@@ -79,6 +89,15 @@ function checkAllNotifications() {
       return morningEnabled && morningTime === currentTimeStr;
     });
 
+    // 夜のお休み通知の送信対象ユーザーを抽出
+    const nightTargets = users.filter(user => {
+      if (!lineMessagingIds[user.id]) return false;
+      const setting = settingsMap[user.id] || {};
+      const nightEnabled = setting.nightEnabled !== false; // デフォルト true
+      const nightTime = setting.nightTime || "22:00"; // デフォルト 22:00
+      return nightEnabled && nightTime === currentTimeStr;
+    });
+
     // リマインダーの送信対象ユーザーを抽出（有効なユーザーのみ）
     const reminderTargets = users.filter(user => {
       if (!lineMessagingIds[user.id]) return false;
@@ -87,29 +106,47 @@ function checkAllNotifications() {
     });
 
     // 送信対象が誰もいない場合はここで早期リターンし、重いデータ（events, todos等）の取得をスキップする
-    if (morningTargets.length === 0 && reminderTargets.length === 0) {
+    if (morningTargets.length === 0 && reminderTargets.length === 0 && nightTargets.length === 0) {
       return;
     }
 
     // 2. 必要な場合のみ、残りのデータを取得
     let events = [];
-    if (morningTargets.length > 0 || reminderTargets.length > 0) {
+    if (morningTargets.length > 0 || reminderTargets.length > 0 || nightTargets.length > 0) {
       const eventsDocs = firestore.getDocuments('events');
       events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     }
 
     let todos = [];
     let anniversaries = [];
-    if (morningTargets.length > 0) {
+    let garbageSchedules = [];
+
+    if (morningTargets.length > 0 || nightTargets.length > 0) {
       const todosDocs = firestore.getDocuments('todos');
-      const anniversariesDocs = firestore.getDocuments('anniversaries');
       todos = todosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    }
+
+    if (morningTargets.length > 0) {
+      const anniversariesDocs = firestore.getDocuments('anniversaries');
       anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    }
+
+    if (nightTargets.length > 0) {
+      try {
+        const garbageDocs = firestore.getDocuments('garbageSchedules');
+        garbageSchedules = garbageDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+      } catch (e) {
+        Logger.log('Failed to fetch garbageSchedules: ' + e.toString());
+      }
     }
 
     // 3. 各通知処理を実行（フェッチ済みの共通データを渡す）
     if (morningTargets.length > 0) {
       sendDailyMorningNotifications(morningTargets, events, todos, anniversaries, lineMessagingIds);
+    }
+
+    if (nightTargets.length > 0) {
+      sendDailyNightNotifications(nightTargets, events, todos, garbageSchedules, lineMessagingIds);
     }
 
     if (reminderTargets.length > 0) {
@@ -517,3 +554,185 @@ function sendLineMessage(to, text, token) {
   };
   UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
 }
+
+/**
+ * 指定日がごみ収集スケジュールに合致するか判定する (JST)
+ */
+function isGarbageCollectionDay(schedule, date) {
+  if (!schedule) return false;
+
+  // 1. 月判定 (1〜12)
+  const month = date.getMonth() + 1;
+  if (schedule.monthType === "even" && month % 2 !== 0) return false;
+  if (schedule.monthType === "odd" && month % 2 === 0) return false;
+  if (schedule.monthType === "custom") {
+    if (!schedule.customMonths || schedule.customMonths.indexOf(month) === -1) return false;
+  }
+
+  // 2. 曜日判定 (0: 日 〜 6: 土)
+  const dayOfWeek = date.getDay();
+  if (!schedule.daysOfWeek || schedule.daysOfWeek.indexOf(dayOfWeek) === -1) return false;
+
+  // 3. 週判定 (every / biweekly / nth)
+  if (schedule.weekType === "biweekly") {
+    if (!schedule.biweeklyStartDate) return false;
+    const startParts = schedule.biweeklyStartDate.split("-").map(Number);
+    if (startParts.length !== 3) return false;
+    const uttStart = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+    const uttTarget = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((uttTarget - uttStart) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0 || diffDays % 14 !== 0) return false;
+  } else if (schedule.weekType === "nth") {
+    const nthWeek = Math.ceil(date.getDate() / 7);
+    if (!schedule.nthWeeks || schedule.nthWeeks.indexOf(nthWeek) === -1) return false;
+  }
+
+  return true;
+}
+
+/**
+ * 毎夜のお休み通知を対象ユーザーに送信する
+ * （明日のイベント、明日のTODO、今日・明日のごみ出し情報）
+ */
+function sendDailyNightNotifications(targets, events, todos, garbageSchedules, lineMessagingIds) {
+  try {
+    const todayDate = new Date();
+    const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
+    const tomorrowDate = new Date(todayDate.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = Utilities.formatDate(tomorrowDate, "Asia/Tokyo", "yyyy-MM-dd");
+
+    targets.forEach(user => {
+      const lineUid = lineMessagingIds[user.id];
+      if (!lineUid) return;
+
+      const nickname = user.nickname || "あなた";
+      const partnerUid = user.partnerUid || null;
+
+      // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
+      const userEvents = events
+        .map(e => {
+          const relation = checkEventRelation(e, user.id, partnerUid);
+          return relation.isTarget ? { ...e, isCouple: relation.isCouple, label: relation.label } : null;
+        })
+        .filter(Boolean);
+
+      // 明日のイベント
+      const tomorrowsEvents = userEvents
+        .filter(e => e.startDate <= tomorrowStr && e.endDate >= tomorrowStr)
+        .sort((a, b) => {
+          if (a.isAllDay && !b.isAllDay) return -1;
+          if (!a.isAllDay && b.isAllDay) return 1;
+          const timeA = a.startTime || "24:00";
+          const timeB = b.startTime || "24:00";
+          if (timeA !== timeB) return timeA.localeCompare(timeB);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
+
+      // 未完了TODO（カップル用 or 自身）
+      const allUserTodos = todos
+        .filter(t => !t.isCompleted)
+        .map(t => {
+          const relation = checkTodoRelation(t, user.id, partnerUid);
+          return relation.isTarget ? { ...t, isCouple: relation.isCouple, label: relation.label } : null;
+        })
+        .filter(Boolean);
+
+      // 1. 明日期日のTODO
+      const tomorrowDueTodos = allUserTodos
+        .filter(t => t.date === tomorrowStr)
+        .sort((a, b) => {
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
+
+      // 2. やり残し・今日以前の未完了TODO (今日または期限切れ)
+      const overdueTodos = allUserTodos
+        .filter(t => t.date && t.date <= todayStr)
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          if (a.isCouple && !b.isCouple) return -1;
+          if (!a.isCouple && b.isCouple) return 1;
+          return 0;
+        });
+
+      // ごみ出し情報（明日・今日）
+      const tomorrowGarbage = garbageSchedules.filter(s => isGarbageCollectionDay(s, tomorrowDate));
+      const todayGarbage = garbageSchedules.filter(s => isGarbageCollectionDay(s, todayDate));
+
+      const cuteMessage = nightCuteMessages[Math.floor(Math.random() * nightCuteMessages.length)].replace(/〇〇/g, nickname);
+
+      // ---- メッセージの構築 ----
+      let message = `こんばんは！CANDYだよ🍬\n${cuteMessage}\n\nあしたの予定をまとめたよ🌙\nゆっくり休んでいい夢見てね✨\n\n`;
+
+      // 📅明日のイベント
+      message += `📅明日のイベント\n`;
+      if (tomorrowsEvents.length > 0) {
+        tomorrowsEvents.forEach(e => {
+          const timeStr = e.isAllDay ? "終日" : (e.startTime ? `${e.startTime}〜` : "時間未定");
+          message += `・${timeStr} ${e.label}${e.title}\n`;
+        });
+      } else {
+        message += `予定は特にないよ✨\n`;
+      }
+      message += `\n`;
+
+      // 📋明日のTODO
+      message += `📋明日のTODO\n`;
+      let hasTodos = false;
+      if (tomorrowDueTodos.length > 0) {
+        message += `【明日期日】\n`;
+        tomorrowDueTodos.forEach(t => {
+          message += `・${t.label}${t.title}\n`;
+        });
+        hasTodos = true;
+      }
+      if (overdueTodos.length > 0) {
+        message += `【やり残しTODO】\n`;
+        overdueTodos.forEach(t => {
+          const diffDays = calculateDiffDays(t.date, todayStr);
+          const dayLabel = diffDays === 0 ? "今日まで" : `${diffDays}日前`;
+          message += `・${t.label}${t.title} (${dayLabel})\n`;
+        });
+        hasTodos = true;
+      }
+      if (!hasTodos) {
+        message += `明日のTODOはすっきりクリア！👏\n`;
+      }
+      message += `\n`;
+
+      // 🗑️ごみ出し情報
+      message += `🗑️ごみ出し情報\n`;
+      let hasGarbage = false;
+      if (tomorrowGarbage.length > 0) {
+        tomorrowGarbage.forEach(g => {
+          const noteStr = g.note ? ` (${g.note})` : "";
+          message += `・明日: ${g.name}${noteStr}\n`;
+        });
+        message += `※夜のうちにまとめておくと安心だよ✨\n`;
+        hasGarbage = true;
+      }
+      if (todayGarbage.length > 0) {
+        todayGarbage.forEach(g => {
+          message += `・本日: ${g.name}\n`;
+        });
+        hasGarbage = true;
+      }
+      if (!hasGarbage) {
+        message += `今日・明日のごみ収集はありません🍀\n`;
+      }
+      message += `\n`;
+
+      message += `CANDYを開く：\n${BASE_URL}/home`;
+
+      // LINEメッセージ送信
+      sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+    });
+
+  } catch (e) {
+    Logger.log('Night Notification Error: ' + e.toString());
+  }
+}
+

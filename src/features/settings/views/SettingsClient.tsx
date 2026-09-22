@@ -19,6 +19,8 @@ export default function SettingsClient() {
   const [formData, setFormData] = useState<{
     morningEnabled: boolean;
     morningTime: string;
+    nightEnabled: boolean;
+    nightTime: string;
     eventReminderEnabled: boolean;
     eventReminderMinutes: number[];
     dailyStatusEnabled: boolean;
@@ -26,6 +28,8 @@ export default function SettingsClient() {
   }>({
     morningEnabled: true,
     morningTime: "08:00",
+    nightEnabled: true,
+    nightTime: "22:00",
     eventReminderEnabled: true,
     eventReminderMinutes: [10],
     dailyStatusEnabled: true,
@@ -59,8 +63,10 @@ export default function SettingsClient() {
           }
         }
         setFormData({
-          morningEnabled: settings.morningEnabled,
-          morningTime: settings.morningTime,
+          morningEnabled: settings.morningEnabled !== false,
+          morningTime: settings.morningTime || "08:00",
+          nightEnabled: settings.nightEnabled !== false,
+          nightTime: settings.nightTime || "22:00",
           eventReminderEnabled: settings.eventReminderEnabled,
           eventReminderMinutes: minutes,
           dailyStatusEnabled: settings.dailyStatusEnabled !== false,
@@ -78,7 +84,7 @@ export default function SettingsClient() {
     loadSettings();
   }, [user]);
 
-  const handleToggleChange = (name: "morningEnabled" | "eventReminderEnabled" | "dailyStatusEnabled" | "dailyStatusCommentEnabled") => {
+  const handleToggleChange = (name: "morningEnabled" | "nightEnabled" | "eventReminderEnabled" | "dailyStatusEnabled" | "dailyStatusCommentEnabled") => {
     setFormData(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
@@ -116,6 +122,11 @@ export default function SettingsClient() {
     // バリデーション
     if (formData.morningEnabled && !formData.morningTime) {
       showDialog("朝のメッセージ通知時間を入力してください。", true);
+      return;
+    }
+
+    if (formData.nightEnabled && !formData.nightTime) {
+      showDialog("夜のお休み通知時間を入力してください。", true);
       return;
     }
 
@@ -186,6 +197,35 @@ export default function SettingsClient() {
             value={formData.morningTime}
             onChange={handleInputChange}
             disabled={!formData.morningEnabled}
+          />
+        </div>
+
+        {/* 夜のお休み通知セクション */}
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-moon"></i> 夜のお休み通知
+        </div>
+
+        <div className={styles.switchContainer}>
+          <span className={styles.switchLabel}>夜の定期通知を送る</span>
+          <label className={styles.switch}>
+            <input
+              type="checkbox"
+              checked={formData.nightEnabled}
+              onChange={() => handleToggleChange("nightEnabled")}
+            />
+            <span className={styles.slider}></span>
+          </label>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>通知する時間</label>
+          <input
+            type="time"
+            name="nightTime"
+            className={styles.appInput}
+            value={formData.nightTime}
+            onChange={handleInputChange}
+            disabled={!formData.nightEnabled}
           />
         </div>
 
