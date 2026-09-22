@@ -10,7 +10,7 @@ import {
   NTH_WEEK_OPTIONS,
   MONTH_OPTIONS,
   GarbagePreset,
-} from "../types/living";
+} from "../types/garbage";
 import { showDialog } from "@/src/lib/functions";
 import styles from "./GarbageModal.module.css";
 

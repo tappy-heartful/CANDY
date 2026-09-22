@@ -9,7 +9,7 @@ import {
   addGarbageSchedule,
   updateGarbageSchedule,
   deleteGarbageSchedule,
-} from "../api/living-client-service";
+} from "../api/garbage-client-service";
 import {
   getGarbageForDate,
   getGarbageForMonth,
@@ -17,13 +17,13 @@ import {
 } from "../lib/garbage-calculator";
 import GarbageModal from "../components/GarbageModal";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
-import styles from "./Living.module.css";
+import styles from "./Garbage.module.css";
 
-interface LivingClientProps {
+interface GarbageClientProps {
   initialSchedules?: GarbageSchedule[];
 }
 
-export default function LivingClient({ initialSchedules = [] }: LivingClientProps) {
+export default function GarbageClient({ initialSchedules = [] }: GarbageClientProps) {
   const { user } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
 
@@ -50,7 +50,7 @@ export default function LivingClient({ initialSchedules = [] }: LivingClientProp
 
   // パンくず設定
   useEffect(() => {
-    setBreadcrumbs([{ title: "暮らし" }]);
+    setBreadcrumbs([{ title: "ごみカレンダー" }]);
   }, [setBreadcrumbs]);
 
   // 初回データ取得（initialSchedules が空の場合など）
@@ -261,10 +261,10 @@ export default function LivingClient({ initialSchedules = [] }: LivingClientProp
       {/* 画面ヘッダー */}
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>
-          <i className={`fa-solid fa-house-chimney-user ${styles.titleIcon}`}></i>
-          暮らし
+          <i className={`fa-solid fa-trash-can ${styles.titleIcon}`}></i>
+          ごみカレンダー
         </h1>
-        <p className={styles.pageSubtitle}>2人の快適な毎日のためのごみカレンダー🍬</p>
+        <p className={styles.pageSubtitle}>2人の快適な毎日のためのごみ収集スケジュール🍬</p>
       </div>
 
       {/* トップサマリー（今日・明日のごみ出し） */}

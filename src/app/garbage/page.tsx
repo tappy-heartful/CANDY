@@ -2,16 +2,16 @@
 
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
-import LivingClient from "@/src/features/living/views/LivingClient";
+import GarbageClient from "@/src/features/garbage/views/GarbageClient";
 
-export default function LivingPage() {
+export default function GarbagePage() {
   const { loading } = useAuth();
 
   if (loading) return <div className="page-container" />;
 
   return (
     <AuthGuard>
-      <LivingClient />
+      <GarbageClient />
     </AuthGuard>
   );
 }

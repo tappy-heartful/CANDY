@@ -1,4 +1,4 @@
-import { GarbageSchedule, DAY_OF_WEEK_LABELS } from "../types/living";
+import { GarbageSchedule, DAY_OF_WEEK_LABELS } from "../types/garbage";
 
 /**
  * 指定した日付（Date）が、対象のごみ収集スケジュールの回収日かどうかを判定する
@@ -108,7 +108,7 @@ export function getUpcomingGarbage(
 
 /**
  * スケジュールルールの日本語サマリー文字列を生成する
- * 例: "毎月 毎週 火・金", "毎月 第1・第3 水", "偶数月 第2 木"
+ * 例: "毎月 毎週 火・金", "毎月 隔週 (2026/04/01〜) 水曜日", "3月・9月 第2 水曜日"
  */
 export function formatScheduleRule(schedule: GarbageSchedule): string {
   const parts: string[] = [];
