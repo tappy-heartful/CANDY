@@ -1,0 +1,442 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes modalPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalHeader {
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.modalTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.modalTitleIcon {
+  color: #ff758c;
+}
+
+.closeIconBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.closeIconBtn:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.modalBody {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.requiredBadge {
+  font-size: 0.7rem;
+  background: #fee2e2;
+  color: #ef4444;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.inputField {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.inputField:focus {
+  border-color: #ff758c;
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.15);
+}
+
+.textareaField {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 0.95rem;
+  outline: none;
+  resize: vertical;
+  min-height: 72px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.textareaField:focus {
+  border-color: #ff758c;
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.15);
+}
+
+/* プリセットタグ */
+.presetContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.presetTag {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.presetTag:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.presetTagActive {
+  background: #fff1f2;
+  border-color: #ff8097;
+  color: #e11d48;
+  font-weight: 600;
+}
+
+/* セグメントコントロール（月指定など） */
+.segmentRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+@media (max-width: 420px) {
+  .segmentRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.segmentBtn {
+  background: transparent;
+  border: none;
+  padding: 10px 6px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.segmentBtnActive {
+  background: #ffffff;
+  color: #e11d48;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 12ヶ月選択グリッド */
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+@media (max-width: 480px) {
+  .monthGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 週のパターン選択（毎週、隔週第1・3、隔週第2・4、第N週指定） */
+.weekPatternGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 400px) {
+  .weekPatternGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 第N週のボタングループ */
+.nthWeekGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.toggleBtn {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  padding: 8px 4px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.toggleBtn:hover {
+  background: #f8fafc;
+}
+
+.toggleBtnActive {
+  background: #fff1f2;
+  border-color: #ff8097;
+  color: #e11d48;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.15);
+}
+
+/* 曜日のボタングループ */
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.dayBtn {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.dayBtnSun {
+  color: #ef4444;
+}
+
+.dayBtnSat {
+  color: #3b82f6;
+}
+
+.dayBtnActive {
+  background: #ff758c !important;
+  border-color: #ff758c !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(255, 117, 140, 0.35);
+}
+
+/* カラー＆アイコンの選択 */
+.colorPalette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.colorDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.colorDot:hover {
+  transform: scale(1.15);
+}
+
+.colorDotActive {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 3px #ff8097, 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.iconRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iconChoiceBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.iconChoiceBtn:hover {
+  background: #f8fafc;
+}
+
+.iconChoiceBtnActive {
+  background: #fff1f2;
+  border-color: #ff8097;
+  color: #e11d48;
+}
+
+/* フッターボタン */
+.modalFooter {
+  padding: 16px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid #f1f3f5;
+  background: #ffffff;
+}
+
+.actionRow {
+  display: flex;
+  gap: 10px;
+}
+
+.saveBtn {
+  flex: 1;
+  background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+  color: #ffffff;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 117, 140, 0.35);
+  transition: transform 0.1s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.saveBtn:active {
+  transform: scale(0.98);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.closeBtn {
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.closeBtn:hover {
+  background: #e2e8f0;
+}
+
+.deleteBtn {
+  background: transparent;
+  color: #ef4444;
+  border: 1px dashed #fca5a5;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
+}

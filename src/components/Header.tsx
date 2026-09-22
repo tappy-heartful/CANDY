@@ -204,6 +204,9 @@ export default function Header() {
 
           {/* サブ機能 (控えめ表示) */}
           <div className={styles.subMenuGrid}>
+            <Link href="/living" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-house-chimney-user ${styles.menuIconSub}`}></i> 暮らし
+            </Link>
             <Link href="/wishlist" onClick={closeMenu} className={styles.menuLinkSub}>
               <i className={`fa-solid fa-gift ${styles.menuIconSub}`}></i> Wishlist
             </Link>

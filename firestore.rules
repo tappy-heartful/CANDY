@@ -149,6 +149,13 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && (resource.data.uid == request.auth.uid || resource.data.partnerEditable == true);
     }
 
+    // 暮らし機能・ごみカレンダー
+    match /garbageSchedules/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn();
+    }
+
     // ============================
 
     // ログ・認証系（システム用）
