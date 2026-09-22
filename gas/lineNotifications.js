@@ -10,7 +10,22 @@
  */
 
 const props = PropertiesService.getScriptProperties();
-const LINE_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+
+// LINEアクセストークン（定期通知用＆イベント通知用で公式アカウントを分離）
+// GASの「プロジェクトの設定」>「スクリプトプロパティ」で以下を設定してください：
+// ・定期通知用（朝・夜の定期通知）：LINE_PERIODIC_ACCESS_TOKEN
+// ・イベント通知用（予定リマインド通知）：LINE_EVENT_ACCESS_TOKEN
+// ※未設定の場合は従来の LINE_CHANNEL_ACCESS_TOKEN をフォールバックとして使用します。
+const LINE_PERIODIC_ACCESS_TOKEN =
+  props.getProperty('LINE_PERIODIC_ACCESS_TOKEN') ||
+  props.getProperty('LINE_CHANNEL_ACCESS_TOKEN_PERIODIC') ||
+  props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+
+const LINE_EVENT_ACCESS_TOKEN =
+  props.getProperty('LINE_EVENT_ACCESS_TOKEN') ||
+  props.getProperty('LINE_CHANNEL_ACCESS_TOKEN_EVENT') ||
+  props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+
 const FIRESTORE_EMAIL = props.getProperty('FIRESTORE_EMAIL');
 const FIRESTORE_KEY = props.getProperty('FIRESTORE_KEY').replace(/\\n/g, '\n');
 const FIRESTORE_PROJECT_ID = props.getProperty('FIRESTORE_PROJECT_ID');
@@ -407,8 +422,8 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
         message += `\n`;
       }
 
-      // LINEメッセージ送信
-      sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+      // LINEメッセージ送信 (定期通知用公式アカウント)
+      sendLineMessage(lineUid, message, LINE_PERIODIC_ACCESS_TOKEN);
     });
 
   } catch (e) {
@@ -483,7 +498,8 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
             }
             message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
 
-            sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+            // LINEメッセージ送信 (イベント通知用公式アカウント)
+            sendLineMessage(lineUid, message, LINE_EVENT_ACCESS_TOKEN);
           });
         }
       });
@@ -727,8 +743,8 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
 
       message += `CANDYを開く：\n${BASE_URL}/home`;
 
-      // LINEメッセージ送信
-      sendLineMessage(lineUid, message, LINE_ACCESS_TOKEN);
+      // LINEメッセージ送信 (定期通知用公式アカウント)
+      sendLineMessage(lineUid, message, LINE_PERIODIC_ACCESS_TOKEN);
     });
 
   } catch (e) {
