@@ -465,7 +465,8 @@ export interface GarbageSchedule {
   icon?: string; // Font Awesome アイコン名 (例: "fa-fire")
   monthType: "every" | "even" | "odd" | "custom"; // 毎月 / 偶数月 / 奇数月 / 指定月
   customMonths?: number[]; // [1, 2, ..., 12] (monthType === 'custom' の場合)
-  weekType: "every" | "nth"; // 毎週 / 第N週
+  weekType: "every" | "biweekly" | "nth"; // 毎週 / 隔週(開始日基準) / 第N週
+  biweeklyStartDate?: string; // "YYYY-MM-DD" (weekType === 'biweekly' の場合)
   nthWeeks: number[]; // 第N週の配列 [1, 2, 3, 4, 5] (weekType === 'nth' の場合)
   daysOfWeek: number[]; // 曜日の配列 [0, 1, 2, 3, 4, 5, 6] (0: 日曜日 〜 6: 土曜日)
   note?: string; // メモ・出し方注意点

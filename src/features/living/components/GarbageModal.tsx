@@ -23,8 +23,6 @@ interface GarbageModalProps {
   isSubmitting: boolean;
 }
 
-type WeekPatternMode = "every" | "biweekly13" | "biweekly24" | "customNth";
-
 export default function GarbageModal({
   isOpen,
   schedule,
@@ -38,10 +36,19 @@ export default function GarbageModal({
   const [icon, setIcon] = useState("fa-fire");
   const [monthType, setMonthType] = useState<"every" | "even" | "odd" | "custom">("every");
   const [customMonths, setCustomMonths] = useState<number[]>([1]);
-  const [weekPattern, setWeekPattern] = useState<WeekPatternMode>("every");
+  const [weekType, setWeekType] = useState<"every" | "biweekly" | "nth">("every");
+  const [biweeklyStartDate, setBiweeklyStartDate] = useState<string>("");
   const [nthWeeks, setNthWeeks] = useState<number[]>([1]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([2]); // デフォルト火曜
   const [note, setNote] = useState("");
+
+  const getTodayDateStr = () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
 
   // 初期値のセット
   useEffect(() => {
@@ -56,34 +63,21 @@ export default function GarbageModal({
             ? schedule.customMonths
             : [new Date().getMonth() + 1]
         );
-
-        // 週パターンの判定
-        if (schedule.weekType === "every") {
-          setWeekPattern("every");
-          setNthWeeks([1]);
-        } else {
-          const sorted = [...(schedule.nthWeeks || [])].sort((a, b) => a - b);
-          const key = sorted.join(",");
-          if (key === "1,3") {
-            setWeekPattern("biweekly13");
-          } else if (key === "2,4") {
-            setWeekPattern("biweekly24");
-          } else {
-            setWeekPattern("customNth");
-          }
-          setNthWeeks(sorted.length > 0 ? sorted : [1]);
-        }
-
+        setWeekType(schedule.weekType || "every");
+        setBiweeklyStartDate(schedule.biweeklyStartDate || getTodayDateStr());
+        setNthWeeks(schedule.nthWeeks && schedule.nthWeeks.length > 0 ? schedule.nthWeeks : [1]);
         setDaysOfWeek(schedule.daysOfWeek && schedule.daysOfWeek.length > 0 ? schedule.daysOfWeek : [1]);
         setNote(schedule.note || "");
       } else {
         // 新規作成時デフォルト
+        const defaultDate = getTodayDateStr();
         setName("");
         setColor("#F87171");
         setIcon("fa-fire");
         setMonthType("every");
         setCustomMonths([new Date().getMonth() + 1]);
-        setWeekPattern("every");
+        setWeekType("every");
+        setBiweeklyStartDate(defaultDate);
         setNthWeeks([1]);
         setDaysOfWeek([2]); // デフォルト火曜日
         setNote("");
@@ -115,21 +109,21 @@ export default function GarbageModal({
     });
   };
 
-  // 週パターンの変更
-  const handleChangeWeekPattern = (mode: WeekPatternMode) => {
-    setWeekPattern(mode);
-    if (mode === "biweekly13") {
-      setNthWeeks([1, 3]);
-    } else if (mode === "biweekly24") {
-      setNthWeeks([2, 4]);
-    } else if (mode === "every") {
-      setNthWeeks([]);
-    } else if (mode === "customNth" && nthWeeks.length === 0) {
-      setNthWeeks([1]);
+  // 隔週の開始日変更（同時に該当曜日を自動セット）
+  const handleStartDateChange = (val: string) => {
+    setBiweeklyStartDate(val);
+    if (val) {
+      const parts = val.split("-").map(Number);
+      if (parts.length === 3) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (!isNaN(d.getTime())) {
+          setDaysOfWeek([d.getDay()]);
+        }
+      }
     }
   };
 
-  // 第N週のトグル（自由指定時）
+  // 第N週のトグル（指定時）
   const handleToggleNthWeek = (week: number) => {
     setNthWeeks((prev) => {
       if (prev.includes(week)) {
@@ -168,9 +162,11 @@ export default function GarbageModal({
       showDialog("対象の月を1つ以上選択してください");
       return;
     }
-
-    const isNthWeek = weekPattern !== "every";
-    if (isNthWeek && nthWeeks.length === 0) {
+    if (weekType === "biweekly" && !biweeklyStartDate) {
+      showDialog("隔週の開始日（基準日）を入力してください");
+      return;
+    }
+    if (weekType === "nth" && nthWeeks.length === 0) {
       showDialog("第何週かを1つ以上選択してください");
       return;
     }
@@ -181,8 +177,9 @@ export default function GarbageModal({
       icon,
       monthType,
       customMonths: monthType === "custom" ? customMonths : [],
-      weekType: isNthWeek ? "nth" : "every",
-      nthWeeks: isNthWeek ? nthWeeks : [],
+      weekType,
+      biweeklyStartDate: weekType === "biweekly" ? biweeklyStartDate : "",
+      nthWeeks: weekType === "nth" ? nthWeeks : [],
       daysOfWeek,
       note: note.trim(),
     });
@@ -304,41 +301,57 @@ export default function GarbageModal({
           {/* 収集週 */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel}>
-              収集週（隔週・第N週） <span className={styles.requiredBadge}>必須</span>
+              収集週 <span className={styles.requiredBadge}>必須</span>
             </label>
             <div className={styles.weekPatternGrid}>
               <button
                 type="button"
-                className={`${styles.segmentBtn} ${weekPattern === "every" ? styles.segmentBtnActive : ""}`}
-                onClick={() => handleChangeWeekPattern("every")}
+                className={`${styles.segmentBtn} ${weekType === "every" ? styles.segmentBtnActive : ""}`}
+                onClick={() => setWeekType("every")}
               >
                 毎週
               </button>
               <button
                 type="button"
-                className={`${styles.segmentBtn} ${weekPattern === "biweekly13" ? styles.segmentBtnActive : ""}`}
-                onClick={() => handleChangeWeekPattern("biweekly13")}
+                className={`${styles.segmentBtn} ${weekType === "biweekly" ? styles.segmentBtnActive : ""}`}
+                onClick={() => setWeekType("biweekly")}
               >
-                隔週 (第1・3週)
+                隔週 (2週に1回)
               </button>
               <button
                 type="button"
-                className={`${styles.segmentBtn} ${weekPattern === "biweekly24" ? styles.segmentBtnActive : ""}`}
-                onClick={() => handleChangeWeekPattern("biweekly24")}
+                className={`${styles.segmentBtn} ${weekType === "nth" ? styles.segmentBtnActive : ""}`}
+                onClick={() => setWeekType("nth")}
               >
-                隔週 (第2・4週)
-              </button>
-              <button
-                type="button"
-                className={`${styles.segmentBtn} ${weekPattern === "customNth" ? styles.segmentBtnActive : ""}`}
-                onClick={() => handleChangeWeekPattern("customNth")}
-              >
-                第N週 (自由指定)
+                第N週 (指定)
               </button>
             </div>
 
-            {/* 第N週（自由指定）が選ばれている場合の個別チェック */}
-            {weekPattern === "customNth" && (
+            {/* 隔週の場合：開始日（基準日）の選択 */}
+            {weekType === "biweekly" && (
+              <div className={styles.startDateBox}>
+                <div className={styles.startDateHeader}>
+                  <label className={styles.startDateLabel} htmlFor="biweekly-start-date">
+                    <i className="fa-regular fa-calendar-check" style={{ color: "#ff758c" }}></i>
+                    開始日（基準となる収集日）
+                  </label>
+                </div>
+                <input
+                  id="biweekly-start-date"
+                  type="date"
+                  className={styles.dateInput}
+                  value={biweeklyStartDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  required
+                />
+                <p className={styles.helperText}>
+                  💡 月に関係なく、この開始日から14日ごと（2週間おき）に収集されます。曜日は自動的に設定されます。
+                </p>
+              </div>
+            )}
+
+            {/* 第N週（指定）が選ばれている場合の個別チェック */}
+            {weekType === "nth" && (
               <div className={styles.nthWeekGrid}>
                 {NTH_WEEK_OPTIONS.map((opt) => {
                   const isSelected = nthWeeks.includes(opt.value);

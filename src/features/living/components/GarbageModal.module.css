@@ -224,17 +224,68 @@
   }
 }
 
-/* 週のパターン選択（毎週、隔週第1・3、隔週第2・4、第N週指定） */
+/* 週のパターン選択（毎週、隔週、第N週指定） */
 .weekPatternGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
   .weekPatternGrid {
     grid-template-columns: 1fr;
   }
+}
+
+/* 隔週の開始日入力ボックス */
+.startDateBox {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.startDateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.startDateLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dateInput {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 0.95rem;
+  outline: none;
+  background: #ffffff;
+  color: #1e293b;
+  box-sizing: border-box;
+}
+
+.dateInput:focus {
+  border-color: #ff758c;
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.15);
+}
+
+.helperText {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* 第N週のボタングループ */

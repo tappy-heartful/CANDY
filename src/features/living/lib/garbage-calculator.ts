@@ -24,8 +24,20 @@ export function isGarbageCollectionDay(schedule: GarbageSchedule, date: Date): b
     return false;
   }
 
-  // 3. 週の判定 (毎週 または 第N週)
-  if (schedule.weekType === "nth") {
+  // 3. 週の判定 (毎週 / 隔週 / 第N週)
+  if (schedule.weekType === "biweekly") {
+    if (!schedule.biweeklyStartDate) return false;
+    const startParts = schedule.biweeklyStartDate.split("-").map(Number);
+    if (startParts.length !== 3) return false;
+    const uttStart = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+    const uttTarget = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((uttTarget - uttStart) / (1000 * 60 * 60 * 24));
+
+    // 開始日以降、かつ14日周期 (2週間に1回)
+    if (diffDays < 0 || diffDays % 14 !== 0) {
+      return false;
+    }
+  } else if (schedule.weekType === "nth") {
     // その月の第何週（第N曜日）かを計算
     // 例: 1日〜7日 = 第1, 8日〜14日 = 第2, 15日〜21日 = 第3, 22日〜28日 = 第4, 29日〜31日 = 第5
     const nthWeek = Math.ceil(date.getDate() / 7);
@@ -115,17 +127,13 @@ export function formatScheduleRule(schedule: GarbageSchedule): string {
   }
 
   // 週
-  if (schedule.weekType === "nth") {
+  if (schedule.weekType === "biweekly") {
+    const startText = schedule.biweeklyStartDate ? `${schedule.biweeklyStartDate.replace(/-/g, "/")}〜 ` : "";
+    parts.push(`隔週 (${startText.trim()})`);
+  } else if (schedule.weekType === "nth") {
     const sortedWeeks = [...(schedule.nthWeeks || [])].sort((a, b) => a - b);
-    const key = sortedWeeks.join(",");
-    if (key === "1,3") {
-      parts.push("隔週(第1・3週)");
-    } else if (key === "2,4") {
-      parts.push("隔週(第2・4週)");
-    } else {
-      const weekLabels = sortedWeeks.map((w) => `第${w}`).join("・");
-      parts.push(weekLabels ? `${weekLabels}週` : "第N週");
-    }
+    const weekLabels = sortedWeeks.map((w) => `第${w}`).join("・");
+    parts.push(weekLabels ? `${weekLabels}週` : "第N週");
   } else {
     parts.push("毎週");
   }
