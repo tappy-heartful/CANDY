@@ -278,7 +278,7 @@
 /* カレンダーグリッド */
 .calendarWeekHeader {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   text-align: center;
   font-size: 0.75rem;
   font-weight: 700;
@@ -288,27 +288,30 @@
 
 .calendarGrid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
 }
 
 .calendarDayCell {
-  min-height: 64px;
+  min-width: 0;
+  width: 100%;
+  min-height: 76px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid #f8fafc;
   padding: 4px 2px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   position: relative;
+  box-sizing: border-box;
 }
 
 @media (max-width: 480px) {
   .calendarDayCell {
-    min-height: 52px;
+    min-height: 68px;
     padding: 3px 1px;
   }
 }
@@ -343,6 +346,7 @@
   justify-content: center;
   border-radius: 50%;
   margin-bottom: 2px;
+  align-self: center;
 }
 
 .daySun {
@@ -363,44 +367,69 @@
   flex-direction: column;
   gap: 2px;
   width: 100%;
-  align-items: center;
+  min-width: 0;
+  align-items: stretch;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin-top: 1px;
 }
 
 .calendarGarbageBadge {
-  width: 90%;
+  width: 100%;
+  min-width: 0;
   font-size: 0.65rem;
   font-weight: 700;
   color: #ffffff;
-  padding: 1px 3px;
+  padding: 2px 4px;
   border-radius: 4px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+  text-align: left;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  line-height: 12px;
+  height: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.badgeIcon {
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}
+
+.badgeText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  text-align: left;
+  flex: 1;
+}
+
+.calendarGarbageBadgeMore {
+  background-color: #94a3b8;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  justify-content: center;
   text-align: center;
 }
 
 @media (max-width: 480px) {
   .calendarGarbageBadge {
-    display: none; /* スマホではドット表示に切り替えて見切れ防止 */
+    font-size: 8px;
+    padding: 1px 3px;
+    gap: 2px;
+    line-height: 11px;
+    height: 14px;
   }
-}
 
-.calendarDotRow {
-  display: none;
-  gap: 3px;
-  margin-top: 2px;
-}
-
-@media (max-width: 480px) {
-  .calendarDotRow {
-    display: flex;
+  .badgeIcon {
+    font-size: 7px;
   }
-}
-
-.calendarDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
 }
 
 /* 選択された日の詳細パネル */

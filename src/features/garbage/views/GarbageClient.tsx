@@ -452,7 +452,7 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                       {cell.dayNumber}
                     </span>
 
-                    {/* PC用: バッジ表示 */}
+                    {/* ごみ種別イベントピル表示 */}
                     {cell.items.length > 0 && (
                       <div className={styles.badgeStack}>
                         {cell.items.slice(0, 2).map((item) => (
@@ -462,30 +462,19 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                             style={{ backgroundColor: item.color }}
                             title={`${item.name} (${item.note || ""})`}
                           >
-                            {item.name.split("（")[0]}
+                            <i className={`fa-solid ${item.icon || "fa-trash-can"} ${styles.badgeIcon}`}></i>
+                            <span className={styles.badgeText}>
+                              {item.name.split("（")[0].split("(")[0]}
+                            </span>
                           </div>
                         ))}
                         {cell.items.length > 2 && (
                           <div
-                            className={styles.calendarGarbageBadge}
-                            style={{ backgroundColor: "#94a3b8" }}
+                            className={`${styles.calendarGarbageBadge} ${styles.calendarGarbageBadgeMore}`}
                           >
                             +{cell.items.length - 2}
                           </div>
                         )}
-                      </div>
-                    )}
-
-                    {/* スマホ用: カラードット表示 */}
-                    {cell.items.length > 0 && (
-                      <div className={styles.calendarDotRow}>
-                        {cell.items.slice(0, 3).map((item) => (
-                          <span
-                            key={item.id}
-                            className={styles.calendarDot}
-                            style={{ backgroundColor: item.color }}
-                          />
-                        ))}
                       </div>
                     )}
                   </div>
