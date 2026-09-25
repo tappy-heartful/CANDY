@@ -472,6 +472,8 @@ export interface GarbageSchedule {
   nthWeeks: number[]; // 第N週の配列 [1, 2, 3, 4, 5] (weekType === 'nth' の場合)
   daysOfWeek: number[]; // 曜日の配列 [0, 1, 2, 3, 4, 5, 6] (0: 日曜日 〜 6: 土曜日)
   note?: string; // メモ・出し方注意点
+  imageUrl?: string; // ごみの出し方・分別画像のURL
+  imageUrls?: string[]; // 複数枚の出し方画像URL
   uid: string; // 作成者UID
   createdAt: number;
   updatedAt: number;

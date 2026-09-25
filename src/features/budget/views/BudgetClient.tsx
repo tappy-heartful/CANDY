@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Fragment, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
@@ -57,11 +58,18 @@ export default function BudgetClient() {
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [types, setTypes] = useState<BudgetType[]>([]);
 
+  const searchParams = useSearchParams();
+  const paramYear = searchParams.get("year");
+  const paramMonth = searchParams.get("month");
+  const paramTab = searchParams.get("tab");
+
   // ソート設定（デフォルトは日時の降順）
   const [sortOption, setSortOption] = useState<BudgetSortOption>("date_desc");
 
   // 画面タブ
-  const [activeTab, setActiveTab] = useState<"actual" | "monthly" | "default">("actual");
+  const [activeTab, setActiveTab] = useState<"actual" | "monthly" | "default">(
+    paramTab === "monthly" || paramTab === "default" ? paramTab : "actual"
+  );
 
   // ロード状態
   const [isLoading, setIsLoading] = useState(true);
@@ -85,8 +93,12 @@ export default function BudgetClient() {
   const [dfPartnerRatio, setDfPartnerRatio] = useState<number | "">(50);
 
   // 実際収支用のアクティブな年月
-  const [actualYear, setActualYear] = useState<number>(new Date().getFullYear());
-  const [actualMonth, setActualMonth] = useState<number>(new Date().getMonth() + 1);
+  const [actualYear, setActualYear] = useState<number>(
+    paramYear ? parseInt(paramYear, 10) : new Date().getFullYear()
+  );
+  const [actualMonth, setActualMonth] = useState<number>(
+    paramMonth ? parseInt(paramMonth, 10) : new Date().getMonth() + 1
+  );
 
   // 実際収支データ
   const [actualBudgets, setActualBudgets] = useState<ActualBudget[]>([]);
@@ -206,6 +218,21 @@ export default function BudgetClient() {
       setSortOption("category_asc");
     }
   }, [activeTab, sortOption]);
+
+  // URLのクエリパラメータ変更に対応
+  useEffect(() => {
+    if (paramYear) {
+      const y = parseInt(paramYear, 10);
+      if (!isNaN(y)) setActualYear(y);
+    }
+    if (paramMonth) {
+      const m = parseInt(paramMonth, 10);
+      if (!isNaN(m)) setActualMonth(m);
+    }
+    if (paramTab === "actual" || paramTab === "monthly" || paramTab === "default") {
+      setActiveTab(paramTab);
+    }
+  }, [paramYear, paramMonth, paramTab]);
 
   const myName = userData?.nickname || "自分";
   const partnerName = partnerUser?.nickname || "パートナー";

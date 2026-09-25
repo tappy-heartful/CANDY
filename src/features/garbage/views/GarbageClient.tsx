@@ -16,6 +16,7 @@ import {
   formatScheduleRule,
 } from "../lib/garbage-calculator";
 import GarbageModal from "../components/GarbageModal";
+import GarbageImageViewerModal from "../components/GarbageImageViewerModal";
 import { showSpinner, hideSpinner, showDialog } from "@/src/lib/functions";
 import styles from "./Garbage.module.css";
 
@@ -47,6 +48,14 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<GarbageSchedule | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 画像拡大ビューア管理
+  const [viewingImage, setViewingImage] = useState<{
+    imageUrl: string;
+    title: string;
+    note?: string;
+    color?: string;
+  } | null>(null);
 
   // パンくず設定
   useEffect(() => {
@@ -289,14 +298,39 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                     className={styles.garbageTagItem}
                     style={{ borderLeftColor: g.color }}
                   >
-                    <i
-                      className={`fa-solid ${g.icon || "fa-trash-can"} ${styles.garbageTagIcon}`}
-                      style={{ color: g.color }}
-                    ></i>
-                    <div>
-                      <div className={styles.garbageTagName}>{g.name}</div>
-                      {g.note && <div className={styles.garbageTagNote}>{g.note}</div>}
+                    <div className={styles.garbageTagContent}>
+                      <i
+                        className={`fa-solid ${g.icon || "fa-trash-can"} ${styles.garbageTagIcon}`}
+                        style={{ color: g.color }}
+                      ></i>
+                      <div className={styles.garbageTagTextGroup}>
+                        <div className={styles.garbageTagName}>{g.name}</div>
+                        {g.note && <div className={styles.garbageTagNote}>{g.note}</div>}
+                      </div>
                     </div>
+
+                    {g.imageUrl && (
+                      <button
+                        type="button"
+                        className={styles.viewImageMiniBtn}
+                        onClick={() =>
+                          setViewingImage({
+                            imageUrl: g.imageUrl!,
+                            title: `${g.name}の出し方`,
+                            note: g.note,
+                            color: g.color,
+                          })
+                        }
+                        title="出し方の写真を見る"
+                        aria-label={`${g.name}の出し方写真を見る`}
+                      >
+                        <img src={g.imageUrl} alt="" className={styles.miniThumbnail} />
+                        <span className={styles.viewImageMiniLabel}>
+                          <i className="fa-solid fa-camera"></i>
+                          写真
+                        </span>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -329,14 +363,39 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                     className={styles.garbageTagItem}
                     style={{ borderLeftColor: g.color }}
                   >
-                    <i
-                      className={`fa-solid ${g.icon || "fa-trash-can"} ${styles.garbageTagIcon}`}
-                      style={{ color: g.color }}
-                    ></i>
-                    <div>
-                      <div className={styles.garbageTagName}>{g.name}</div>
-                      {g.note && <div className={styles.garbageTagNote}>{g.note}</div>}
+                    <div className={styles.garbageTagContent}>
+                      <i
+                        className={`fa-solid ${g.icon || "fa-trash-can"} ${styles.garbageTagIcon}`}
+                        style={{ color: g.color }}
+                      ></i>
+                      <div className={styles.garbageTagTextGroup}>
+                        <div className={styles.garbageTagName}>{g.name}</div>
+                        {g.note && <div className={styles.garbageTagNote}>{g.note}</div>}
+                      </div>
                     </div>
+
+                    {g.imageUrl && (
+                      <button
+                        type="button"
+                        className={styles.viewImageMiniBtn}
+                        onClick={() =>
+                          setViewingImage({
+                            imageUrl: g.imageUrl!,
+                            title: `${g.name}の出し方`,
+                            note: g.note,
+                            color: g.color,
+                          })
+                        }
+                        title="出し方の写真を見る"
+                        aria-label={`${g.name}の出し方写真を見る`}
+                      >
+                        <img src={g.imageUrl} alt="" className={styles.miniThumbnail} />
+                        <span className={styles.viewImageMiniLabel}>
+                          <i className="fa-solid fa-camera"></i>
+                          写真
+                        </span>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -507,6 +566,28 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                         <h4 className={styles.dayDetailName}>{item.name}</h4>
                         {item.note && <p className={styles.dayDetailNote}>💡 {item.note}</p>}
                       </div>
+
+                      {item.imageUrl && (
+                        <button
+                          type="button"
+                          className={styles.dayDetailImageBtn}
+                          onClick={() =>
+                            setViewingImage({
+                              imageUrl: item.imageUrl!,
+                              title: `${item.name}の出し方`,
+                              note: item.note,
+                              color: item.color,
+                            })
+                          }
+                          title="出し方の写真を見る"
+                          aria-label={`${item.name}の出し方写真を見る`}
+                        >
+                          <img src={item.imageUrl} alt="" className={styles.detailThumbnail} />
+                          <span className={styles.dayDetailImageBadge}>
+                            <i className="fa-solid fa-camera"></i> 写真
+                          </span>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -548,14 +629,41 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className={styles.ruleEditBtn}
-                  onClick={() => handleOpenEditModal(schedule)}
-                >
-                  <i className="fa-solid fa-pen"></i>
-                  編集
-                </button>
+                <div className={styles.ruleRightActions}>
+                  {schedule.imageUrl && (
+                    <button
+                      type="button"
+                      className={styles.ruleImageBtn}
+                      onClick={() =>
+                        setViewingImage({
+                          imageUrl: schedule.imageUrl!,
+                          title: `${schedule.name}の出し方`,
+                          note: schedule.note,
+                          color: schedule.color,
+                        })
+                      }
+                      title="出し方の写真を見る"
+                    >
+                      <img
+                        src={schedule.imageUrl}
+                        alt=""
+                        className={styles.ruleThumbnail}
+                      />
+                      <span className={styles.ruleImageLabel}>
+                        <i className="fa-solid fa-camera"></i> 写真
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={styles.ruleEditBtn}
+                    onClick={() => handleOpenEditModal(schedule)}
+                  >
+                    <i className="fa-solid fa-pen"></i>
+                    編集
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -588,6 +696,16 @@ export default function GarbageClient({ initialSchedules = [] }: GarbageClientPr
         onSave={handleSaveSchedule}
         onDelete={handleDeleteSchedule}
         isSubmitting={isSubmitting}
+      />
+
+      {/* 画像拡大ビューアモーダル */}
+      <GarbageImageViewerModal
+        isOpen={!!viewingImage}
+        onClose={() => setViewingImage(null)}
+        imageUrl={viewingImage?.imageUrl || ""}
+        title={viewingImage?.title}
+        note={viewingImage?.note}
+        color={viewingImage?.color}
       />
     </div>
   );

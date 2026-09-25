@@ -16,5 +16,10 @@ service firebase.storage {
     match /budgets/{coupleKey}/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
+
+    // ログイン済みユーザーのみ、ごみカレンダー関連ファイル（ごみの出し方画像等）の読み書きを許可
+    match /garbage/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

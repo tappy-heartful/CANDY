@@ -77,6 +77,18 @@ export default function TodoModal({
   const prevGroupsLength = useRef(groups.length);
   const isInitialized = useRef(false);
 
+  // グループのデフォルトIDを取得（グループID: "muWLzIvxqDvwGExKBhWb" または「日常タスク」を最優先）
+  const getDefaultGroupId = (groupsList: Group[]): string => {
+    if (!groupsList || groupsList.length === 0) return "";
+    const idMatch = groupsList.find((g) => g.id === "muWLzIvxqDvwGExKBhWb");
+    if (idMatch) return idMatch.id;
+    const exactMatch = groupsList.find((g) => g.name.trim() === "日常タスク");
+    if (exactMatch) return exactMatch.id;
+    const partialMatch = groupsList.find((g) => g.name.includes("日常"));
+    if (partialMatch) return partialMatch.id;
+    return groupsList[0].id;
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (todo) {
@@ -91,7 +103,7 @@ export default function TodoModal({
         setIsCompleted(!!todo.isCompleted);
       } else {
         setTitle("");
-        setGroupId(groups.length > 0 ? groups[0].id : "");
+        setGroupId(getDefaultGroupId(groups));
         setType("personal");
         setUid(currentUserId);
         setDateSettings([
@@ -156,7 +168,7 @@ export default function TodoModal({
     // 開いた時点で groups がまだ未ロードだった場合、ロード完了時に初期デフォルトグループをセット
     if (!isInitialized.current && groups.length > 0) {
       if (!todo) {
-        setGroupId(groups[0].id);
+        setGroupId(getDefaultGroupId(groups));
       }
       prevGroupsLength.current = groups.length;
       isInitialized.current = true;

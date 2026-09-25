@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GarbageSchedule } from "@/src/lib/firestore/types";
 import {
   GARBAGE_PRESETS,
@@ -11,6 +11,8 @@ import {
   MONTH_OPTIONS,
   GarbagePreset,
 } from "../types/garbage";
+import { uploadGarbageImage } from "../api/garbage-client-service";
+import GarbageImageViewerModal from "./GarbageImageViewerModal";
 import { showDialog } from "@/src/lib/functions";
 import styles from "./GarbageModal.module.css";
 
@@ -41,6 +43,12 @@ export default function GarbageModal({
   const [nthWeeks, setNthWeeks] = useState<number[]>([1]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([2]); // デフォルト火曜
   const [note, setNote] = useState("");
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isViewerOpen, setIsViewerOpen] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getTodayDateStr = () => {
     const today = new Date();
@@ -68,6 +76,9 @@ export default function GarbageModal({
         setNthWeeks(schedule.nthWeeks && schedule.nthWeeks.length > 0 ? schedule.nthWeeks : [1]);
         setDaysOfWeek(schedule.daysOfWeek && schedule.daysOfWeek.length > 0 ? schedule.daysOfWeek : [1]);
         setNote(schedule.note || "");
+        setImageUrl(schedule.imageUrl || "");
+        setPreviewUrl(schedule.imageUrl || "");
+        setSelectedFile(null);
       } else {
         // 新規作成時デフォルト
         const defaultDate = getTodayDateStr();
@@ -81,9 +92,43 @@ export default function GarbageModal({
         setNthWeeks([1]);
         setDaysOfWeek([2]); // デフォルト火曜日
         setNote("");
+        setImageUrl("");
+        setPreviewUrl("");
+        setSelectedFile(null);
       }
     }
   }, [isOpen, schedule]);
+
+  // 画像ファイル選択
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showDialog("画像ファイル（JPEGやPNGなど）を選択してください");
+      return;
+    }
+
+    // 15MB制限
+    if (file.size > 15 * 1024 * 1024) {
+      showDialog("画像サイズは15MB以下のものを選択してください");
+      return;
+    }
+
+    setSelectedFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+  };
+
+  // 画像の削除
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl("");
+    setImageUrl("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -171,6 +216,23 @@ export default function GarbageModal({
       return;
     }
 
+    let finalImageUrl = imageUrl;
+    if (selectedFile) {
+      setIsUploading(true);
+      try {
+        finalImageUrl = await uploadGarbageImage(selectedFile);
+      } catch (err) {
+        console.error("Failed to upload image:", err);
+        showDialog("画像のアップロード中に問題が発生しました。再度お試しください。");
+        setIsUploading(false);
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    } else if (!previewUrl) {
+      finalImageUrl = "";
+    }
+
     await onSave({
       name: name.trim(),
       color,
@@ -182,6 +244,7 @@ export default function GarbageModal({
       nthWeeks: weekType === "nth" ? nthWeeks : [],
       daysOfWeek,
       note: note.trim(),
+      imageUrl: finalImageUrl || undefined,
     });
   };
 
@@ -442,19 +505,114 @@ export default function GarbageModal({
             />
           </div>
 
+          {/* 出し方の画像・分別表 */}
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel}>
+              <i className="fa-regular fa-image" style={{ color: "#ff758c" }}></i>
+              出し方の画像・分別表の写真（任意）
+            </label>
+
+            {/* 非表示のファイル入力 */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+
+            {previewUrl ? (
+              <div className={styles.imagePreviewContainer}>
+                <div
+                  className={styles.imageThumbnailWrapper}
+                  onClick={() => setIsViewerOpen(true)}
+                  title="クリックして拡大表示"
+                >
+                  <img
+                    src={previewUrl}
+                    alt="ごみの出し方プレビュー"
+                    className={styles.imageThumbnail}
+                  />
+                  <div className={styles.thumbnailOverlay}>
+                    <i className="fa-solid fa-magnifying-glass-plus"></i>
+                    <span>タップして拡大</span>
+                  </div>
+                </div>
+
+                <div className={styles.imageActionButtons}>
+                  <button
+                    type="button"
+                    className={styles.imageChangeBtn}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting || isUploading}
+                  >
+                    <i className="fa-solid fa-camera"></i>
+                    写真を変更
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.imageDeleteBtn}
+                    onClick={handleRemoveImage}
+                    disabled={isSubmitting || isUploading}
+                  >
+                    <i className="fa-regular fa-trash-can"></i>
+                    削除
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.uploadDropZone}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || isUploading}
+              >
+                <div className={styles.uploadIconCircle}>
+                  <i className="fa-solid fa-camera"></i>
+                </div>
+                <div className={styles.uploadTextGroup}>
+                  <span className={styles.uploadMainText}>写真を選択または撮影する</span>
+                  <span className={styles.uploadSubText}>
+                    自治体の分別早見表や指定袋の写真を登録できます📷
+                  </span>
+                </div>
+              </button>
+            )}
+          </div>
+
           {/* フッターアクション */}
           <div className={styles.modalFooter}>
             <div className={styles.actionRow}>
-              <button type="button" className={styles.closeBtn} onClick={onClose} disabled={isSubmitting}>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={onClose}
+                disabled={isSubmitting || isUploading}
+              >
                 キャンセル
               </button>
-              <button type="submit" className={styles.saveBtn} disabled={isSubmitting}>
+              <button
+                type="submit"
+                className={styles.saveBtn}
+                disabled={isSubmitting || isUploading}
+              >
                 <i className="fa-solid fa-check"></i>
-                {isSubmitting ? "保存中..." : schedule ? "更新する" : "追加する"}
+                {isUploading
+                  ? "画像をアップロード中..."
+                  : isSubmitting
+                  ? "保存中..."
+                  : schedule
+                  ? "更新する"
+                  : "追加する"}
               </button>
             </div>
             {schedule && onDelete && (
-              <button type="button" className={styles.deleteBtn} onClick={handleDelete} disabled={isSubmitting}>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={handleDelete}
+                disabled={isSubmitting || isUploading}
+              >
                 <i className="fa-solid fa-trash-can"></i>
                 このルールを削除
               </button>
@@ -462,6 +620,16 @@ export default function GarbageModal({
           </div>
         </form>
       </div>
+
+      {/* 拡大画像ビューア */}
+      <GarbageImageViewerModal
+        isOpen={isViewerOpen}
+        onClose={() => setIsViewerOpen(false)}
+        imageUrl={previewUrl}
+        title={`${name || "ごみ"} の出し方画像`}
+        note={note}
+        color={color}
+      />
     </div>
   );
 }

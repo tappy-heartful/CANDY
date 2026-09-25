@@ -22,6 +22,7 @@ interface CalendarViewProps {
   openDate?: string | null;
   onOpenDateClear?: () => void;
   userData?: User | null;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 const padZero = (n: number) => n.toString().padStart(2, "0");
@@ -131,6 +132,7 @@ export default function CalendarView({
   openDate,
   onOpenDateClear,
   userData,
+  onMonthChange,
 }: CalendarViewProps) {
   const today = useMemo(() => new Date(), []);
   const thisYear = today.getFullYear();
@@ -139,6 +141,11 @@ export default function CalendarView({
 
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-11
+
+  // 操作中の年月変更を親（Home等）へ通知
+  useEffect(() => {
+    onMonthChange?.(currentYear, currentMonth + 1);
+  }, [currentYear, currentMonth, onMonthChange]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<any[]>([]); // will be typed as Todo[]
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);

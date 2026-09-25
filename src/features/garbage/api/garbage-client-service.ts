@@ -1,4 +1,4 @@
-import { db } from "@/src/lib/firebase";
+import { db, storage } from "@/src/lib/firebase";
 import {
   collection,
   doc,
@@ -9,6 +9,8 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { compressImage } from "@/src/lib/image-compression";
 import { GarbageSchedule } from "@/src/lib/firestore/types";
 
 const COLLECTION_NAME = "garbageSchedules";
@@ -101,3 +103,31 @@ export async function deleteGarbageSchedule(id: string) {
   const docRef = doc(db, COLLECTION_NAME, id);
   await deleteDoc(docRef);
 }
+
+/**
+ * ごみの出し方・分別ガイド画像を Storage にアップロードする
+ */
+export async function uploadGarbageImage(file: File): Promise<string> {
+  // 文字や図がくっきり読めるよう最大1600px、品質0.82で自動圧縮
+  const compressed = await compressImage(file, 1600, 0.82);
+  const safeName = (compressed.name || "image.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `garbage/${Date.now()}_${safeName}`;
+  const storageRef = ref(storage, storagePath);
+  const snapshot = await uploadBytes(storageRef, compressed);
+  const downloadUrl = await getDownloadURL(snapshot.ref);
+  return downloadUrl;
+}
+
+/**
+ * ごみ画像（Storage）を削除する
+ */
+export async function deleteGarbageImage(imageUrl: string): Promise<void> {
+  try {
+    const storageRef = ref(storage, imageUrl);
+    await deleteObject(storageRef);
+  } catch (err) {
+    // 削除に失敗してもUIの進行をブロックしない
+    console.warn("Garbage image deletion skipped or failed:", err);
+  }
+}
+

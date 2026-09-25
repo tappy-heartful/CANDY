@@ -13,7 +13,7 @@ import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/cale
 import { getGroups, addTodo, updateTodo, deleteTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
-import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep } from "@/src/lib/firestore/types";
+import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep, ActualBudget } from "@/src/lib/firestore/types";
 import { getNextAnniversaryDiff, showDialog } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
@@ -26,6 +26,7 @@ import PhotoSlideshow from "../components/PhotoSlideshow";
 import TodoModal from "@/src/features/todo/components/TodoModal";
 import BirthdayCelebration from "../components/BirthdayCelebration";
 import FireworksCanvas from "../components/FireworksCanvas";
+import ActualBudgetModal from "@/src/features/budget/components/ActualBudgetModal";
 import { isTodayBirthday } from "../utils/birthday";
 
 const CLOCK_THEMES = [
@@ -74,6 +75,22 @@ export default function HomeClient() {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isGoalSubmitting, setIsGoalSubmitting] = useState(false);
   const router = useRouter();
+
+  // カレンダー操作中の年月と収支登録モーダル
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState<number>(now.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState<number>(now.getMonth() + 1);
+  const [isActualBudgetModalOpen, setIsActualBudgetModalOpen] = useState(false);
+
+  const handleCalendarMonthChange = (year: number, month: number) => {
+    setCalendarYear(year);
+    setCalendarMonth(month);
+  };
+
+  const handleActualBudgetSaved = (savedItem: ActualBudget) => {
+    // 登録後は家計簿画面（該当年月・実績タブ）に遷移
+    router.push(`/budget?year=${savedItem.year}&month=${savedItem.month}&tab=actual`);
+  };
 
   useEffect(() => {
     if (searchParams.get("action") === "status") {
@@ -702,6 +719,27 @@ export default function HomeClient() {
           </div>
         </div>
 
+        {/* カレンダー上部の収支登録クイックバー */}
+        <div className={styles.calendarTopActionBar}>
+          <button
+            type="button"
+            className={styles.registerBudgetQuickBtn}
+            onClick={() => setIsActualBudgetModalOpen(true)}
+            aria-label={`${calendarYear}年${calendarMonth}月の実際の収支を登録`}
+          >
+            <div className={styles.quickBtnIconWrap}>
+              <i className="fa-solid fa-wallet"></i>
+            </div>
+            <div className={styles.quickBtnTextWrap}>
+              <span className={styles.quickBtnMainText}>収支を登録する</span>
+              <span className={styles.quickBtnMonthBadge}>
+                {calendarYear}年{calendarMonth}月
+              </span>
+            </div>
+            <i className={`fa-solid fa-chevron-right ${styles.quickBtnArrow}`}></i>
+          </button>
+        </div>
+
         {user && (
           <CalendarView
             currentUserId={user.uid}
@@ -712,6 +750,7 @@ export default function HomeClient() {
             openDate={openCalendarDate}
             onOpenDateClear={() => setOpenCalendarDate(null)}
             userData={userData as FirestoreUser}
+            onMonthChange={handleCalendarMonthChange}
           />
         )}
 
@@ -1253,6 +1292,21 @@ export default function HomeClient() {
             onToggleComplete={handleToggleCompleteTodo}
             onCopy={handleCopyTodo}
             isSubmitting={isTodoSubmitting}
+          />
+        )}
+
+        {/* 実際の収支登録モーダル */}
+        {isActualBudgetModalOpen && user && (
+          <ActualBudgetModal
+            isOpen={isActualBudgetModalOpen}
+            onClose={() => setIsActualBudgetModalOpen(false)}
+            year={calendarYear}
+            month={calendarMonth}
+            currentUserId={user.uid}
+            myNickname={userData?.nickname || userData?.displayName || "自分"}
+            partnerUser={partnerData}
+            partnerNickname={partnerData?.nickname || "パートナー"}
+            onSuccess={handleActualBudgetSaved}
           />
         )}
       </div>
