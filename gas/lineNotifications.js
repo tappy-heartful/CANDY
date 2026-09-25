@@ -558,17 +558,29 @@ function calculateAnniversaryDiff(dateStr) {
   return { diffDays: diffDays, isToday: diffDays === 0 };
 }
 
-// LINEにメッセージを送信する関数
+// LINEにメッセージ群を送信する関数 (テキスト・画像など複数対応、最大5件ずつ送信)
+function sendLineMessages(to, messages, token) {
+  if (!to || !token || !messages || messages.length === 0) return;
+  for (let i = 0; i < messages.length; i += 5) {
+    const chunk = messages.slice(i, i + 5);
+    const options = {
+      'method': 'post',
+      'contentType': 'application/json',
+      'headers': { 'Authorization': 'Bearer ' + token },
+      'payload': JSON.stringify({ to: to, messages: chunk }),
+      'muteHttpExceptions': true
+    };
+    try {
+      UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
+    } catch (e) {
+      Logger.log('sendLineMessages error: ' + e.toString());
+    }
+  }
+}
+
+// LINEに単一テキストメッセージを送信する関数 (既存互換用)
 function sendLineMessage(to, text, token) {
-  if (!to || !token) return;
-  const options = {
-    'method': 'post',
-    'contentType': 'application/json',
-    'headers': { 'Authorization': 'Bearer ' + token },
-    'payload': JSON.stringify({ to: to, messages: [{ type: 'text', text: text }] }),
-    'muteHttpExceptions': true
-  };
-  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
+  sendLineMessages(to, [{ type: 'text', text: text }], token);
 }
 
 /**
@@ -608,7 +620,7 @@ function isGarbageCollectionDay(schedule, date) {
 
 /**
  * 毎夜のお休み通知を対象ユーザーに送信する
- * （明日のイベント、明日のTODO、今日・明日のごみ出し情報）
+ * （明日のイベント、明日のTODO、明日のごみ出し情報・出し方/分別表写真）
  */
 function sendDailyNightNotifications(targets, events, todos, garbageSchedules, lineMessagingIds) {
   try {
@@ -674,9 +686,8 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
           return 0;
         });
 
-      // ごみ出し情報（明日・今日）
+      // ごみ出し情報（明日のみ）
       const tomorrowGarbage = garbageSchedules.filter(s => isGarbageCollectionDay(s, tomorrowDate));
-      const todayGarbage = garbageSchedules.filter(s => isGarbageCollectionDay(s, todayDate));
 
       const cuteMessage = nightCuteMessages[Math.floor(Math.random() * nightCuteMessages.length)].replace(/〇〇/g, nickname);
 
@@ -719,32 +730,43 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
       }
       message += `\n`;
 
-      // 🗑️ごみ出し情報
-      message += `🗑️ごみ出し情報\n`;
-      let hasGarbage = false;
+      // 🗑️明日のごみ出し情報（きょうのごみ情報は含めず明日のみ）
+      message += `🗑️明日のごみ出し\n`;
       if (tomorrowGarbage.length > 0) {
+        const hasImages = tomorrowGarbage.some(g => !!g.imageUrl);
         tomorrowGarbage.forEach(g => {
           const noteStr = g.note ? ` (${g.note})` : "";
-          message += `・明日: ${g.name}${noteStr}\n`;
+          message += `・${g.name}${noteStr}\n`;
         });
+        if (hasImages) {
+          message += `※分別・出し方の写真も下にお送りします📸\n`;
+        }
         message += `※夜のうちにまとめておくと安心だよ✨\n`;
-        hasGarbage = true;
-      }
-      if (todayGarbage.length > 0) {
-        todayGarbage.forEach(g => {
-          message += `・本日: ${g.name}\n`;
-        });
-        hasGarbage = true;
-      }
-      if (!hasGarbage) {
-        message += `今日・明日のごみ収集はありません🍀\n`;
+      } else {
+        message += `明日のごみ収集はありません🍀\n`;
       }
       message += `\n`;
 
       message += `CANDYを開く：\n${BASE_URL}/home`;
 
+      // LINEメッセージ群の構築
+      const lineMessages = [
+        { type: 'text', text: message }
+      ];
+
+      // 明日のごみ出しの画像・分別表の写真があれば画像メッセージとして追加
+      tomorrowGarbage.forEach(g => {
+        if (g.imageUrl) {
+          lineMessages.push({
+            type: 'image',
+            originalContentUrl: g.imageUrl,
+            previewImageUrl: g.imageUrl
+          });
+        }
+      });
+
       // LINEメッセージ送信 (定期通知用公式アカウント)
-      sendLineMessage(lineUid, message, LINE_PERIODIC_ACCESS_TOKEN);
+      sendLineMessages(lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN);
     });
 
   } catch (e) {
