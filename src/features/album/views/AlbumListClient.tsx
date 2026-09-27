@@ -100,28 +100,56 @@ function AlbumCard({ album }: { album: Album }) {
             {totalCount}
           </span>
         )}
-        {album.showOnHome === false && (
-          <span
-            style={{
-              position: "absolute",
-              top: "8px",
-              left: "8px",
-              background: "rgba(0, 0, 0, 0.6)",
-              color: "white",
-              padding: "3px 8px",
-              borderRadius: "10px",
-              fontSize: "10px",
-              fontWeight: "bold",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              backdropFilter: "blur(4px)",
-            }}
-            title="ホーム画面の写真スライドショーには表示されません"
-          >
-            <i className="fa-solid fa-eye-slash"></i> ホーム非表示
-          </span>
-        )}
+        <div
+          style={{
+            position: "absolute",
+            top: "8px",
+            left: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+            alignItems: "flex-start",
+          }}
+        >
+          {album.showOnHome === false && (
+            <span
+              style={{
+                background: "rgba(0, 0, 0, 0.6)",
+                color: "white",
+                padding: "3px 8px",
+                borderRadius: "10px",
+                fontSize: "10px",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                backdropFilter: "blur(4px)",
+              }}
+              title="ホーム画面の写真スライドショーには表示されません"
+            >
+              <i className="fa-solid fa-eye-slash"></i> ホーム非表示
+            </span>
+          )}
+          {album.includeInDailyPhoto === false && (
+            <span
+              style={{
+                background: "rgba(0, 0, 0, 0.6)",
+                color: "white",
+                padding: "3px 8px",
+                borderRadius: "10px",
+                fontSize: "10px",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                backdropFilter: "blur(4px)",
+              }}
+              title="朝の通知「今日の一枚」には送信されません"
+            >
+              <i className="fa-solid fa-bell-slash"></i> 今日の一枚対象外
+            </span>
+          )}
+        </div>
       </div>
       <div className={styles.albumInfo}>
         <h3 className={styles.albumName}>{album.name}</h3>
@@ -190,6 +218,7 @@ export default function AlbumListClient() {
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
   const [showOnHome, setShowOnHome] = useState(true);
+  const [includeInDailyPhoto, setIncludeInDailyPhoto] = useState(true);
 
   useEffect(() => {
     if (isModalOpen && prefectures.length === 0) {
@@ -251,7 +280,8 @@ export default function AlbumListClient() {
         dateMode,
         startDate,
         dateMode === "range" ? endDate : undefined,
-        showOnHome
+        showOnHome,
+        includeInDailyPhoto
       );
       setNewAlbumName("");
       setSelectedPrefCode("");
@@ -261,6 +291,7 @@ export default function AlbumListClient() {
       setStartDate(getTodayString());
       setEndDate(getTodayString());
       setShowOnHome(true);
+      setIncludeInDailyPhoto(true);
       setIsModalOpen(false);
       // 再取得
       await fetchAlbums();
@@ -502,6 +533,32 @@ export default function AlbumListClient() {
                 </div>
               </div>
 
+              <div className={styles.dialogFormGroup}>
+                <label className={styles.dialogLabel}>今日の一枚（朝の通知）</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="newAlbumIncludeInDailyPhoto"
+                      value="true"
+                      checked={includeInDailyPhoto}
+                      onChange={() => setIncludeInDailyPhoto(true)}
+                    />
+                    <span>送る</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="newAlbumIncludeInDailyPhoto"
+                      value="false"
+                      checked={!includeInDailyPhoto}
+                      onChange={() => setIncludeInDailyPhoto(false)}
+                    />
+                    <span>送らない</span>
+                  </label>
+                </div>
+              </div>
+
               <div className={styles.dialogButtons}>
                 <button
                   className={`${styles.dialogBtn} ${styles.btnCancel}`}
@@ -514,6 +571,7 @@ export default function AlbumListClient() {
                     setStartDate(getTodayString());
                     setEndDate(getTodayString());
                     setShowOnHome(true);
+                    setIncludeInDailyPhoto(true);
                     setIsModalOpen(false);
                   }}
                   disabled={isSubmitting}

@@ -135,6 +135,8 @@ function checkAllNotifications() {
     let todos = [];
     let anniversaries = [];
     let garbageSchedules = [];
+    let photos = [];
+    let albums = [];
 
     if (morningTargets.length > 0 || nightTargets.length > 0) {
       const todosDocs = firestore.getDocuments('todos');
@@ -144,6 +146,20 @@ function checkAllNotifications() {
     if (morningTargets.length > 0) {
       const anniversariesDocs = firestore.getDocuments('anniversaries');
       anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+      try {
+        const photosDocs = firestore.getDocuments('photos');
+        photos = photosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+      } catch (e) {
+        Logger.log('Failed to fetch photos: ' + e.toString());
+      }
+
+      try {
+        const albumsDocs = firestore.getDocuments('albums');
+        albums = albumsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+      } catch (e) {
+        Logger.log('Failed to fetch albums: ' + e.toString());
+      }
     }
 
     if (nightTargets.length > 0) {
@@ -157,7 +173,7 @@ function checkAllNotifications() {
 
     // 3. 各通知処理を実行（フェッチ済みの共通データを渡す）
     if (morningTargets.length > 0) {
-      sendDailyMorningNotifications(morningTargets, events, todos, anniversaries, lineMessagingIds);
+      sendDailyMorningNotifications(morningTargets, events, todos, anniversaries, photos, albums, lineMessagingIds);
     }
 
     if (nightTargets.length > 0) {
@@ -226,10 +242,43 @@ function checkTodoRelation(t, userId, partnerUid) {
 /**
  * 毎朝の定期通知を対象ユーザーに送信する
  */
-function sendDailyMorningNotifications(targets, events, todos, anniversaries, lineMessagingIds) {
+function sendDailyMorningNotifications(targets, events, todos, anniversaries, photos, albums, lineMessagingIds) {
   try {
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
+
+    // アルバム情報のマップ化
+    const albumMap = {};
+    if (albums && Array.isArray(albums)) {
+      albums.forEach(a => {
+        albumMap[a.id] = a;
+      });
+    }
+
+    // 有効な写真の抽出（画像URLが存在し、「今日の一枚」が有効なアルバムの写真）
+    // ※includeInDailyPhoto !== false (デフォルト有効)
+    const validPhotos = (photos || []).filter(p => {
+      if (!p.url) return false;
+      const album = albumMap[p.albumId];
+      if (album && album.includeInDailyPhoto === false) return false;
+      return true;
+    });
+
+    // 安定ソート
+    validPhotos.sort((a, b) => (a.id || "").localeCompare(b.id || ""));
+
+    // 今日の1枚をランダムに選定
+    // ※日付（todayStr）のハッシュを用いて、同日であれば送信時間が異なっても2人に同じ今日の一枚が届くように設計
+    let todayPhoto = null;
+    if (validPhotos.length > 0) {
+      let hash = 5381;
+      for (let i = 0; i < todayStr.length; i++) {
+        hash = ((hash << 5) + hash) + todayStr.charCodeAt(i);
+        hash |= 0;
+      }
+      const photoIndex = Math.abs(hash) % validPhotos.length;
+      todayPhoto = validPhotos[photoIndex];
+    }
 
     targets.forEach(user => {
       const lineUid = lineMessagingIds[user.id];
@@ -422,8 +471,50 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, li
         message += `\n`;
       }
 
+      // 📸今日の一枚 セクション
+      if (todayPhoto) {
+        message += `📸今日の一枚\n`;
+        const album = albumMap[todayPhoto.albumId];
+        const albumName = album ? album.name : null;
+
+        const photoDetails = [];
+        if (albumName) {
+          photoDetails.push(`「${albumName}」`);
+        }
+        if (todayPhoto.takenAt) {
+          const takenDate = new Date(todayPhoto.takenAt);
+          const takenDateStr = Utilities.formatDate(takenDate, "Asia/Tokyo", "yyyy/MM/dd");
+          photoDetails.push(`${takenDateStr} 撮影`);
+        }
+
+        if (photoDetails.length > 0) {
+          message += `・${photoDetails.join("・")}\n`;
+        } else {
+          message += `・アルバムの思い出写真をお届け✨\n`;
+        }
+
+        if (todayPhoto.albumId) {
+          message += `アルバムを見る：\n${BASE_URL}/albums/${todayPhoto.albumId}\n`;
+        }
+        message += `\n`;
+      }
+
+      // LINEメッセージ群の構築
+      const lineMessages = [
+        { type: 'text', text: message }
+      ];
+
+      // 今日の一枚の写真があれば画像メッセージとして追加
+      if (todayPhoto && todayPhoto.url) {
+        lineMessages.push({
+          type: 'image',
+          originalContentUrl: todayPhoto.url,
+          previewImageUrl: todayPhoto.url
+        });
+      }
+
       // LINEメッセージ送信 (定期通知用公式アカウント)
-      sendLineMessage(lineUid, message, LINE_PERIODIC_ACCESS_TOKEN);
+      sendLineMessages(lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN);
     });
 
   } catch (e) {
@@ -771,6 +862,59 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
 
   } catch (e) {
     Logger.log('Night Notification Error: ' + e.toString());
+  }
+}
+
+/**
+ * 朝の通知（今日の一枚を含む）の手動テスト実行関数
+ * GASエディタ上で「testMorningNotification」を選択して実行することで、
+ * 朝の指定時刻を待たずに即時送信テストを行えます。
+ */
+function testMorningNotification() {
+  try {
+    const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
+    const usersDocs = firestore.getDocuments('users');
+    const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
+    const eventsDocs = firestore.getDocuments('events');
+    const todosDocs = firestore.getDocuments('todos');
+    const anniversariesDocs = firestore.getDocuments('anniversaries');
+    let photosDocs = [];
+    let albumsDocs = [];
+    try {
+      photosDocs = firestore.getDocuments('photos');
+    } catch (e) {
+      Logger.log('Photos fetch failed: ' + e.toString());
+    }
+    try {
+      albumsDocs = firestore.getDocuments('albums');
+    } catch (e) {
+      Logger.log('Albums fetch failed: ' + e.toString());
+    }
+
+    const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const lineMessagingIds = {};
+    lineMessagingIdsDocs.forEach(doc => {
+      lineMessagingIds[doc.name.split('/').pop()] = doc.obj.lineUid;
+    });
+
+    const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const todos = todosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const photos = photosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const albums = albumsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+    // LINE IDが設定されているユーザーをテスト送信対象とする
+    const testTargets = users.filter(user => !!lineMessagingIds[user.id]);
+    if (testTargets.length === 0) {
+      Logger.log('LINE連携済みのユーザーが見つかりませんでした。');
+      return;
+    }
+
+    Logger.log(`朝の通知テスト実行中... 対象ユーザー数: ${testTargets.length}`);
+    sendDailyMorningNotifications(testTargets, events, todos, anniversaries, photos, albums, lineMessagingIds);
+    Logger.log('朝の通知テスト送信が完了しました！');
+  } catch (e) {
+    Logger.log('testMorningNotification Error: ' + e.toString());
   }
 }
 

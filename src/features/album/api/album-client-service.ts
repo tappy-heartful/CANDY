@@ -57,7 +57,8 @@ export async function createAlbum(
   dateMode?: "single" | "range",
   startDate?: string,
   endDate?: string,
-  showOnHome: boolean = true
+  showOnHome: boolean = true,
+  includeInDailyPhoto: boolean = true
 ): Promise<string> {
   const ref = collection(db, "albums");
   const docRef = await addDoc(ref, {
@@ -71,6 +72,7 @@ export async function createAlbum(
     startDate: startDate || null,
     endDate: endDate || null,
     showOnHome,
+    includeInDailyPhoto,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   });
@@ -88,7 +90,8 @@ export async function updateAlbum(
   dateMode?: "single" | "range",
   startDate?: string,
   endDate?: string,
-  showOnHome?: boolean
+  showOnHome?: boolean,
+  includeInDailyPhoto?: boolean
 ) {
   const ref = doc(db, "albums", albumId);
   return await updateDoc(ref, {
@@ -101,6 +104,7 @@ export async function updateAlbum(
     startDate: startDate || null,
     endDate: endDate || null,
     ...(showOnHome !== undefined ? { showOnHome } : {}),
+    ...(includeInDailyPhoto !== undefined ? { includeInDailyPhoto } : {}),
     updatedAt: Date.now(),
   });
 }

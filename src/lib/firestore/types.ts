@@ -137,6 +137,7 @@ export interface Album {
   startDate?: string;
   endDate?: string;
   showOnHome?: boolean;
+  includeInDailyPhoto?: boolean;
 }
 
 export interface Photo {
