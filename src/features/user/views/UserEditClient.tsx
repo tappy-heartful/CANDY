@@ -5,6 +5,7 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import BackToHome from "@/src/components/Common/BackToHome";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
+import { getPrefectures, getMunicipalities, Prefecture, Municipality } from "@/src/features/album/api/album-client-service";
 import { showDialog, showSpinner, hideSpinner, setSession, errorLog } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
 import styles from "./UserEdit.module.css";
@@ -13,6 +14,9 @@ export default function UserEditClient() {
   const { user, userData, refreshUserData } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
   const router = useRouter();
+
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
 
   const [formData, setFormData] = useState({
     nickname: "",
@@ -32,14 +36,30 @@ export default function UserEditClient() {
     weaknesses: "",
     favoritePlaces: "",
     dislikedPlaces: "",
+    prefectureCode: "",
+    prefectureName: "",
+    municipalityCode: "",
+    municipalityName: "",
   });
 
   useEffect(() => {
     setBreadcrumbs([{ title: "プロフィール編集" }]);
   }, [setBreadcrumbs]);
 
+  // 都道府県一覧を取得
+  useEffect(() => {
+    getPrefectures()
+      .then((data) => setPrefectures(data))
+      .catch((e) => console.error("Failed to fetch prefectures:", e));
+  }, []);
+
   useEffect(() => {
     if (userData) {
+      const prefCode = userData.prefectureCode || "";
+      const prefName = userData.prefectureName || "";
+      const muniCode = userData.municipalityCode || "";
+      const muniName = userData.municipalityName || "";
+
       setFormData({
         nickname: userData.nickname || "",
         paypayId: userData.paypayId || "",
@@ -58,23 +78,74 @@ export default function UserEditClient() {
         weaknesses: userData.weaknesses || "",
         favoritePlaces: userData.favoritePlaces || "",
         dislikedPlaces: userData.dislikedPlaces || "",
+        prefectureCode: prefCode,
+        prefectureName: prefName,
+        municipalityCode: muniCode,
+        municipalityName: muniName,
       });
+
+      if (prefCode) {
+        getMunicipalities(prefCode)
+          .then((data) => setMunicipalities(data))
+          .catch((e) => console.error("Failed to fetch municipalities on init:", e));
+      }
     }
   }, [userData]);
+
+  const handlePrefChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const prefCode = e.target.value;
+    const pref = prefectures.find((p) => String(p.code).padStart(2, "0") === prefCode);
+    const prefName = pref?.name || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      prefectureCode: prefCode,
+      prefectureName: prefName,
+      municipalityCode: "",
+      municipalityName: "",
+    }));
+    setMunicipalities([]);
+
+    if (!prefCode) return;
+
+    try {
+      const data = await getMunicipalities(prefCode);
+      setMunicipalities(data);
+    } catch (err) {
+      console.error("Failed to fetch municipalities:", err);
+    }
+  };
+
+  const handleMuniChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const muniCode = e.target.value;
+    const muni = municipalities.find((m) => m.code === muniCode);
+    const muniName = muni?.name || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      municipalityCode: muniCode,
+      municipalityName: muniName,
+    }));
+  };
 
   const handleSave = async () => {
     const {
       nickname, paypayId, mbti, birthday, phone, emergencyContact,
       allergies, medications, medicalHistory, dislikedFoods,
-      favoriteFoods, happyThings, dislikedThings
+      favoriteFoods, happyThings, dislikedThings,
+      prefectureCode, municipalityCode
     } = formData;
 
     if (!nickname.trim()) {
       showDialog("ニックネームを入力してください", true);
       return;
     }
-    if (!paypayId.trim()) {
-      showDialog("PayPay IDを入力してください", true);
+    if (!prefectureCode) {
+      showDialog("お住まいの都道府県を選択してください", true);
+      return;
+    }
+    if (!municipalityCode) {
+      showDialog("お住まいの市区町村を選択してください", true);
       return;
     }
     if (!mbti) {
@@ -182,6 +253,52 @@ export default function UserEditClient() {
             value={formData.nickname}
             onChange={handleChange}
           />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>
+            お住まいの都道府県
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
+          <select
+            name="prefectureCode"
+            className={styles.appSelect}
+            value={formData.prefectureCode}
+            onChange={handlePrefChange}
+          >
+            <option value="">都道府県を選択してください</option>
+            {prefectures.map(pref => {
+              const codeStr = String(pref.code).padStart(2, "0");
+              return (
+                <option key={pref.code} value={codeStr}>
+                  {pref.name}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.inputLabel}>
+            お住まいの市区町村
+            <span className={styles.requiredBadge}>必須</span>
+          </label>
+          <select
+            name="municipalityCode"
+            className={styles.appSelect}
+            value={formData.municipalityCode}
+            onChange={handleMuniChange}
+            disabled={!formData.prefectureCode}
+          >
+            <option value="">
+              {!formData.prefectureCode ? "都道府県を先に選択してください" : "市区町村を選択してください"}
+            </option>
+            {municipalities.map(muni => (
+              <option key={muni.code} value={muni.code}>
+                {muni.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.formGroup}>

@@ -23,6 +23,14 @@ export default function ProfileModal({ userData, title, isMe, onClose }: Profile
         </div>
 
         <div className={styles.infoList}>
+          <InfoItem
+            label="お住まい"
+            value={
+              userData?.prefectureName && userData?.municipalityName
+                ? `${userData.prefectureName} ${userData.municipalityName}`
+                : userData?.prefectureName || userData?.municipalityName
+            }
+          />
           <InfoItem label="MBTI" value={userData?.mbti} />
           <InfoItem label="誕生日" value={userData?.birthday} />
           <InfoItem label="電話番号" value={userData?.phone} />

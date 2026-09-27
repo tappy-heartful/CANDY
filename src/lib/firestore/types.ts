@@ -19,6 +19,10 @@ export interface User {
   weaknesses?: string;
   favoritePlaces?: string;
   dislikedPlaces?: string;
+  prefectureCode?: string;
+  prefectureName?: string;
+  municipalityCode?: string;
+  municipalityName?: string;
   agreedAt?: number;
   lastLoginAt?: number;
   createdAt?: number;

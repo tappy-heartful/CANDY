@@ -280,12 +280,23 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
       todayPhoto = validPhotos[photoIndex];
     }
 
+    // 天気データのキャッシュ（同一地域の重複fetch防止）
+    const weatherCache = {};
+
     targets.forEach(user => {
       const lineUid = lineMessagingIds[user.id];
       if (!lineUid) return;
 
       const nickname = user.nickname || "あなた";
       const partnerUid = user.partnerUid || null;
+
+      // 居住地情報から今日の天気を取得
+      const userLoc = getUserLocation(user);
+      const cacheKey = userLoc.lat + "_" + userLoc.lon;
+      if (!weatherCache[cacheKey]) {
+        weatherCache[cacheKey] = fetchWeatherData(userLoc.lat, userLoc.lon);
+      }
+      const weatherDaily = weatherCache[cacheKey];
 
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events
@@ -386,6 +397,12 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
 
       // ---- メッセージの構築 ----
       let message = `おはよう！CANDYだよ🍬\n${cuteMessage}\n\nきょうの${nickname}ちゃんはどんな調子かな？ぜひ教えてね🍀\n${BASE_URL}/home?action=status\n\n`;
+
+      // ☀️ きょうの天気 セクション
+      const weatherSection = formatWeatherSection(weatherDaily, 0, userLoc.areaLabel, false);
+      if (weatherSection) {
+        message += weatherSection;
+      }
 
       // 📅イベント セクション
       message += `📅イベント\n`;
@@ -618,6 +635,211 @@ function parseJSTDateTime(dateStr, timeStr) {
   }
 }
 
+// 47都道府県の代表緯度経度（県庁所在地）マップ
+const PREFECTURE_COORDINATES = {
+  "01": { lat: 43.0642, lon: 141.3469, name: "北海道" },
+  "02": { lat: 40.8244, lon: 140.7400, name: "青森県" },
+  "03": { lat: 39.7036, lon: 141.1527, name: "岩手県" },
+  "04": { lat: 38.2682, lon: 140.8694, name: "宮城県" },
+  "05": { lat: 39.7186, lon: 140.1024, name: "秋田県" },
+  "06": { lat: 38.2404, lon: 140.3633, name: "山形県" },
+  "07": { lat: 37.7500, lon: 140.4678, name: "福島県" },
+  "08": { lat: 36.3418, lon: 140.4468, name: "茨城県" },
+  "09": { lat: 36.5657, lon: 139.8836, name: "栃木県" },
+  "10": { lat: 36.3907, lon: 139.0604, name: "群馬県" },
+  "11": { lat: 35.8569, lon: 139.6489, name: "埼玉県" },
+  "12": { lat: 35.6051, lon: 140.1233, name: "千葉県" },
+  "13": { lat: 35.6895, lon: 139.6917, name: "東京都" },
+  "14": { lat: 35.4478, lon: 139.6425, name: "神奈川県" },
+  "15": { lat: 37.9022, lon: 139.0236, name: "新潟県" },
+  "16": { lat: 36.6953, lon: 137.2113, name: "富山県" },
+  "17": { lat: 36.5947, lon: 136.6256, name: "石川県" },
+  "18": { lat: 36.0652, lon: 136.2216, name: "福井県" },
+  "19": { lat: 35.6639, lon: 138.5683, name: "山梨県" },
+  "20": { lat: 36.6513, lon: 138.1812, name: "長野県" },
+  "21": { lat: 35.3912, lon: 136.7223, name: "岐阜県" },
+  "22": { lat: 34.9756, lon: 138.3828, name: "静岡県" },
+  "23": { lat: 35.1802, lon: 136.9066, name: "愛知県" },
+  "24": { lat: 34.7303, lon: 136.5086, name: "三重県" },
+  "25": { lat: 35.0045, lon: 135.8686, name: "滋賀県" },
+  "26": { lat: 35.0211, lon: 135.7556, name: "京都府" },
+  "27": { lat: 34.6863, lon: 135.5200, name: "大阪府" },
+  "28": { lat: 34.6913, lon: 135.1830, name: "兵庫県" },
+  "29": { lat: 34.6853, lon: 135.8327, name: "奈良県" },
+  "30": { lat: 34.2260, lon: 135.1675, name: "和歌山県" },
+  "31": { lat: 35.5036, lon: 134.2383, name: "鳥取県" },
+  "32": { lat: 35.4723, lon: 133.0505, name: "島根県" },
+  "33": { lat: 34.6618, lon: 133.9350, name: "岡山県" },
+  "34": { lat: 34.3963, lon: 132.4594, name: "広島県" },
+  "35": { lat: 34.1858, lon: 131.4705, name: "山口県" },
+  "36": { lat: 34.0658, lon: 134.5594, name: "徳島県" },
+  "37": { lat: 34.3401, lon: 134.0433, name: "香川県" },
+  "38": { lat: 33.8417, lon: 132.7661, name: "愛媛県" },
+  "39": { lat: 33.5597, lon: 133.5311, name: "高知県" },
+  "40": { lat: 33.6064, lon: 130.4183, name: "福岡県" },
+  "41": { lat: 33.2494, lon: 130.2988, name: "佐賀県" },
+  "42": { lat: 32.7448, lon: 129.8737, name: "長崎県" },
+  "43": { lat: 32.7898, lon: 130.7417, name: "熊本県" },
+  "44": { lat: 33.2382, lon: 131.6126, name: "大分県" },
+  "45": { lat: 31.9111, lon: 131.4239, name: "宮崎県" },
+  "46": { lat: 31.5602, lon: 130.5581, name: "鹿児島県" },
+  "47": { lat: 26.2124, lon: 127.6809, name: "沖縄県" },
+};
+
+/**
+ * ユーザーの登録情報から居住地の緯度・経度・表示エリア名を取得する
+ */
+function getUserLocation(user) {
+  let prefCode = user.prefectureCode ? String(user.prefectureCode).padStart(2, "0") : null;
+  const prefName = user.prefectureName || (prefCode && PREFECTURE_COORDINATES[prefCode] ? PREFECTURE_COORDINATES[prefCode].name : "東京都");
+  if (!prefCode) prefCode = "13"; // デフォルト東京都
+
+  const muniName = user.municipalityName || "";
+  const areaLabel = muniName || prefName;
+
+  // デフォルト代表座標（都道府県基準）
+  let lat = PREFECTURE_COORDINATES[prefCode] ? PREFECTURE_COORDINATES[prefCode].lat : 35.6895;
+  let lon = PREFECTURE_COORDINATES[prefCode] ? PREFECTURE_COORDINATES[prefCode].lon : 139.6917;
+
+  // 市区町村名が指定されている場合、ジオコーディングでピンポイントの座標を取得
+  if (muniName) {
+    try {
+      const geoQuery = encodeURIComponent(prefName + " " + muniName);
+      const geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + geoQuery + "&count=1&language=ja&format=json";
+      const res = UrlFetchApp.fetch(geoUrl, { muteHttpExceptions: true });
+      if (res.getResponseCode() === 200) {
+        const geoData = JSON.parse(res.getContentText());
+        if (geoData.results && geoData.results.length > 0) {
+          lat = geoData.results[0].latitude;
+          lon = geoData.results[0].longitude;
+        }
+      }
+    } catch (e) {
+      Logger.log("Geocoding failed for " + muniName + ": " + e.toString());
+    }
+  }
+
+  return { lat: lat, lon: lon, areaLabel: areaLabel };
+}
+
+/**
+ * Open-Meteo APIから天気予報データ(daily)を取得する
+ */
+function fetchWeatherData(lat, lon) {
+  try {
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo";
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (res.getResponseCode() === 200) {
+      const data = JSON.parse(res.getContentText());
+      if (data && data.daily) {
+        return data.daily;
+      }
+    }
+  } catch (e) {
+    Logger.log("fetchWeatherData error: " + e.toString());
+  }
+  return null;
+}
+
+/**
+ * WMO Weather Code をテキストと絵文字に変換
+ */
+function getWeatherInfoFromCode(code) {
+  switch (code) {
+    case 0:
+      return { text: "快晴", emoji: "☀️", isRain: false };
+    case 1:
+      return { text: "晴れ", emoji: "☀️", isRain: false };
+    case 2:
+      return { text: "晴れ時々曇り", emoji: "🌤️", isRain: false };
+    case 3:
+      return { text: "曇り", emoji: "☁️", isRain: false };
+    case 45:
+    case 48:
+      return { text: "霧", emoji: "🌫️", isRain: false };
+    case 51:
+    case 53:
+    case 55:
+      return { text: "霧雨", emoji: "🌦️", isRain: true };
+    case 61:
+    case 63:
+    case 65:
+      return { text: "雨", emoji: "🌧️", isRain: true };
+    case 66:
+    case 67:
+      return { text: "みぞれ", emoji: "🌨️", isRain: true };
+    case 71:
+    case 73:
+    case 75:
+    case 77:
+      return { text: "雪", emoji: "❄️", isRain: true };
+    case 80:
+    case 81:
+    case 82:
+      return { text: "にわか雨", emoji: "🌧️", isRain: true };
+    case 85:
+    case 86:
+      return { text: "にわか雪", emoji: "❄️", isRain: true };
+    case 95:
+    case 96:
+    case 99:
+      return { text: "雷雨", emoji: "⛈️", isRain: true };
+    default:
+      return { text: "晴れ", emoji: "☀️", isRain: false };
+  }
+}
+
+/**
+ * 気温・降水確率・天候に基づく温かいアドバイス
+ */
+function getWeatherAdvice(weather, maxTemp, minTemp, pop, isTomorrow) {
+  const dayText = isTomorrow ? "明日" : "今日";
+  if (weather.isRain || pop >= 50) {
+    if (pop >= 70) {
+      return "※" + dayText + "は雨が降りそうだから、傘を忘れないでね☂️";
+    } else {
+      return "※雨が降るかもしれないから、折りたたみ傘があると安心だよ☂️";
+    }
+  } else if (pop >= 30) {
+    return "※念のため、折りたたみ傘があると安心だよ☂️";
+  } else if (maxTemp >= 30) {
+    return "※日中は暑くなりそう！水分補給をしっかりしてね🌻";
+  } else if (maxTemp - minTemp >= 10) {
+    return "※朝晩の寒暖差が大きいから、羽織るものがあると快適だよ✨";
+  } else if (minTemp <= 10) {
+    return "※冷え込みそうだから、暖かくして過ごしてね🍵";
+  } else {
+    return "※過ごしやすいお天気になりそう！素敵な一日を過ごしてね🍀";
+  }
+}
+
+/**
+ * 天気通知ブロックの文字列を生成する
+ */
+function formatWeatherSection(dailyData, index, areaLabel, isTomorrow) {
+  if (!dailyData || !dailyData.time || !dailyData.time[index]) return "";
+
+  const code = dailyData.weather_code[index];
+  const maxTemp = Math.round(dailyData.temperature_2m_max[index]);
+  const minTemp = Math.round(dailyData.temperature_2m_min[index]);
+  const pop = dailyData.precipitation_probability_max ? dailyData.precipitation_probability_max[index] : 0;
+
+  const weather = getWeatherInfoFromCode(code);
+  const advice = getWeatherAdvice(weather, maxTemp, minTemp, pop, isTomorrow);
+
+  const titlePrefix = isTomorrow ? "あす" : "きょう";
+  const headerIcon = weather.emoji;
+
+  let text = headerIcon + titlePrefix + "の天気（" + areaLabel + "）\n";
+  text += "・" + weather.text + " " + weather.emoji + "\n";
+  text += "・気温：最高 " + maxTemp + "℃ / 最低 " + minTemp + "℃\n";
+  if (pop !== undefined && pop !== null) {
+    text += "・降水確率：" + pop + "%\n";
+  }
+  text += advice + "\n\n";
+  return text;
+}
+
 // 2つの日付文字列("YYYY-MM-DD")の差分日数を計算するヘルパー関数
 function calculateDiffDays(d1Str, d2Str) {
   const d1 = new Date(d1Str.replace(/-/g, '/'));
@@ -720,12 +942,23 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
     const tomorrowDate = new Date(todayDate.getTime() + 24 * 60 * 60 * 1000);
     const tomorrowStr = Utilities.formatDate(tomorrowDate, "Asia/Tokyo", "yyyy-MM-dd");
 
+    // 天気データのキャッシュ（同一地域の重複fetch防止）
+    const weatherCache = {};
+
     targets.forEach(user => {
       const lineUid = lineMessagingIds[user.id];
       if (!lineUid) return;
 
       const nickname = user.nickname || "あなた";
       const partnerUid = user.partnerUid || null;
+
+      // 居住地情報から明日の天気を取得
+      const userLoc = getUserLocation(user);
+      const cacheKey = userLoc.lat + "_" + userLoc.lon;
+      if (!weatherCache[cacheKey]) {
+        weatherCache[cacheKey] = fetchWeatherData(userLoc.lat, userLoc.lon);
+      }
+      const weatherDaily = weatherCache[cacheKey];
 
       // 対象ユーザーのイベントをフィルタリング（カップル用 or 自身のイベント）
       const userEvents = events
@@ -784,6 +1017,12 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
 
       // ---- メッセージの構築 ----
       let message = `こんばんは！CANDYだよ🍬\n${cuteMessage}\n\nあしたの予定をまとめたよ🌙\nゆっくり休んでいい夢見てね✨\n\n`;
+
+      // 🌙 あすの天気 セクション
+      const weatherSection = formatWeatherSection(weatherDaily, 1, userLoc.areaLabel, true);
+      if (weatherSection) {
+        message += weatherSection;
+      }
 
       // 📅明日のイベント
       message += `📅明日のイベント\n`;
@@ -917,4 +1156,48 @@ function testMorningNotification() {
     Logger.log('testMorningNotification Error: ' + e.toString());
   }
 }
+
+/**
+ * 夜の通知（明日の天気・予定・TODO・ごみ出し）の手動テスト実行関数
+ * GASエディタ上で「testNightNotification」を選択して実行することで、
+ * 夜の指定時刻を待たずに即時送信テストを行えます。
+ */
+function testNightNotification() {
+  try {
+    const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
+    const usersDocs = firestore.getDocuments('users');
+    const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
+    const eventsDocs = firestore.getDocuments('events');
+    const todosDocs = firestore.getDocuments('todos');
+    let garbageSchedules = [];
+    try {
+      const garbageDocs = firestore.getDocuments('garbageSchedules');
+      garbageSchedules = garbageDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    } catch (e) {
+      Logger.log('garbageSchedules fetch failed: ' + e.toString());
+    }
+
+    const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const lineMessagingIds = {};
+    lineMessagingIdsDocs.forEach(doc => {
+      lineMessagingIds[doc.name.split('/').pop()] = doc.obj.lineUid;
+    });
+
+    const events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const todos = todosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+    const testTargets = users.filter(user => !!lineMessagingIds[user.id]);
+    if (testTargets.length === 0) {
+      Logger.log('LINE連携済みのユーザーが見つかりませんでした。');
+      return;
+    }
+
+    Logger.log(`夜の通知テスト実行中... 対象ユーザー数: ${testTargets.length}`);
+    sendDailyNightNotifications(testTargets, events, todos, garbageSchedules, lineMessagingIds);
+    Logger.log('夜の通知テスト送信が完了しました！');
+  } catch (e) {
+    Logger.log('testNightNotification Error: ' + e.toString());
+  }
+}
+
 

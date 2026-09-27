@@ -194,7 +194,9 @@ export default function HomeClient() {
       userData?.dislikedFoods &&
       userData?.favoriteFoods &&
       userData?.happyThings &&
-      userData?.dislikedThings;
+      userData?.dislikedThings &&
+      userData?.prefectureCode &&
+      userData?.municipalityCode;
 
     if (user && hasRequired) {
       const today = new Date();
