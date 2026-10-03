@@ -184,3 +184,153 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **コンポーネントの分割**: 1つのファイルが長くなりすぎる（目安として 200行以上）場合は、責務ごとにコンポーネントを分割する。
 - **絶対パスインポート**: インポートパスには `@/` エイリアスを使用し、階層の深さによらず一貫性を保つ。
 - **早期リターン**: 複雑な条件分岐を避け、エラー状態や非表示状態は関数の冒頭で早期リターンする（ただし Hooks の呼び出し順序に注意）。
+
+---
+
+## 7. AIアシスタント（Gemini）への厳格な指示
+
+- **自動ビルド検証**: ユーザーの指示に基づいてコードを修正した後は、必ず自動的に `npm run build` を実行してビルドエラーがないか確認してください。もしエラーが発生した場合は、ユーザーに報告する前に**必ず自らエラーを解消し、再度ビルドが通ることを確認**してから完了報告を行うこと。
+
+---
+
+## 8. CANDY プロジェクト詳細設計・機能別実装ノウハウ (Architecture & Implementation)
+
+本セクションは、本プロジェクトをゼロから完全に再現・再構築できるように、採用されている設計思想、機能ごとのロジック、および工夫を網羅的に記録する。
+
+### 8.1. プロジェクト概要とデータモデルの二者間設計
+- **サービスコンセプト**: カップル向けプライベートライフマネジメントPWA。
+- **データ分離と共有モデル**:
+  - 各データ（予定、TODO、ウィッシュリスト等）には `type: "personal" | "couple"` および `uid: string`（作成者）を持つ。
+  - `type === "couple"`: パートナーと共有。
+  - `type === "personal"`: 作成者本人のみに表示。
+  - リレーション判定関数（`checkEventRelation`, `checkTodoRelation`）により、本人とパートナーの権限および表示ラベル（【自分】【2人】）を一元判定する。
+
+### 8.2. 各機能の設計と技術的工夫
+
+#### ① カレンダー・スケジュール管理 (`src/features/calendar/`)
+- **時間単位の厳格な5分刻み設計**:
+  - イベントの開始・終了時刻は `<input type="time" step="300">` によりブラウザ標準ピッカーを5分単位に制限。
+  - 端数によるリマインダー判定のズレを防止し、バックグラウンドの監視負荷を最小限（5分おき）に抑える。
+- **終日イベントと時刻指定イベント**:
+  - `isAllDay: boolean` で分岐。終日イベントはリマインダー通知の対象外。
+- **日跨ぎ判定**:
+  - `startDate <= targetDate && endDate >= targetDate` で判定し、連日イベントを正確に描画。
+- **ビュー切り替え**:
+  - グリッド表示（月間カレンダー）、タイムライン表示（時間軸リスト/カラム）、デイリーアジェンダ（1日の詳細モーダル）を完備。
+
+#### ② LINE通知・バックグラウンド連携 (`gas/lineNotifications.js`)
+- **公式アカウントの2系統分離運用**:
+  - **定期通知用アカウント**: 朝の定時メッセージ（天気・予定・TODO・記念日・今日の一枚）および夜のお休み通知（明日の予定・明日のゴミ出し・明日のTODO）。
+  - **イベント通知用アカウント**: 予定開始N分前（0〜60分前、5分刻み）のリマインダー専用。日常の定時通知でリマインダーが埋もれないようにLINEトークルームを物理的に分離。
+- **「今日の一枚（Daily Photo）」の決定論的選定アルゴリズム**:
+  - 日付文字列（`YYYY-MM-DD`）からDJB2ライクなハッシュ値を生成し、アルバム写真一覧からインデックスを決定。
+  - 2人がそれぞれ別の時間（例: 朝7時と朝8時）に通知を受け取っても、**必ず同日であれば同じ思い出写真が届く**ように設計。
+- **居住地ベースの天気連携**:
+  - ユーザープロファイルの都道府県・市区町村から Open-Meteo API を用いて緯度経度を取得し、当日の天気予報（最高・最低気温、降水確率、天気アイコン）を自動取得・キャッシュ。
+
+#### ③ 家計簿・ワリカン精算 (`src/features/settlement/`, `src/features/budget/`)
+- **希望ワリカン比率 (`splitRatio`)**:
+  - ユーザーごとに 0〜100% の希望負担比率を保持（デフォルト50:50）。
+  - 「相手が多く払った」「自分が多く払った」の差額から、現在どちらがいくら精算すべきかをリアルタイム自動計算。
+- **支払い区分**:
+  - 立替払い、共通財布からの支出、個人支出を切り替え可能。
+
+#### ④ 体調・気分・ひとこと共有 (`src/features/home/`)
+- **DailyStatus**:
+  - 毎日の気分（1〜5）、体調（1〜5）、ひとことコメントを記録。
+  - パートナーのコメントに対して絵文字リアクションを即時反映。
+
+#### ⑤ ごみ出しスケジュール (`src/features/garbage/`)
+- **定期収集ルールの柔軟な定義**:
+  - 毎週特定の曜日、隔週、第N曜日（例: 第2・第4水曜日）に対応。
+  - 夜の通知で「明日のごみ」、朝の通知で「今日のごみ」を自動リマインド。出し方や分別表の写真URLも添付可能。
+
+#### ⑥ 理想の住まい・引越し条件管理 (`src/features/ideal-property/`)
+- **カテゴリ別の重要度スコアリング**:
+  - キッチン、冷暖房、建物設備、周辺環境などの各項目に優先度（★1〜★3）を設定。パートナーとの希望条件の擦り合わせを可視化。
+
+---
+
+## 9. Firestore＆GAS 最適化アーキテクチャ (Performance & Cost Saving)
+
+Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防ぎ、完全無料枠内で安全に運用するための必須設計指針。
+
+### 9.1. 読み取り爆発（Read Explosion）を防ぐ3大原則
+1. **全件取得（`getDocuments`）のポーリング禁止**:
+   - 定期バッチやリマインダー内で `getDocuments('events')` などの無制限フェッチを絶対に行わない。
+   - 必ず `startDate >= today && startDate <= tomorrow` のように **クエリで日付範囲を限定** して取得する。
+2. **マスタデータのキャッシュ化（GAS CacheService / メモリキャッシュ）**:
+   - `users`, `lineMessagingIds`, `notificationSettings` などの設定データは、毎分・毎回の実行で再取得せず、`CacheService.getScriptCache()` 等で15分〜1時間キャッシュする。
+3. **時間単位の統一によるトリガー間隔の緩和**:
+   - アプリ側の予定時間・通知時間・リマインダー時間を「5分刻み」に統一することで、GASのタイマーを **「1分おき」から「5分おき」に変更**。
+   - これにより、実行回数と読み取り回数を **1/5（1日1,440回 → 288回）** に削減し、GASの1日90分実行制限エラーも完全に回避する。
+
+### 9.2. GASのタイマー遅延（ジッター）対策設計
+- **Googleの仕様**: GASの時間主導型トリガーは、Googleのインフラ仕様により約30〜50秒の起動遅延（ゆらぎ）が必ず発生する。
+- **「時間の幅（区間）」によるスキャン**:
+  - `currentTime === "08:00"` のようなピンポイント一致判定は、起動が `08:00:45` にずれた場合にすり抜けてしまうため禁止。
+  - 必ず `lastCheck < targetTime && targetTime <= now` のように「前回実行時刻〜今回実行時刻」の区間に含まれるかを判定する。
+- **二重送信防止フラグ**:
+  - 朝・夜の通知など1日1回だけ送信すべきものは、送信完了時に `LAST_MORNING_SENT_${uid}` 等のスクリプトプロパティに今日の日付文字列を保存し、同日中の再実行をスキップする。
+
+---
+
+## 10. 再構築（ゼロからの再現）環境構築ガイド (Rebuild Guide)
+
+本プロジェクトを別環境で再構築する際の手順と必要な設定項目一覧。
+
+### 10.1. Firebase プロジェクト設定
+1. **Firestore Database**:
+   - データベース作成（ロケーション: `asia-northeast1` (Tokyo) 推奨）。
+   - コレクション構成:
+     - `users`: ユーザープロファイル
+     - `events`: 予定・スケジュール
+     - `todos`: やることリスト
+     - `wishlist`: やりたいことリスト
+     - `anniversaries`: 記念日
+     - `albums`: アルバム情報
+     - `photos`: 写真メタデータ（Storage URL含む）
+     - `dailyStatus`: 毎日の体調・気分
+     - `garbageSchedules`: ごみ収集ルール
+     - `notificationSettings`: 各ユーザーのLINE通知設定
+     - `lineMessagingIds`: uidとLINE Messaging API UIDの紐付け
+     - `pwaAuthSessions`: PWA/外部ブラウザ間のログインセッション連携
+2. **Firebase Storage**:
+   - 写真アップロード用バケットを作成。
+3. **サービスアカウントの作成**:
+   - IAMからサービスアカウントを作成し、JSONキーを発行（GASからFirestoreへの接続に使用）。
+
+### 10.2. LINE Developers 設定
+1. **LINE ログイン チャネル**:
+   - Webアプリ用のチャネルを作成。
+   - コールバックURL: `https://<DOMAIN>/api/line/callback`
+2. **LINE Messaging API チャネル（2つ作成推奨）**:
+   - ① **定期通知用公式アカウント**（Channel Access Token を発行）
+   - ② **イベントリマインダー用公式アカウント**（Channel Access Token を発行）
+
+### 10.3. Google Apps Script（GAS）設定
+1. **ライブラリ追加**:
+   - `FirestoreApp`（ID: `1VUSl4b1r1eoNcRWotZM3e87ygkxvXltOgyDZhixqncz9lQ3MjfT1iKFw`）
+2. **スクリプトプロパティ**:
+   - `FIRESTORE_EMAIL`: サービスアカウントのクライアントメール
+   - `FIRESTORE_KEY`: サービスアカウントの秘密鍵（`-----BEGIN PRIVATE KEY...`）
+   - `FIRESTORE_PROJECT_ID`: FirebaseプロジェクトID
+   - `LINE_PERIODIC_ACCESS_TOKEN`: 定期通知用チャネルアクセストークン
+   - `LINE_EVENT_ACCESS_TOKEN`: イベント通知用チャネルアクセストークン
+3. **トリガー設定**:
+   - 実行する関数: `checkAllNotifications`
+   - イベントのソース: 時間主導型
+   - タイマーのタイプ: 分ベースのタイマー
+   - 時間の間隔: **5分おき**
+
+### 10.4. Vercel 環境変数一覧
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `LINE_CHANNEL_ID`: LINEログインのチャネルID
+- `LINE_CHANNEL_SECRET`: LINEログインのチャネルシークレット
+- `NEXT_PUBLIC_APP_URL`: 本番URL（例: `https://candy-life.vercel.app`）
+- `LINE_CHANNEL_ACCESS_TOKEN`: サーバーサイド送信時のフォールバックトークン
