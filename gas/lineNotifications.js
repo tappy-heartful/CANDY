@@ -53,64 +53,148 @@ const nightCuteMessages = [
 ];
 
 /**
+ * キャッシュ付きでFirestoreのドキュメント一覧を取得するヘルパー (15分間キャッシュ)
+ * users, lineMessagingIds, notificationSettings などのマスタデータ読み取り回数を激減させます
+ */
+function getCachedFirestoreDocuments(firestore, collectionName, cacheMinutes) {
+  cacheMinutes = cacheMinutes || 15;
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'candy_cache_' + collectionName;
+  const cachedJson = cache.get(cacheKey);
+  if (cachedJson) {
+    try {
+      return JSON.parse(cachedJson);
+    } catch (e) {}
+  }
+
+  const docs = firestore.getDocuments(collectionName);
+  const data = docs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+
+  try {
+    cache.put(cacheKey, JSON.stringify(data), cacheMinutes * 60);
+  } catch (e) {
+    Logger.log('Cache put failed for ' + collectionName + ': ' + e.toString());
+  }
+
+  return data;
+}
+
+/**
+ * リマインダー／夜通知用に「今日〜明日」の直近イベントのみをクエリ取得するヘルパー
+ * 全件（過去〜未来すべての数百件）を毎分・5分ごとに取得するのを防ぎ、読み取りを数件に激減させます
+ */
+function fetchUpcomingEvents(firestore, todayStr, tomorrowStr) {
+  try {
+    if (firestore.query) {
+      const q = firestore.query('events');
+      const queryObj = (q.Where ? q.Where('startDate', '>=', todayStr).Where('startDate', '<=', tomorrowStr)
+                                : q.where('startDate', '>=', todayStr).where('startDate', '<=', tomorrowStr));
+      const res = queryObj.Execute ? queryObj.Execute() : queryObj.execute();
+      if (Array.isArray(res)) {
+        return res.map(doc => ({
+          id: doc.name ? doc.name.split('/').pop() : (doc.id || ''),
+          ...(doc.obj || doc.fields || doc)
+        }));
+      }
+    }
+  } catch (err) {
+    Logger.log('Firestore query failed for upcoming events: ' + err.toString());
+  }
+
+  // クエリが失敗した、または未対応の場合のフォールバック
+  try {
+    const eventsDocs = firestore.getDocuments('events');
+    return eventsDocs
+      .map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }))
+      .filter(e => (e.startDate >= todayStr && e.startDate <= tomorrowStr) || (e.startDate <= todayStr && e.endDate >= todayStr));
+  } catch (e) {
+    Logger.log('Failed to fetch events fallback: ' + e.toString());
+    return [];
+  }
+}
+
+/**
+ * 指定の時刻（HH:mm）が直近の実行期間（lastCheck 〜 now）の間に到来したか判定するヘルパー
+ * 5分おきトリガーでも確実かつ同日に二重送信されないようにします
+ */
+function isTimeToTrigger(targetTimeStr, lastCheck, now, lastSentPropKey) {
+  if (!targetTimeStr) return false;
+  const todayStr = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd");
+
+  // 今日すでに送信済みならスキップ
+  const lastSentDate = props.getProperty(lastSentPropKey);
+  if (lastSentDate === todayStr) {
+    return false;
+  }
+
+  const parts = targetTimeStr.split(":").map(Number);
+  if (parts.length !== 2) return false;
+  const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parts[0], parts[1], 0, 0);
+  const targetMs = targetDate.getTime();
+
+  const lastCheckMs = lastCheck ? lastCheck.getTime() : (now.getTime() - 6 * 60 * 1000);
+  // 前回チェック〜今回チェックまでの間にその時刻が含まれていたか判定
+  return targetMs > lastCheckMs && targetMs <= now.getTime();
+}
+
+/**
  * すべての通知（朝のメッセージ＆夜のお休み通知＆予定リマインダー）を監視・送信する統合関数
- * GASのエディタでこの関数に対して「時間主導型」-「分ベースのタイマー」-「1分おき」のトリガーを設定してください。
+ * 【推奨トリガー設定】
+ * GASのエディタでこの関数に対して「時間主導型」-「分ベースのタイマー」-「5分おき」のトリガーを設定してください。
+ * （※1分おきでも正常に動作しますが、5分おきにすることで実行回数とFirestore読み取り量を大幅に削減できます）
  */
 function checkAllNotifications() {
   try {
     const now = new Date();
-    const currentTimeStr = Utilities.formatDate(now, "Asia/Tokyo", "HH:mm");
+    const todayStr = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd");
+    const tomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = Utilities.formatDate(tomorrowDate, "Asia/Tokyo", "yyyy-MM-dd");
 
-    // 1分おきトリガー用の前回実行時刻を取得（スキップ・遅延対策）
+    // 前回実行時刻を取得（5分おきトリガー等の遅延・スキップ対策）
     const lastCheckStr = props.getProperty('LAST_REMINDER_CHECK_TIME');
-    const lastCheck = lastCheckStr ? new Date(Number(lastCheckStr)) : new Date(now.getTime() - 5 * 60 * 1000); // 取得できない場合は仮で5分前
+    const lastCheck = lastCheckStr ? new Date(Number(lastCheckStr)) : new Date(now.getTime() - 6 * 60 * 1000);
     props.setProperty('LAST_REMINDER_CHECK_TIME', now.getTime().toString());
 
     const firestore = FirestoreApp.getFirestore(FIRESTORE_EMAIL, FIRESTORE_KEY, FIRESTORE_PROJECT_ID);
 
-    // 1. まずは最小限の共通データをフェッチ（users, lineMessagingIds, notificationSettings）
-    // これにより、通知対象がいない時間帯の無駄な通信を削減します
-    const usersDocs = firestore.getDocuments('users');
-    const lineMessagingIdsDocs = firestore.getDocuments('lineMessagingIds');
-    let settingsDocs = [];
+    // 1. キャッシュを活用してマスタデータを取得 (15分間キャッシュ)
+    const users = getCachedFirestoreDocuments(firestore, 'users', 15);
+    const lineMessagingIdsList = getCachedFirestoreDocuments(firestore, 'lineMessagingIds', 15);
+    let settingsList = [];
     try {
-      settingsDocs = firestore.getDocuments('notificationSettings');
+      settingsList = getCachedFirestoreDocuments(firestore, 'notificationSettings', 15);
     } catch (e) {
       Logger.log('Failed to fetch notificationSettings: ' + e.toString());
     }
-
-    const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     
     // LINE Messaging IDsをマッピング
     const lineMessagingIds = {};
-    lineMessagingIdsDocs.forEach(doc => {
-      const uid = doc.name.split('/').pop();
-      lineMessagingIds[uid] = doc.obj.lineUid;
+    lineMessagingIdsList.forEach(item => {
+      lineMessagingIds[item.id] = item.lineUid;
     });
 
     // 通知設定をマッピング
     const settingsMap = {};
-    settingsDocs.forEach(doc => {
-      const uid = doc.name.split('/').pop();
-      settingsMap[uid] = doc.obj;
+    settingsList.forEach(item => {
+      settingsMap[item.id] = item;
     });
 
-    // 朝の通知の送信対象ユーザーを抽出
+    // 朝の通知の送信対象ユーザーを抽出（5分おきトリガー対応：lastCheck〜nowの間に時間到来したか判定）
     const morningTargets = users.filter(user => {
       if (!lineMessagingIds[user.id]) return false;
       const setting = settingsMap[user.id] || {};
       const morningEnabled = setting.morningEnabled !== false; // デフォルト true
       const morningTime = setting.morningTime || "08:00"; // デフォルト 08:00
-      return morningEnabled && morningTime === currentTimeStr;
+      return morningEnabled && isTimeToTrigger(morningTime, lastCheck, now, 'LAST_MORNING_SENT_' + user.id);
     });
 
-    // 夜のお休み通知の送信対象ユーザーを抽出
+    // 夜のお休み通知の送信対象ユーザーを抽出（5分おきトリガー対応）
     const nightTargets = users.filter(user => {
       if (!lineMessagingIds[user.id]) return false;
       const setting = settingsMap[user.id] || {};
       const nightEnabled = setting.nightEnabled !== false; // デフォルト true
       const nightTime = setting.nightTime || "22:00"; // デフォルト 22:00
-      return nightEnabled && nightTime === currentTimeStr;
+      return nightEnabled && isTimeToTrigger(nightTime, lastCheck, now, 'LAST_NIGHT_SENT_' + user.id);
     });
 
     // リマインダーの送信対象ユーザーを抽出（有効なユーザーのみ）
@@ -120,16 +204,27 @@ function checkAllNotifications() {
       return setting.eventReminderEnabled !== false; // デフォルト true
     });
 
-    // 送信対象が誰もいない場合はここで早期リターンし、重いデータ（events, todos等）の取得をスキップする
+    // 送信対象が誰もいない場合は早期リターン
     if (morningTargets.length === 0 && reminderTargets.length === 0 && nightTargets.length === 0) {
       return;
     }
 
-    // 2. 必要な場合のみ、残りのデータを取得
-    let events = [];
-    if (morningTargets.length > 0 || reminderTargets.length > 0 || nightTargets.length > 0) {
-      const eventsDocs = firestore.getDocuments('events');
-      events = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    // 2. 必要な場合のみ、イベントデータを取得
+    // ★重要：通常のリマインダー実行では「今日〜明日」の直近イベントのみを取得（読み取り量を99%削減）
+    let reminderEvents = [];
+    if (reminderTargets.length > 0 || nightTargets.length > 0) {
+      reminderEvents = fetchUpcomingEvents(firestore, todayStr, tomorrowStr);
+    }
+
+    // 朝の通知は直近未来3件の予定も表示するため、朝の通知対象がいる時（1日1回のみ）だけ全件取得
+    let morningEvents = [];
+    if (morningTargets.length > 0) {
+      try {
+        const eventsDocs = firestore.getDocuments('events');
+        morningEvents = eventsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+      } catch (e) {
+        morningEvents = reminderEvents;
+      }
     }
 
     let todos = [];
@@ -171,17 +266,25 @@ function checkAllNotifications() {
       }
     }
 
-    // 3. 各通知処理を実行（フェッチ済みの共通データを渡す）
+    // 3. 各通知処理を実行
     if (morningTargets.length > 0) {
-      sendDailyMorningNotifications(morningTargets, events, todos, anniversaries, photos, albums, lineMessagingIds);
+      sendDailyMorningNotifications(morningTargets, morningEvents, todos, anniversaries, photos, albums, lineMessagingIds);
+      // 今日の送信済みフラグを記録
+      morningTargets.forEach(user => {
+        props.setProperty('LAST_MORNING_SENT_' + user.id, todayStr);
+      });
     }
 
     if (nightTargets.length > 0) {
-      sendDailyNightNotifications(nightTargets, events, todos, garbageSchedules, lineMessagingIds);
+      sendDailyNightNotifications(nightTargets, reminderEvents, todos, garbageSchedules, lineMessagingIds);
+      // 今日の送信済みフラグを記録
+      nightTargets.forEach(user => {
+        props.setProperty('LAST_NIGHT_SENT_' + user.id, todayStr);
+      });
     }
 
     if (reminderTargets.length > 0) {
-      sendEventReminders(reminderTargets, events, lineMessagingIds, now, lastCheck, settingsMap);
+      sendEventReminders(reminderTargets, reminderEvents, lineMessagingIds, now, lastCheck, settingsMap);
     }
 
   } catch (e) {

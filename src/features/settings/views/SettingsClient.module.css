@@ -224,3 +224,49 @@ input:checked + .slider:before {
   cursor: not-allowed;
   background-color: #f5f5f5;
 }
+
+.timeSelectRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeSelect {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #f3e5f5;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #444;
+  background-color: #fcf8ff;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239B7CC3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 38px;
+}
+
+.timeSelect:focus {
+  border-color: #9B7CC3;
+  box-shadow: 0 0 0 3px rgba(155, 124, 195, 0.15);
+}
+
+.timeSelect:disabled {
+  background-color: #f5f5f5;
+  border-color: #eee;
+  color: #aaa;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.timeSelectSeparator {
+  font-size: 20px;
+  font-weight: 900;
+  color: #9B7CC3;
+}
+

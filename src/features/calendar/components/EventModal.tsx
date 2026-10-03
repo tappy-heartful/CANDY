@@ -358,6 +358,7 @@ export default function EventModal({
               {!isAllDay && (
                 <input
                   type="time"
+                  step="300"
                   className={styles.timeInput}
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -382,6 +383,7 @@ export default function EventModal({
               {!isAllDay && (
                 <input
                   type="time"
+                  step="300"
                   className={styles.timeInput}
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}

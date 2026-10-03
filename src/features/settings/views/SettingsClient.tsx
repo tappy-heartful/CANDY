@@ -10,6 +10,24 @@ import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functi
 import { useRouter } from "next/navigation";
 import styles from "./SettingsClient.module.css";
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES_5 = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+const roundTimeTo5Minutes = (timeStr?: string, defaultTime: string = "08:00") => {
+  if (!timeStr) return defaultTime;
+  const parts = timeStr.split(":");
+  if (parts.length !== 2) return defaultTime;
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return defaultTime;
+  m = Math.round(m / 5) * 5;
+  if (m >= 60) {
+    m = 0;
+    h = (h + 1) % 24;
+  }
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
 export default function SettingsClient() {
   const { user } = useAuth();
   const { setBreadcrumbs } = useBreadcrumb();
@@ -64,9 +82,9 @@ export default function SettingsClient() {
         }
         setFormData({
           morningEnabled: settings.morningEnabled !== false,
-          morningTime: settings.morningTime || "08:00",
+          morningTime: roundTimeTo5Minutes(settings.morningTime, "08:00"),
           nightEnabled: settings.nightEnabled !== false,
-          nightTime: settings.nightTime || "22:00",
+          nightTime: roundTimeTo5Minutes(settings.nightTime, "22:00"),
           eventReminderEnabled: settings.eventReminderEnabled,
           eventReminderMinutes: minutes,
           dailyStatusEnabled: settings.dailyStatusEnabled !== false,
@@ -189,15 +207,36 @@ export default function SettingsClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>通知する時間</label>
-          <input
-            type="time"
-            name="morningTime"
-            className={styles.appInput}
-            value={formData.morningTime}
-            onChange={handleInputChange}
-            disabled={!formData.morningEnabled}
-          />
+          <label className={styles.inputLabel}>通知する時間 (5分刻み)</label>
+          <div className={styles.timeSelectRow}>
+            <select
+              className={styles.timeSelect}
+              value={formData.morningTime.split(":")[0] || "08"}
+              onChange={(e) => {
+                const minute = formData.morningTime.split(":")[1] || "00";
+                setFormData(prev => ({ ...prev, morningTime: `${e.target.value}:${minute}` }));
+              }}
+              disabled={!formData.morningEnabled}
+            >
+              {HOURS.map(h => (
+                <option key={h} value={h}>{h}時</option>
+              ))}
+            </select>
+            <span className={styles.timeSelectSeparator}>:</span>
+            <select
+              className={styles.timeSelect}
+              value={formData.morningTime.split(":")[1] || "00"}
+              onChange={(e) => {
+                const hour = formData.morningTime.split(":")[0] || "08";
+                setFormData(prev => ({ ...prev, morningTime: `${hour}:${e.target.value}` }));
+              }}
+              disabled={!formData.morningEnabled}
+            >
+              {MINUTES_5.map(m => (
+                <option key={m} value={m}>{m}分</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* 夜のお休み通知セクション */}
@@ -218,15 +257,36 @@ export default function SettingsClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>通知する時間</label>
-          <input
-            type="time"
-            name="nightTime"
-            className={styles.appInput}
-            value={formData.nightTime}
-            onChange={handleInputChange}
-            disabled={!formData.nightEnabled}
-          />
+          <label className={styles.inputLabel}>通知する時間 (5分刻み)</label>
+          <div className={styles.timeSelectRow}>
+            <select
+              className={styles.timeSelect}
+              value={formData.nightTime.split(":")[0] || "22"}
+              onChange={(e) => {
+                const minute = formData.nightTime.split(":")[1] || "00";
+                setFormData(prev => ({ ...prev, nightTime: `${e.target.value}:${minute}` }));
+              }}
+              disabled={!formData.nightEnabled}
+            >
+              {HOURS.map(h => (
+                <option key={h} value={h}>{h}時</option>
+              ))}
+            </select>
+            <span className={styles.timeSelectSeparator}>:</span>
+            <select
+              className={styles.timeSelect}
+              value={formData.nightTime.split(":")[1] || "00"}
+              onChange={(e) => {
+                const hour = formData.nightTime.split(":")[0] || "22";
+                setFormData(prev => ({ ...prev, nightTime: `${hour}:${e.target.value}` }));
+              }}
+              disabled={!formData.nightEnabled}
+            >
+              {MINUTES_5.map(m => (
+                <option key={m} value={m}>{m}分</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* イベント前通知セクション */}
@@ -247,12 +307,13 @@ export default function SettingsClient() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.inputLabel}>リマインダー (0〜60分前)</label>
+          <label className={styles.inputLabel}>リマインダー (0〜60分前・5分刻み)</label>
           <div className={styles.reminderList}>
             {formData.eventReminderMinutes.map((minutes, index) => (
               <div key={index} className={styles.reminderItem}>
                 <input
                   type="number"
+                  step="5"
                   className={styles.appInput}
                   min="0"
                   max="60"
