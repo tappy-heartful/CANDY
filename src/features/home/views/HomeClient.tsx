@@ -1262,9 +1262,13 @@ export default function HomeClient() {
         </div>
 
         <div className={styles.menuGrid}>
-          <Link href="/settings" className={`${styles.menuCard} ${styles.cardSettings} ${styles.cardFullWidth}`}>
+          <Link href="/settings" className={`${styles.menuCard} ${styles.cardSettings}`}>
             <span className={styles.cardIcon}><i className="fa-solid fa-bell"></i></span>
-            <span className={styles.cardTitle}>通知設定を変更する</span>
+            <span className={styles.cardTitle}>通知設定</span>
+          </Link>
+          <Link href="/settings/line-logs" className={`${styles.menuCard} ${styles.cardLineLogs}`}>
+            <span className={styles.cardIcon}><i className="fa-solid fa-paper-plane"></i></span>
+            <span className={styles.cardTitle}>LINE送信履歴</span>
           </Link>
         </div>
 

@@ -43,7 +43,7 @@ export default function LineLogListClient() {
   useEffect(() => {
     setBreadcrumbs([
       { title: "設定", href: "/settings" },
-      { title: "LINE送信履歴・残通数" },
+      { title: "LINE送信履歴" },
     ]);
   }, [setBreadcrumbs]);
 
@@ -129,7 +129,7 @@ export default function LineLogListClient() {
       <div className={styles.headerRow}>
         <h1 className={styles.pageTitle}>
           <i className="fa-solid fa-paper-plane"></i>
-          <span>LINE送信履歴・配信残数</span>
+          <span>LINE送信履歴</span>
         </h1>
         <div className={styles.headerActions}>
           <button

@@ -228,6 +228,9 @@ export default function Header() {
             <Link href="/settings" onClick={closeMenu} className={styles.menuLinkSub}>
               <i className={`fa-solid fa-bell ${styles.menuIconSub}`}></i> 通知設定
             </Link>
+            <Link href="/settings/line-logs" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-paper-plane ${styles.menuIconSub}`}></i> LINE送信履歴
+            </Link>
           </div>
         </div>
 

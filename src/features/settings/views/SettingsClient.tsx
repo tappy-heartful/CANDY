@@ -387,7 +387,7 @@ export default function SettingsClient() {
               <i className="fa-solid fa-paper-plane"></i>
             </div>
             <div>
-              <div className={styles.logLinkTitle}>LINE送信履歴・配信残数</div>
+              <div className={styles.logLinkTitle}>LINE送信履歴</div>
               <div className={styles.logLinkDesc}>月200通枠の残り回数や送信ログを確認</div>
             </div>
           </div>
