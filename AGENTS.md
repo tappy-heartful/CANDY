@@ -10,6 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 1. **実装プランの承認プロセス省略**: Implementation Planを作成した後、ユーザーの明示的な承認を待つ必要はありません。プランを提示（または作成）したら、そのまま連続してタスクの実行（コードの修正等）に進んでください。
 2. **モバイル表示の考慮**: スマートフォンでの表示崩れを防ぐため、フィルターバッジやボタン等のUI要素が画面幅で見切れたり不自然に折り返したりしないように常に設計に配慮してください。必要に応じて要素を別行にするか、スクロール可能なコンテナに格納するなど、モバイルファーストでの実装を徹底してください。
 3. **ブラウザでのレイアウト・動作確認の禁止**: レイアウト確認や動作確認はユーザー自身が行うため、ブラウザ（`browser_subagent` や `navigate`、ブラウザ操作ツール全般）による画面遷移や確認作業は一切行わないでください。AIがログインで手間取って時間がかかるのを防ぐため、検証は `npm run build` によるビルドチェックのみにとどめ、迅速にコード修正と報告を行ってください。
+4. **新機能追加時の Firestore セキュリティルール更新**: 新機能の実装や新しいコレクションの作成・拡張を行った際は、必ず忘れずに `firestore.rules` に対応するセキュリティルール（読み取り・書き込み権限の定義）を追加・更新すること。
 
 # CANDY プロジェクト規約 (Project Conventions)
 
@@ -108,10 +109,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - APIルート (`/api/line/login`, `/api/line/callback`) を通じて実装する。
 - 認証状態は `AuthContext` で管理し、`AuthGuard` コンポーネントでページアクセスを制御する。
 
-### 3.3. Firestore データ構造
+### 3.3. Firestore データ構造＆セキュリティルール
 
 - コレクションの型定義は `src/lib/firestore/types.ts` に集約する。
 - データの更新は `src/features/<feature>/api/*-client-service.ts` で行い、読み込みは Server Actions または直接 Server Component で行う。
+- **セキュリティルールの同期必須**: 新しいコレクションを追加した際やスキーマ・新機能を実装した際は、必ず `firestore.rules` に適切なアクセス権限（`allow read`, `allow write`）を漏れなく記述・更新すること。
 - セキュリティのため、管理者権限 (`isAdmin`) のチェックを厳格に行う。
 
 ---
