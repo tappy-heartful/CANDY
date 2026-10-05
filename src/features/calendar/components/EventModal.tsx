@@ -44,7 +44,8 @@ export default function EventModal({
   onDelete,
   onCopy,
 }: EventModalProps) {
-  const isEdit = !!event?.id;
+  const [isCopyMode, setIsCopyMode] = useState(false);
+  const isEdit = !!event?.id && !isCopyMode;
   const isEditable = true;
   const isOwnEvent = !isEdit || event?.uid === currentUserId;
 
@@ -72,6 +73,7 @@ export default function EventModal({
   const [isCopying, setIsCopying] = useState(false);
 
   useEffect(() => {
+    setIsCopyMode(false);
     const today = getJSTDate();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     setTitle(event?.title || "");
@@ -174,33 +176,29 @@ export default function EventModal({
     }
   };
 
-  const handleCopyClick = async () => {
+  const handleCopyClick = () => {
     if (!title.trim()) {
       showDialog("タイトルを入力してください");
       return;
     }
-    const confirmed = await showDialog("この予定をコピーして新しく作成しますか？");
-    if (!confirmed) return;
+    // ボタン押下時の確認ダイアログなしで、入力内容を保持したまま新規作成モードに切り替え
+    setIsCopyMode(true);
+    setIsRecurring(false);
 
     if (onCopy) {
-      setIsCopying(true);
-      try {
-        await onCopy({
-          title: title.trim(),
-          type,
-          uid,
-          isAllDay,
-          startDate,
-          startTime: isAllDay ? "" : startTime,
-          endDate: isAllDay ? startDate : endDate,
-          endTime: isAllDay ? "" : endTime,
-          note: note.trim(),
-          link: link.trim(),
-          isRecurring: false,
-        });
-      } finally {
-        setIsCopying(false);
-      }
+      onCopy({
+        title: title.trim(),
+        type,
+        uid,
+        isAllDay,
+        startDate,
+        startTime: isAllDay ? "" : startTime,
+        endDate: isAllDay ? startDate : endDate,
+        endTime: isAllDay ? "" : endTime,
+        note: note.trim(),
+        link: link.trim(),
+        isRecurring: false,
+      });
     }
   };
 

@@ -996,24 +996,11 @@ export default function CalendarView({
   };
 
   const handleCopyEvent = async (eventData: Partial<CalendarEvent>) => {
-    showSpinner();
-    try {
-      const docRef = await addEvent(eventData);
-      const newEventItem = {
-        id: docRef.id,
-        ...eventData,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      } as CalendarEvent;
-      setEvents((prev) => [...prev, newEventItem]);
-      setIsModalOpen(false);
-      setActiveModalEvent(null);
-    } catch (e) {
-      console.error("Copy error:", e);
-      showDialog("予定のコピーに失敗しました");
-    } finally {
-      hideSpinner();
-    }
+    // 即座に登録せず、コピーした内容を保持したまま新規作成モードに設定
+    setActiveModalEvent({
+      ...eventData,
+      id: undefined,
+    });
   };
 
   const handleToggleTodo = async (id: string, currentStatus: boolean) => {
@@ -1145,55 +1132,9 @@ export default function CalendarView({
     }
   };
 
-  const handleCopyTodo = async (data: {
-    title: string;
-    groupId: string;
-    type: "personal" | "couple";
-    uid: string;
-    date?: string;
-    dateMode?: "due" | "on";
-    dates?: { date: string; dateMode: "due" | "on" }[];
-    steps?: TodoStep[];
-  }) => {
-    setIsTodoSubmitting(true);
-    showSpinner();
-    try {
-      const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
-      const addedTodos: Todo[] = [];
-      for (const d of dates) {
-        const docRef = await addTodo({
-          title: data.title,
-          type: data.type,
-          uid: data.uid,
-          groupId: data.groupId,
-          dateMode: d.dateMode,
-          date: d.date,
-          steps: data.steps || [],
-        });
-        addedTodos.push({
-          id: docRef.id,
-          title: data.title,
-          type: data.type,
-          uid: data.uid,
-          groupId: data.groupId,
-          dateMode: d.dateMode,
-          date: d.date,
-          isCompleted: false,
-          steps: data.steps || [],
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        } as Todo);
-      }
-      setTodos((prev) => [...addedTodos, ...prev]);
-      setIsTodoModalOpen(false);
-      setEditingTodo(null);
-    } catch (e) {
-      console.error("Failed to copy todo:", e);
-      showDialog("TODOのコピーに失敗しました");
-    } finally {
-      hideSpinner();
-      setIsTodoSubmitting(false);
-    }
+  const handleCopyTodo = async () => {
+    // 即時登録は行わず、新規作成モードとしてeditingTodoを解除（ダイアログは開いたまま）
+    setEditingTodo(null);
   };
 
   const handleToggleCompleteTodo = async (todo: Todo) => {

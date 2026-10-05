@@ -348,6 +348,20 @@ export default function HomeClient() {
           isCompleted: nextIsCompleted,
         });
         await refreshTodos(user.uid);
+      } else {
+        const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
+        for (const d of dates) {
+          await addTodo({
+            title: data.title,
+            type: data.type,
+            uid: data.uid,
+            groupId: data.groupId,
+            dateMode: d.dateMode,
+            date: d.date,
+            steps: data.steps || [],
+          });
+        }
+        await refreshTodos(user.uid);
       }
       setIsTodoModalOpen(false);
       setEditingTodo(null);
@@ -382,40 +396,9 @@ export default function HomeClient() {
     }
   };
 
-  const handleCopyTodo = async (data: {
-    title: string;
-    groupId: string;
-    type: "personal" | "couple";
-    uid: string;
-    date?: string;
-    dateMode?: "due" | "on";
-    dates?: { date: string; dateMode: "due" | "on" }[];
-    steps?: TodoStep[];
-  }) => {
-    if (!data.title || !user) return;
-    setIsTodoSubmitting(true);
-    try {
-      const dates = data.dates || [{ date: data.date || "", dateMode: data.dateMode || "due" }];
-      for (const d of dates) {
-        await addTodo({
-          title: data.title,
-          type: data.type,
-          uid: data.uid,
-          groupId: data.groupId,
-          dateMode: d.dateMode,
-          date: d.date,
-          steps: data.steps || [],
-        });
-      }
-      await refreshTodos(user.uid);
-      setIsTodoModalOpen(false);
-      setEditingTodo(null);
-    } catch (e) {
-      console.error("Failed to copy todo on home screen:", e);
-      showDialog("TODOのコピーに失敗しました");
-    } finally {
-      setIsTodoSubmitting(false);
-    }
+  const handleCopyTodo = async () => {
+    // 即時登録は行わず、新規作成モードとしてeditingTodoを解除（ダイアログは開いたまま）
+    setEditingTodo(null);
   };
 
 

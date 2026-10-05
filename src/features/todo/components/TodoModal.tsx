@@ -63,6 +63,9 @@ export default function TodoModal({
   onToggleComplete,
   onCopy,
 }: TodoModalProps) {
+  const [isCopyMode, setIsCopyMode] = useState(false);
+  const isEdit = Boolean(todo && !isCopyMode);
+
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [type, setType] = useState<"personal" | "couple">("personal");
@@ -91,6 +94,7 @@ export default function TodoModal({
 
   useEffect(() => {
     if (isOpen) {
+      setIsCopyMode(false);
       if (todo) {
         setTitle(todo.title);
         setGroupId(todo.groupId || "");
@@ -190,7 +194,7 @@ export default function TodoModal({
 
   const handleSave = () => {
     const cleanSteps = steps.filter(s => s.title.trim() !== "");
-    if (todo) {
+    if (isEdit) {
       const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
       onSave({
         title,
@@ -218,39 +222,36 @@ export default function TodoModal({
     }
   };
 
-  const handleCopy = async () => {
+  const handleCopy = () => {
     if (!title.trim()) {
       showDialog("タイトルを入力してください");
       return;
     }
-    const confirmed = await showDialog("このTODOをコピーして新しく作成しますか？");
-    if (!confirmed) return;
+    // ボタン押下時の確認ダイアログなしで、入力内容を保持したまま新規作成モードに切り替え
+    setIsCopyMode(true);
+    setIsCompleted(false);
+    setSteps((prev) => prev.map((s) => ({ ...s, isCompleted: false })));
 
     if (onCopy) {
-      setIsCopying(true);
-      try {
-        const cleanSteps = steps
-          .filter((s) => s.title.trim() !== "")
-          .map((s) => ({ ...s, isCompleted: false }));
+      const cleanSteps = steps
+        .filter((s) => s.title.trim() !== "")
+        .map((s) => ({ ...s, isCompleted: false }));
 
-        const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
+      const firstSetting = dateSettings[0] || { date: "", dateMode: "due" };
 
-        await onCopy({
-          title: title.trim(),
-          groupId,
-          type,
-          uid: uid || currentUserId,
-          date: firstSetting.date,
-          dateMode: firstSetting.dateMode as "due" | "on",
-          dates: dateSettings.map((s) => ({
-            date: s.date,
-            dateMode: s.dateMode as "due" | "on",
-          })),
-          steps: cleanSteps,
-        });
-      } finally {
-        setIsCopying(false);
-      }
+      onCopy({
+        title: title.trim(),
+        groupId,
+        type,
+        uid: uid || currentUserId,
+        date: firstSetting.date,
+        dateMode: firstSetting.dateMode as "due" | "on",
+        dates: dateSettings.map((s) => ({
+          date: s.date,
+          dateMode: s.dateMode as "due" | "on",
+        })),
+        steps: cleanSteps,
+      });
     }
   };
 
@@ -261,10 +262,10 @@ export default function TodoModal({
           <i className="fa-solid fa-xmark"></i>
         </div>
         <div className={styles.modalHeader}>
-          {todo ? "TODOを編集" : "新しいTODO"}
+          {isEdit ? "TODOを編集" : "新しいTODO"}
         </div>
         <div className={styles.modalBody}>
-          {todo && (
+          {isEdit && (
             <div className={styles.formGroup}>
               <label className={styles.inputLabel}>状態</label>
               <div className={styles.radioGroup}>
@@ -456,7 +457,7 @@ export default function TodoModal({
 
         <div className={styles.modalFooter}>
           <div className={styles.footerRow}>
-            {todo && onCopy && (
+            {isEdit && onCopy && (
               <button
                 type="button"
                 className={styles.btnCopy}
@@ -485,7 +486,7 @@ export default function TodoModal({
             >
               閉じる
             </button>
-            {todo && onDelete && (
+            {isEdit && onDelete && todo && (
               <button
                 type="button"
                 className={styles.btnDelete}
