@@ -23,23 +23,31 @@ function cleanUndefined<T extends object>(obj: T): T {
   return activeObj;
 }
 
+let cachedMasterData: BudgetMasterData | null = null;
+
 /**
  * 家計簿のマスタデータを取得する (DBにない場合は初期作成)
+ * インメモリキャッシュにより画面遷移ごとの再取得を抑制
  */
-export async function getBudgetMasterData(): Promise<BudgetMasterData> {
+export async function getBudgetMasterData(forceRefresh = false): Promise<BudgetMasterData> {
+  if (cachedMasterData && !forceRefresh) {
+    return cachedMasterData;
+  }
   try {
     const docRef = doc(db, "budgetSettings", "master");
     const snap = await getDoc(docRef);
     if (snap.exists()) {
-      return snap.data() as BudgetMasterData;
+      cachedMasterData = snap.data() as BudgetMasterData;
+      return cachedMasterData;
     } else {
       // 初期データを投入
       await setDoc(docRef, DEFAULT_MASTER_DATA);
+      cachedMasterData = DEFAULT_MASTER_DATA;
       return DEFAULT_MASTER_DATA;
     }
   } catch (error) {
     console.error("Error getting budget master data:", error);
-    return DEFAULT_MASTER_DATA;
+    return cachedMasterData || DEFAULT_MASTER_DATA;
   }
 }
 
@@ -269,6 +277,7 @@ export async function copyDefaultToMonthlyBudget(coupleKey: string, year: number
 export async function updateBudgetMasterData(data: BudgetMasterData): Promise<void> {
   const docRef = doc(db, "budgetSettings", "master");
   await setDoc(docRef, data);
+  cachedMasterData = data;
 }
 
 /**

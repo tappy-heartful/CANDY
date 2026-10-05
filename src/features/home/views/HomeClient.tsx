@@ -2,7 +2,7 @@
 
 import AuthGuard from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service";
@@ -82,10 +82,10 @@ export default function HomeClient() {
   const [calendarMonth, setCalendarMonth] = useState<number>(now.getMonth() + 1);
   const [isActualBudgetModalOpen, setIsActualBudgetModalOpen] = useState(false);
 
-  const handleCalendarMonthChange = (year: number, month: number) => {
-    setCalendarYear(year);
-    setCalendarMonth(month);
-  };
+  const handleCalendarMonthChange = useCallback((year: number, month: number) => {
+    setCalendarYear((prev) => (prev !== year ? year : prev));
+    setCalendarMonth((prev) => (prev !== month ? month : prev));
+  }, []);
 
   const handleActualBudgetSaved = (savedItem: ActualBudget) => {
     // 登録後は家計簿画面（該当年月・実績タブ）に遷移
@@ -138,34 +138,84 @@ export default function HomeClient() {
     }
   }, [userData, partnerData]);
 
+  const [allCalendarEvents, setAllCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [allCalendarTodos, setAllCalendarTodos] = useState<Todo[]>([]);
+
+  const updateUpcomingFromEvents = useCallback((events: CalendarEvent[], currentUserId: string) => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const currentHourMin = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+
+    const validEvents = events.filter(e => {
+      if (e.endDate < todayStr) return false;
+      if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
+        if (e.endTime < currentHourMin) return false;
+      }
+      const isCouple = (e.type || "").trim().toLowerCase() === "couple";
+      const isMe = e.uid === currentUserId;
+      return isCouple || isMe;
+    });
+
+    validEvents.sort((a, b) => {
+      if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+      if (a.isAllDay && !b.isAllDay) return -1;
+      if (!a.isAllDay && b.isAllDay) return 1;
+      if (a.startTime && b.startTime) {
+        return a.startTime.localeCompare(b.startTime);
+      }
+      return 0;
+    });
+    setUpcomingEvents(validEvents.slice(0, 4));
+  }, []);
+
+  const processTodos = useCallback((allTodos: Todo[], userId: string) => {
+    const userTodos = allTodos.filter(t => {
+      if (t.isCompleted) return false;
+      const isCouple = (t.type || "").trim().toLowerCase() === "couple";
+      const isMe = t.uid === userId;
+      if (!isCouple && !isMe) return false;
+      return true;
+    });
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 1. 期限切れのTODO (昨日以前)
+    const overdue = userTodos.filter(t => t.date && t.date < todayStr);
+    overdue.sort((a, b) => a.date!.localeCompare(b.date!));
+    setOverdueTodos(overdue);
+
+    // 2. 直近のTODO (今日以降、直近の4件を表示)
+    const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
+    upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
+    setUpcomingTodos(upcoming.slice(0, 4));
+
+    // 3. 期限なしのTODO (すべて)
+    const noDeadline = userTodos.filter(t => !t.date || t.date === "");
+    noDeadline.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    setNoDeadlineTodos(noDeadline);
+  }, []);
+
+  const handleCalendarEventsChange = useCallback((newEvents: CalendarEvent[]) => {
+    setAllCalendarEvents(newEvents);
+    if (user?.uid) {
+      updateUpcomingFromEvents(newEvents, user.uid);
+    }
+  }, [user?.uid, updateUpcomingFromEvents]);
+
+  const handleCalendarTodosChange = useCallback((newTodos: Todo[]) => {
+    setAllCalendarTodos(newTodos);
+    if (user?.uid) {
+      processTodos(newTodos, user.uid);
+    }
+  }, [user?.uid, processTodos]);
+
+
   const refreshTodos = async (userId: string) => {
     try {
       const allTodos = await getTodosForCalendar();
-      const userTodos = allTodos.filter(t => {
-        if (t.isCompleted) return false;
-        const isCouple = (t.type || "").trim().toLowerCase() === "couple";
-        const isMe = t.uid === userId;
-        if (!isCouple && !isMe) return false;
-        return true;
-      });
-
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      // 1. 期限切れのTODO (昨日以前)
-      const overdue = userTodos.filter(t => t.date && t.date < todayStr);
-      overdue.sort((a, b) => a.date!.localeCompare(b.date!));
-      setOverdueTodos(overdue);
-
-      // 2. 直近のTODO (今日以降、直近の4件を表示)
-      const upcoming = userTodos.filter(t => t.date && t.date >= todayStr);
-      upcoming.sort((a, b) => a.date!.localeCompare(b.date!));
-      setUpcomingTodos(upcoming.slice(0, 4));
-
-      // 3. 期限なしのTODO (すべて)
-      const noDeadline = userTodos.filter(t => !t.date || t.date === "");
-      noDeadline.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      setNoDeadlineTodos(noDeadline);
+      setAllCalendarTodos(allTodos);
+      processTodos(allTodos, userId);
     } catch (e) {
       console.error("Failed to refresh todos:", e);
     }
@@ -201,98 +251,69 @@ export default function HomeClient() {
     if (user && hasRequired) {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const partnerUid = userData?.partnerUid || null;
 
-      getPartnerData(user.uid).then((partner) => {
-        const partnerUid = partner?.id || null;
+      // パートナー情報取得とその他すべてのコレクション取得を完全並列化
+      Promise.all([
+        getPartnerData(user.uid, partnerUid || undefined),
+        getWishlist(),
+        getDailyStatuses(todayStr),
+        getEvents(),
+        getGroups("wishlist"),
+        getAnniversaries(user.uid, partnerUid),
+        getTodosForCalendar(),
+        getRecentPhotos(50),
+        getAlbums(),
+        getGroups("todo")
+      ]).then(([partner, wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums, tGroups]) => {
         setPartnerData(partner);
 
-        return Promise.all([
-          getWishlist(),
-          getDailyStatuses(todayStr),
-          getEvents(),
-          getGroups("wishlist"),
-          getAnniversaries(user.uid, partnerUid),
-          getTodosForCalendar(),
-          getRecentPhotos(50),
-          getAlbums(),
-          getGroups("todo")
-        ]).then(([wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums, tGroups]) => {
-          // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
-          const myWishes = wishData
-            .filter(w => w.uid === user.uid)
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-            .slice(0, 3);
-          const partnerWishes = wishData
-            .filter(w => w.uid !== user.uid)
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-            .slice(0, 3);
-          setRecentWishlist([...myWishes, ...partnerWishes]);
+        // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
+        const myWishes = wishData
+          .filter(w => w.uid === user.uid)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 3);
+        const partnerWishes = wishData
+          .filter(w => w.uid !== user.uid)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 3);
+        setRecentWishlist([...myWishes, ...partnerWishes]);
 
-          const myStatus = statuses.find(s => s.uid === user.uid) || null;
-          const pStatus = statuses.find(s => s.uid !== user.uid) || null;
-          setMyDailyStatus(myStatus);
-          setPartnerDailyStatus(pStatus);
+        const myStatus = statuses.find(s => s.uid === user.uid) || null;
+        const pStatus = statuses.find(s => s.uid !== user.uid) || null;
+        setMyDailyStatus(myStatus);
+        setPartnerDailyStatus(pStatus);
 
-          const currentHourMin = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+        // 予定の抽出・ソート・設定
+        updateUpcomingFromEvents(allEvents, user.uid);
+        setAllCalendarEvents(allEvents);
+        setWishlistGroups(groups);
+        setTodoGroups(tGroups);
 
-          const validEvents = allEvents.filter(e => {
-            if (e.endDate < todayStr) return false;
-            if (e.endDate === todayStr && !e.isAllDay && e.endTime) {
-              if (e.endTime < currentHourMin) return false;
-            }
-            // 相手のみのイベントを除外（自分または2人のみ表示）
-            const isCouple = (e.type || "").trim().toLowerCase() === "couple";
-            const isMe = e.uid === user.uid;
-            if (!isCouple && !isMe) return false;
-
-            return true;
-          });
-
-          validEvents.sort((a, b) => {
-            // まず日付順で比較
-            if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-
-            // 同一日なら終日予定を先にする
-            if (a.isAllDay && !b.isAllDay) return -1;
-            if (!a.isAllDay && b.isAllDay) return 1;
-
-            if (a.startTime && b.startTime) {
-              return a.startTime.localeCompare(b.startTime);
-            }
-            return 0;
-          });
-
-          // 予定：直近の4件を表示
-          setUpcomingEvents(validEvents.slice(0, 4));
-          setWishlistGroups(groups);
-          setTodoGroups(tGroups);
-
-          // 最近の写真とアルバム名のマッピングを設定
-          // ホームに表示設定（showOnHome !== false）のアルバムのみを対象
-          const allowedAlbumIds = new Set(
-            albums.filter((alb) => alb.showOnHome !== false).map((alb) => alb.id)
-          );
-          const eligiblePics = recentPics.filter((p) => allowedAlbumIds.has(p.albumId));
-          // 対象写真の中からランダムに最大8枚を抽出
-          const shuffledPics = [...eligiblePics].sort(() => 0.5 - Math.random()).slice(0, 8);
-          setRecentPhotos(shuffledPics);
-          const mapping: Record<string, string> = {};
-          albums.forEach((alb) => {
-            mapping[alb.id] = alb.name;
-          });
-          setAlbumsMap(mapping);
-
-          // 記念日のソート（直近のもの3件）
-          const sortedAnniversaries = [...anniversaries].sort((a, b) => {
-            return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
-          });
-          setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
-
-          // TODOのフィルタとソート
-          refreshTodos(user.uid).then(() => {
-            setLoading(false);
-          });
+        // 最近の写真とアルバム名のマッピングを設定
+        const allowedAlbumIds = new Set(
+          albums.filter((alb) => alb.showOnHome !== false).map((alb) => alb.id)
+        );
+        const eligiblePics = recentPics.filter((p) => allowedAlbumIds.has(p.albumId));
+        const shuffledPics = [...eligiblePics].sort(() => 0.5 - Math.random()).slice(0, 8);
+        setRecentPhotos(shuffledPics);
+        const mapping: Record<string, string> = {};
+        albums.forEach((alb) => {
+          mapping[alb.id] = alb.name;
         });
+        setAlbumsMap(mapping);
+
+        // 記念日のソート（直近のもの3件）
+        const sortedAnniversaries = [...anniversaries].sort((a, b) => {
+          return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
+        });
+        setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
+
+        // TODOの振り分け（重複通信なしで即時完了）
+        setAllCalendarTodos(allTodos);
+        processTodos(allTodos, user.uid);
+
+        setLoading(false);
       }).catch((e) => {
         console.error("Error loading dashboard data:", e);
         setLoading(false);
@@ -753,6 +774,12 @@ export default function HomeClient() {
             onOpenDateClear={() => setOpenCalendarDate(null)}
             userData={userData as FirestoreUser}
             onMonthChange={handleCalendarMonthChange}
+            initialEvents={allCalendarEvents}
+            initialTodos={allCalendarTodos}
+            initialAnniversaries={upcomingAnniversaries}
+            initialTodoGroups={todoGroups}
+            onEventsChange={handleCalendarEventsChange}
+            onTodosChange={handleCalendarTodosChange}
           />
         )}
 

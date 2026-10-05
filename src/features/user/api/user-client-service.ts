@@ -11,24 +11,48 @@ export async function updateProfile(uid: string, data: Partial<User>) {
   });
 }
 
+// メモリキャッシュ（有効期限3分）
+const partnerCache = new Map<string, { data: User | null; expiresAt: number }>();
+const CACHE_TTL_MS = 3 * 60 * 1000;
+
+export function clearPartnerCache(uid?: string) {
+  if (uid) {
+    partnerCache.delete(uid);
+  } else {
+    partnerCache.clear();
+  }
+}
+
 /**
  * パートナーの情報を取得する
- * ※現在の実装では「自分以外の最初のユーザー」をパートナーとみなす（2人用アプリの暫定仕様）
+ * knownPartnerUid が渡されている場合は myUid の再取得をスキップして高速化
  */
-export async function getPartnerData(myUid: string): Promise<User | null> {
-  try {
-    const myUserRef = doc(db, "users", myUid);
-    const myUserSnap = await getDoc(myUserRef);
-    if (!myUserSnap.exists()) return null;
+export async function getPartnerData(myUid: string, knownPartnerUid?: string): Promise<User | null> {
+  const cacheKey = knownPartnerUid ? `p_${knownPartnerUid}` : `my_${myUid}`;
+  const cached = partnerCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
 
-    const myUserData = myUserSnap.data() as User;
-    const partnerUid = myUserData.partnerUid;
-    if (!partnerUid) return null;
+  try {
+    let partnerUid = knownPartnerUid;
+    if (!partnerUid) {
+      const myUserRef = doc(db, "users", myUid);
+      const myUserSnap = await getDoc(myUserRef);
+      if (!myUserSnap.exists()) return null;
+
+      const myUserData = myUserSnap.data() as User;
+      partnerUid = myUserData.partnerUid;
+      if (!partnerUid) return null;
+    }
 
     const partnerRef = doc(db, "users", partnerUid);
     const partnerSnap = await getDoc(partnerRef);
     if (partnerSnap.exists()) {
-      return toPlainObject(partnerSnap) as User;
+      const partnerData = toPlainObject(partnerSnap) as User;
+      partnerCache.set(cacheKey, { data: partnerData, expiresAt: now + CACHE_TTL_MS });
+      return partnerData;
     }
     return null;
   } catch (error) {

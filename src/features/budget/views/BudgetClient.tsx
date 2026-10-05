@@ -478,38 +478,73 @@ export default function BudgetClient() {
     if (!user) return;
     try {
       showSpinner();
-      const master = await getBudgetMasterData();
-      setCategories(master.categories);
-      setTypes(master.types);
 
-      if (master.categories.length > 0) {
-        setDfCategory(master.categories[0].id);
-        const { categoryId: defaultVarCat, typeId: defaultDailyType } = getDefaultVariableAndDailyGoods(master.categories, master.types);
-        setActCategory(defaultVarCat || master.categories[0].id);
-        setActType(defaultDailyType);
-        setMbCategory(defaultVarCat || master.categories[0].id);
-        setMbType(defaultDailyType);
-      }
-
-      const partner = await getPartnerData(user.uid);
-      setPartnerUser(partner);
-
-      let cKey = user.uid;
-      if (partner) {
-        cKey = user.uid < partner.id ? `${user.uid}_${partner.id}` : `${partner.id}_${user.uid}`;
-      }
-      setCoupleKey(cKey);
+      const knownPartnerUid = userData?.partnerUid;
+      const initialCKey = knownPartnerUid
+        ? (user.uid < knownPartnerUid ? `${user.uid}_${knownPartnerUid}` : `${knownPartnerUid}_${user.uid}`)
+        : user.uid;
 
       setDfTargetUid(user.uid);
       setActTargetUid(user.uid);
       setMbTargetUid(user.uid);
 
-      await Promise.all([
-        loadDefaultBudgets(cKey),
-        loadActualBudgets(cKey, actualYear, actualMonth),
-        loadMonthlyBudgets(cKey, actualYear, actualMonth),
-        loadSettlementProof(cKey, actualYear, actualMonth)
-      ]);
+      if (knownPartnerUid) {
+        setCoupleKey(initialCKey);
+        const [master, partner] = await Promise.all([
+          getBudgetMasterData(),
+          getPartnerData(user.uid, knownPartnerUid),
+          loadDefaultBudgets(initialCKey),
+          loadActualBudgets(initialCKey, actualYear, actualMonth),
+          loadMonthlyBudgets(initialCKey, actualYear, actualMonth),
+          loadSettlementProof(initialCKey, actualYear, actualMonth)
+        ]);
+
+        setCategories(master.categories);
+        setTypes(master.types);
+
+        if (master.categories.length > 0) {
+          setDfCategory(master.categories[0].id);
+          const { categoryId: defaultVarCat, typeId: defaultDailyType } = getDefaultVariableAndDailyGoods(master.categories, master.types);
+          setActCategory(defaultVarCat || master.categories[0].id);
+          setActType(defaultDailyType);
+          setMbCategory(defaultVarCat || master.categories[0].id);
+          setMbType(defaultDailyType);
+        }
+
+        setPartnerUser(partner);
+      } else {
+        const [master, partner] = await Promise.all([
+          getBudgetMasterData(),
+          getPartnerData(user.uid)
+        ]);
+
+        setCategories(master.categories);
+        setTypes(master.types);
+
+        if (master.categories.length > 0) {
+          setDfCategory(master.categories[0].id);
+          const { categoryId: defaultVarCat, typeId: defaultDailyType } = getDefaultVariableAndDailyGoods(master.categories, master.types);
+          setActCategory(defaultVarCat || master.categories[0].id);
+          setActType(defaultDailyType);
+          setMbCategory(defaultVarCat || master.categories[0].id);
+          setMbType(defaultDailyType);
+        }
+
+        setPartnerUser(partner);
+
+        let cKey = user.uid;
+        if (partner) {
+          cKey = user.uid < partner.id ? `${user.uid}_${partner.id}` : `${partner.id}_${user.uid}`;
+        }
+        setCoupleKey(cKey);
+
+        await Promise.all([
+          loadDefaultBudgets(cKey),
+          loadActualBudgets(cKey, actualYear, actualMonth),
+          loadMonthlyBudgets(cKey, actualYear, actualMonth),
+          loadSettlementProof(cKey, actualYear, actualMonth)
+        ]);
+      }
     } catch (e) {
       console.error(e);
       errorLog("家計簿マスタ・パートナーデータ読み込み", e);
@@ -522,7 +557,7 @@ export default function BudgetClient() {
 
   useEffect(() => {
     loadMasterAndPartner();
-  }, [user]);
+  }, [user, userData?.partnerUid]);
 
   // 年月の切り替え
   const handleActualMonthChange = async (year: number, month: number) => {

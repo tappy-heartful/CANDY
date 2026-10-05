@@ -23,6 +23,12 @@ interface CalendarViewProps {
   onOpenDateClear?: () => void;
   userData?: User | null;
   onMonthChange?: (year: number, month: number) => void;
+  initialEvents?: CalendarEvent[];
+  initialTodos?: Todo[];
+  initialAnniversaries?: Anniversary[];
+  initialTodoGroups?: Group[];
+  onEventsChange?: (events: CalendarEvent[]) => void;
+  onTodosChange?: (todos: Todo[]) => void;
 }
 
 const padZero = (n: number) => n.toString().padStart(2, "0");
@@ -133,6 +139,12 @@ export default function CalendarView({
   onOpenDateClear,
   userData,
   onMonthChange,
+  initialEvents,
+  initialTodos,
+  initialAnniversaries,
+  initialTodoGroups,
+  onEventsChange,
+  onTodosChange,
 }: CalendarViewProps) {
   const today = useMemo(() => new Date(), []);
   const thisYear = today.getFullYear();
@@ -142,13 +154,53 @@ export default function CalendarView({
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-11
 
-  // 操作中の年月変更を親（Home等）へ通知
+  // 操作中の年月変更を親（Home等）へ通知（値が実際に変化した時のみ通知）
+  const prevMonthRef = useRef<{ year: number; month: number } | null>(null);
   useEffect(() => {
-    onMonthChange?.(currentYear, currentMonth + 1);
+    const targetMonth = currentMonth + 1;
+    if (
+      !prevMonthRef.current ||
+      prevMonthRef.current.year !== currentYear ||
+      prevMonthRef.current.month !== targetMonth
+    ) {
+      prevMonthRef.current = { year: currentYear, month: targetMonth };
+      onMonthChange?.(currentYear, targetMonth);
+    }
   }, [currentYear, currentMonth, onMonthChange]);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [todos, setTodos] = useState<any[]>([]); // will be typed as Todo[]
-  const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
+
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents || []);
+  const [todos, setTodos] = useState<any[]>(initialTodos || []); // will be typed as Todo[]
+  const [anniversaries, setAnniversaries] = useState<Anniversary[]>(initialAnniversaries || []);
+
+  // 親からの初回データ供給（初期データ到着時に一度だけ反映）
+  const isEventsInitRef = useRef(false);
+  const isTodosInitRef = useRef(false);
+
+  useEffect(() => {
+    if (!isEventsInitRef.current && initialEvents && initialEvents.length > 0) {
+      setEvents(initialEvents);
+      isEventsInitRef.current = true;
+    }
+  }, [initialEvents]);
+
+  useEffect(() => {
+    if (!isTodosInitRef.current && initialTodos && initialTodos.length > 0) {
+      setTodos(initialTodos);
+      isTodosInitRef.current = true;
+    }
+  }, [initialTodos]);
+
+  useEffect(() => {
+    if (initialAnniversaries && initialAnniversaries.length > 0) {
+      setAnniversaries(initialAnniversaries);
+    }
+  }, [initialAnniversaries]);
+
+  useEffect(() => {
+    if (initialTodoGroups && initialTodoGroups.length > 0) {
+      setTodoGroups(initialTodoGroups);
+    }
+  }, [initialTodoGroups]);
   const [filterState, setFilterState] = useState({
     eventsCouple: true,
     eventsMe: true,
@@ -246,14 +298,37 @@ export default function CalendarView({
   const [holidays, setHolidays] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // sessionStorage による祝日データのキャッシュ（外部API通信の抑制）
+    try {
+      const cached = sessionStorage.getItem("candy_holidays_jp");
+      if (cached) {
+        setHolidays(JSON.parse(cached));
+        return;
+      }
+    } catch (e) {
+      // sessionStorage が利用できない場合はフォールバック
+    }
+
     fetch("https://holidays-jp.github.io/api/v1/date.json")
       .then((res) => res.json())
-      .then((data) => setHolidays(data))
+      .then((data) => {
+        setHolidays(data);
+        try {
+          sessionStorage.setItem("candy_holidays_jp", JSON.stringify(data));
+        } catch (e) {
+          // ignore
+        }
+      })
       .catch((err) => console.error("Failed to fetch holidays:", err));
   }, []);
 
-  // Fetch events and todos on mount
+  // Fetch events and todos on mount if not provided from parent props
   useEffect(() => {
+    // 親（HomeClientなど）からすでに初期データが渡されている場合は重複フェッチを完全にスキップ
+    if (initialEvents !== undefined && initialTodos !== undefined) {
+      return;
+    }
+
     showSpinner();
     Promise.all([
       getEvents(), 
@@ -269,12 +344,12 @@ export default function CalendarView({
       })
       .catch((e) => {
         console.error("Failed to load events/todos:", e);
-        showDialog("データの読み込みに失敗しました");
+        showDialog("データの読み込みに問題が発生したようです。");
       })
       .finally(() => {
         hideSpinner();
       });
-  }, [currentUserId]);
+  }, [currentUserId, initialEvents, initialTodos, partnerNickname]);
 
   const visibleEvents = useMemo(() => {
     return events.filter((e) => {
