@@ -268,7 +268,7 @@ function checkAllNotifications() {
 
     // 3. 各通知処理を実行
     if (morningTargets.length > 0) {
-      sendDailyMorningNotifications(morningTargets, morningEvents, todos, anniversaries, photos, albums, lineMessagingIds);
+      sendDailyMorningNotifications(morningTargets, morningEvents, todos, anniversaries, photos, albums, lineMessagingIds, firestore);
       // 今日の送信済みフラグを記録
       morningTargets.forEach(user => {
         props.setProperty('LAST_MORNING_SENT_' + user.id, todayStr);
@@ -276,7 +276,7 @@ function checkAllNotifications() {
     }
 
     if (nightTargets.length > 0) {
-      sendDailyNightNotifications(nightTargets, reminderEvents, todos, garbageSchedules, lineMessagingIds);
+      sendDailyNightNotifications(nightTargets, reminderEvents, todos, garbageSchedules, lineMessagingIds, firestore);
       // 今日の送信済みフラグを記録
       nightTargets.forEach(user => {
         props.setProperty('LAST_NIGHT_SENT_' + user.id, todayStr);
@@ -284,7 +284,7 @@ function checkAllNotifications() {
     }
 
     if (reminderTargets.length > 0) {
-      sendEventReminders(reminderTargets, reminderEvents, lineMessagingIds, now, lastCheck, settingsMap);
+      sendEventReminders(reminderTargets, reminderEvents, lineMessagingIds, now, lastCheck, settingsMap, firestore);
     }
 
   } catch (e) {
@@ -345,7 +345,7 @@ function checkTodoRelation(t, userId, partnerUid) {
 /**
  * 毎朝の定期通知を対象ユーザーに送信する
  */
-function sendDailyMorningNotifications(targets, events, todos, anniversaries, photos, albums, lineMessagingIds) {
+function sendDailyMorningNotifications(targets, events, todos, anniversaries, photos, albums, lineMessagingIds, firestore) {
   try {
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
@@ -633,8 +633,40 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
         });
       }
 
-      // LINEメッセージ送信 (定期通知用公式アカウント)
-      sendLineMessages(lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN);
+      // LINEメッセージ送信 (定期通知用公式アカウント) と Firestore ログ記録
+      const logMeta = {
+        accountType: "periodic",
+        accountName: "定期通知公式アカウント",
+        notificationType: "morning",
+        notificationTitle: "朝の定期通知",
+        recipientUid: user.id,
+        recipientName: nickname,
+        summary: `朝の定期通知 (予定${todaysEvents.length}件 / TODO${todaysTodos.length}件${todayPhoto ? " / 写真添付" : ""})`,
+        details: {
+          areaLabel: userLoc.areaLabel,
+          weather: weatherDaily && weatherDaily.weather_code && weatherDaily.weather_code[0] !== undefined ? {
+            code: weatherDaily.weather_code[0],
+            tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[0]) : null,
+            tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[0]) : null,
+            pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[0] : 0,
+          } : null,
+          todayEventsCount: todaysEvents.length,
+          todayEvents: todaysEvents.map(function(e) {
+            return { title: e.title, startTime: e.startTime || "", isAllDay: !!e.isAllDay, label: e.label || "" };
+          }),
+          nextEventsCount: nextEvents.length,
+          overdueTodosCount: overdueTodos.length,
+          todaysTodosCount: todaysTodos.length,
+          anniversariesCount: userAnniversaries.length,
+          anniversaries: userAnniversaries.map(function(a) {
+            return { title: a.title, diffDays: a.diffDays, isToday: !!a.isToday };
+          }),
+          hasDailyPhoto: !!(todayPhoto && todayPhoto.url),
+          dailyPhotoAlbumName: todayPhoto && albumMap[todayPhoto.albumId] ? albumMap[todayPhoto.albumId].name : null,
+        }
+      };
+
+      sendLineMessagesWithLog(firestore, lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN, logMeta);
     });
 
   } catch (e) {
@@ -645,7 +677,7 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
 /**
  * 予定開始の数分前のリマインダー通知を実行する (前回チェック時からの範囲判定)
  */
-function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, settingsMap) {
+function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, settingsMap, firestore) {
   try {
     targets.forEach(user => {
       const lineUid = lineMessagingIds[user.id];
@@ -709,8 +741,27 @@ function sendEventReminders(targets, events, lineMessagingIds, now, lastCheck, s
             }
             message += `\nCANDYで詳細を見る：\n${BASE_URL}/home`;
 
-            // LINEメッセージ送信 (イベント通知用公式アカウント)
-            sendLineMessage(lineUid, message, LINE_EVENT_ACCESS_TOKEN);
+            // LINEメッセージ送信 (イベント通知用公式アカウント) と Firestore ログ記録
+            const logMeta = {
+              accountType: "event",
+              accountName: "イベント通知公式アカウント",
+              notificationType: "event_reminder",
+              notificationTitle: `予定リマインダー (${timeText})`,
+              recipientUid: user.id,
+              recipientName: nickname,
+              summary: `【${timeText}】${e.label}${e.title} (${e.startTime}〜)`,
+              details: {
+                eventId: e.id || "",
+                eventTitle: e.title || "",
+                eventStartTime: e.startTime || "",
+                eventStartDate: e.startDate || "",
+                label: e.label || "",
+                reminderMinutes: minutes,
+                note: e.note || ""
+              }
+            };
+
+            sendLineMessagesWithLog(firestore, lineUid, [{ type: 'text', text: message }], LINE_EVENT_ACCESS_TOKEN, logMeta);
           });
         }
       });
@@ -974,9 +1025,21 @@ function calculateAnniversaryDiff(dateStr) {
   return { diffDays: diffDays, isToday: diffDays === 0 };
 }
 
-// LINEにメッセージ群を送信する関数 (テキスト・画像など複数対応、最大5件ずつ送信)
-function sendLineMessages(to, messages, token) {
+// LINEにメッセージ群を送信し、送信ログをFirestore（lineNotificationLogs）に保存する関数
+function sendLineMessagesWithLog(firestore, to, messages, token, logMeta) {
   if (!to || !token || !messages || messages.length === 0) return;
+
+  const now = new Date();
+  const sentAt = now.getTime();
+  const sentAtFormatted = Utilities.formatDate(now, "Asia/Tokyo", "yyyy/MM/dd HH:mm:ss");
+  const yearMonth = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM");
+  const dateStr = Utilities.formatDate(now, "Asia/Tokyo", "yyyy-MM-dd");
+
+  let lastStatusCode = 200;
+  let lastErrorMessage = null;
+  let overallSuccess = true;
+
+  // 1. LINE Messaging API に送信
   for (let i = 0; i < messages.length; i += 5) {
     const chunk = messages.slice(i, i + 5);
     const options = {
@@ -987,16 +1050,91 @@ function sendLineMessages(to, messages, token) {
       'muteHttpExceptions': true
     };
     try {
-      UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
+      const response = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
+      const code = response.getResponseCode();
+      lastStatusCode = code;
+      if (code < 200 || code >= 300) {
+        overallSuccess = false;
+        lastErrorMessage = "LINE API Error (status " + code + "): " + response.getContentText();
+        Logger.log('sendLineMessagesWithLog error response: ' + lastErrorMessage);
+      }
     } catch (e) {
-      Logger.log('sendLineMessages error: ' + e.toString());
+      overallSuccess = false;
+      lastErrorMessage = e.toString();
+      Logger.log('sendLineMessagesWithLog fetch error: ' + e.toString());
+    }
+  }
+
+  // 2. Firestore に送信ログを保存
+  if (firestore) {
+    try {
+      const meta = logMeta || {};
+
+      // サマリー生成
+      let summary = meta.summary || "";
+      if (!summary) {
+        const firstText = messages.find(function(m) { return m.type === 'text'; });
+        if (firstText && firstText.text) {
+          const lines = firstText.text.split('\n').filter(function(l) { return l.trim().length > 0; });
+          summary = lines.slice(0, 2).join(' / ');
+          if (summary.length > 80) summary = summary.substring(0, 80) + '...';
+        } else {
+          summary = (meta.notificationTitle || "LINEメッセージ") + " (" + messages.length + "件)";
+        }
+      }
+
+      // 保存するメッセージオブジェクト（軽量化して保存）
+      const sanitizedMessages = messages.map(function(m) {
+        if (m.type === 'text') {
+          return { type: 'text', text: m.text };
+        } else if (m.type === 'image') {
+          return {
+            type: 'image',
+            originalContentUrl: m.originalContentUrl,
+            previewImageUrl: m.previewImageUrl
+          };
+        }
+        return m;
+      });
+
+      const isEventAccount = (token === LINE_EVENT_ACCESS_TOKEN);
+      const logDoc = {
+        accountType: meta.accountType || (isEventAccount ? "event" : "periodic"),
+        accountName: meta.accountName || (isEventAccount ? "イベント通知公式アカウント" : "定期通知公式アカウント"),
+        notificationType: meta.notificationType || "other",
+        notificationTitle: meta.notificationTitle || "LINE通知",
+        recipientUid: meta.recipientUid || "",
+        recipientName: meta.recipientName || "ユーザー",
+        recipientLineId: to,
+        messages: sanitizedMessages,
+        messageCount: messages.length, // LINE公式アカウントの配信通数消費は吹き出し数単位
+        summary: summary,
+        details: meta.details || {},
+        status: overallSuccess ? "success" : "error",
+        statusCode: lastStatusCode,
+        errorMessage: lastErrorMessage,
+        sentAt: sentAt,
+        sentAtFormatted: sentAtFormatted,
+        yearMonth: yearMonth,
+        date: dateStr
+      };
+
+      firestore.createDocument("lineNotificationLogs", logDoc);
+      Logger.log("lineNotificationLog saved: " + logDoc.notificationTitle + " to " + logDoc.recipientName + " (" + logDoc.messageCount + "通)");
+    } catch (logErr) {
+      Logger.log("Failed to save lineNotificationLog: " + logErr.toString());
     }
   }
 }
 
+// LINEにメッセージ群を送信する関数 (既存互換用・ログなし/フォールバック)
+function sendLineMessages(to, messages, token) {
+  sendLineMessagesWithLog(null, to, messages, token, null);
+}
+
 // LINEに単一テキストメッセージを送信する関数 (既存互換用)
 function sendLineMessage(to, text, token) {
-  sendLineMessages(to, [{ type: 'text', text: text }], token);
+  sendLineMessagesWithLog(null, to, [{ type: 'text', text: text }], token, null);
 }
 
 /**
@@ -1038,7 +1176,7 @@ function isGarbageCollectionDay(schedule, date) {
  * 毎夜のお休み通知を対象ユーザーに送信する
  * （明日のイベント、明日のTODO、明日のごみ出し情報・出し方/分別表写真）
  */
-function sendDailyNightNotifications(targets, events, todos, garbageSchedules, lineMessagingIds) {
+function sendDailyNightNotifications(targets, events, todos, garbageSchedules, lineMessagingIds, firestore) {
   try {
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
@@ -1198,8 +1336,37 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
         }
       });
 
-      // LINEメッセージ送信 (定期通知用公式アカウント)
-      sendLineMessages(lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN);
+      // LINEメッセージ送信 (定期通知用公式アカウント) と Firestore ログ記録
+      const logMeta = {
+        accountType: "periodic",
+        accountName: "定期通知公式アカウント",
+        notificationType: "night",
+        notificationTitle: "夜のおやすみ通知",
+        recipientUid: user.id,
+        recipientName: nickname,
+        summary: `夜のおやすみ通知 (明日の予定${tomorrowsEvents.length}件 / 明日のTODO${tomorrowDueTodos.length}件 / ごみ出し${tomorrowGarbage.length}件)`,
+        details: {
+          areaLabel: userLoc.areaLabel,
+          weather: weatherDaily && weatherDaily.weather_code && weatherDaily.weather_code[1] !== undefined ? {
+            code: weatherDaily.weather_code[1],
+            tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[1]) : null,
+            tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[1]) : null,
+            pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[1] : 0,
+          } : null,
+          tomorrowEventsCount: tomorrowsEvents.length,
+          tomorrowEvents: tomorrowsEvents.map(function(e) {
+            return { title: e.title, startTime: e.startTime || "", isAllDay: !!e.isAllDay, label: e.label || "" };
+          }),
+          tomorrowDueTodosCount: tomorrowDueTodos.length,
+          overdueTodosCount: overdueTodos.length,
+          tomorrowGarbageCount: tomorrowGarbage.length,
+          tomorrowGarbage: tomorrowGarbage.map(function(g) {
+            return { name: g.name, note: g.note || "", hasImage: !!g.imageUrl };
+          }),
+        }
+      };
+
+      sendLineMessagesWithLog(firestore, lineUid, lineMessages, LINE_PERIODIC_ACCESS_TOKEN, logMeta);
     });
 
   } catch (e) {
@@ -1253,7 +1420,7 @@ function testMorningNotification() {
     }
 
     Logger.log(`朝の通知テスト実行中... 対象ユーザー数: ${testTargets.length}`);
-    sendDailyMorningNotifications(testTargets, events, todos, anniversaries, photos, albums, lineMessagingIds);
+    sendDailyMorningNotifications(testTargets, events, todos, anniversaries, photos, albums, lineMessagingIds, firestore);
     Logger.log('朝の通知テスト送信が完了しました！');
   } catch (e) {
     Logger.log('testMorningNotification Error: ' + e.toString());
@@ -1296,7 +1463,7 @@ function testNightNotification() {
     }
 
     Logger.log(`夜の通知テスト実行中... 対象ユーザー数: ${testTargets.length}`);
-    sendDailyNightNotifications(testTargets, events, todos, garbageSchedules, lineMessagingIds);
+    sendDailyNightNotifications(testTargets, events, todos, garbageSchedules, lineMessagingIds, firestore);
     Logger.log('夜の通知テスト送信が完了しました！');
   } catch (e) {
     Logger.log('testNightNotification Error: ' + e.toString());

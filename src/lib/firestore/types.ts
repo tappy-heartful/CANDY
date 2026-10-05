@@ -484,4 +484,38 @@ export interface GarbageSchedule {
   updatedAt: number;
 }
 
+// ==========================================
+// LINE通知送信ログ用データ型定義
+// ==========================================
+
+export interface LineNotificationMessage {
+  type: string;
+  text?: string;
+  originalContentUrl?: string;
+  previewImageUrl?: string;
+}
+
+export interface LineNotificationLog {
+  id: string;
+  accountType: "periodic" | "event" | "other"; // "periodic": 定期通知, "event": イベント通知
+  accountName: string; // "定期通知公式アカウント" | "イベント通知公式アカウント"
+  notificationType: "morning" | "night" | "event_reminder" | "test_morning" | "test_night" | "other";
+  notificationTitle: string; // "朝の定期通知" 等
+  recipientUid: string; // 送信先CANDY UID
+  recipientName: string; // 送信先ニックネーム
+  recipientLineId: string; // 送信先LINE ID
+  messages: LineNotificationMessage[];
+  messageCount: number; // 吹き出し数（月200通上限のカウント単位）
+  summary: string; // リスト表示用要約
+  details?: Record<string, any>; // 天気、予定リスト、ごみ情報などの詳細
+  status: "success" | "error";
+  statusCode?: number;
+  errorMessage?: string | null;
+  sentAt: number; // 送信タイムスタンプ（ミリ秒）
+  sentAtFormatted: string; // "yyyy/MM/dd HH:mm:ss"
+  yearMonth: string; // "yyyy-MM" (月別集計用)
+  date: string; // "yyyy-MM-dd"
+}
+
+
 

@@ -8,6 +8,7 @@ import { getNotificationSetting, saveNotificationSetting } from "@/src/features/
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import styles from "./SettingsClient.module.css";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
@@ -378,6 +379,22 @@ export default function SettingsClient() {
         <button className={styles.saveBtn} onClick={handleSave}>
           設定を保存する
         </button>
+
+        {/* LINE送信履歴・配信枠確認への導線 */}
+        <div className={styles.logLinkCard}>
+          <div className={styles.logLinkInfo}>
+            <div className={styles.logLinkIcon}>
+              <i className="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+              <div className={styles.logLinkTitle}>LINE送信履歴・配信残数</div>
+              <div className={styles.logLinkDesc}>月200通枠の残り回数や送信ログを確認</div>
+            </div>
+          </div>
+          <Link href="/settings/line-logs" className={styles.logLinkBtn}>
+            確認する <i className="fa-solid fa-chevron-right"></i>
+          </Link>
+        </div>
 
         <p className={styles.note}>
           ※LINE公式アカウントから通知が届きます。
