@@ -517,5 +517,35 @@ export interface LineNotificationLog {
   date: string; // "yyyy-MM-dd"
 }
 
+// ==========================================
+// 買い足しリマインド機能用データ型定義
+// ==========================================
+
+export interface ReplenishmentCategory {
+  id: string;
+  name: string; // カテゴリ名（例: "日用品", "キッチン", "バス・洗面"）
+  order: number;
+  uid: string; // 作成者UID
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ReplenishmentItem {
+  id: string;
+  name: string; // アイテム名（例: "トイレットペーパー"）
+  categoryId: string; // カテゴリID
+  categoryName?: string; // カテゴリ表示名
+  lastPurchasedDate: string; // 前回購入日 ("YYYY-MM-DD")
+  cycleDays: number; // 使い切り目安日数（例: 30）
+  reminderDaysBefore: number; // 何日前から通知するか（デフォルト: 3）
+  notifyEnabled: boolean; // LINE通知対象か（デフォルト: true）
+  note?: string; // メモ（置き場所・ブランドなど）
+  stockQuantity?: number; // ストック個数（任意）
+  uid: string; // 登録者UID
+  createdAt: number;
+  updatedAt: number;
+}
+
+
 
 

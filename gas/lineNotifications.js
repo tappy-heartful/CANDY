@@ -232,6 +232,7 @@ function checkAllNotifications() {
     let garbageSchedules = [];
     let photos = [];
     let albums = [];
+    let replenishments = [];
 
     if (morningTargets.length > 0 || nightTargets.length > 0) {
       const todosDocs = firestore.getDocuments('todos');
@@ -255,6 +256,13 @@ function checkAllNotifications() {
       } catch (e) {
         Logger.log('Failed to fetch albums: ' + e.toString());
       }
+
+      try {
+        const replenishmentsDocs = firestore.getDocuments('replenishments');
+        replenishments = replenishmentsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+      } catch (e) {
+        Logger.log('Failed to fetch replenishments: ' + e.toString());
+      }
     }
 
     if (nightTargets.length > 0) {
@@ -268,7 +276,7 @@ function checkAllNotifications() {
 
     // 3. 各通知処理を実行
     if (morningTargets.length > 0) {
-      sendDailyMorningNotifications(morningTargets, morningEvents, todos, anniversaries, photos, albums, lineMessagingIds, firestore);
+      sendDailyMorningNotifications(morningTargets, morningEvents, todos, anniversaries, photos, albums, replenishments, lineMessagingIds, firestore);
       // 今日の送信済みフラグを記録
       morningTargets.forEach(user => {
         props.setProperty('LAST_MORNING_SENT_' + user.id, todayStr);
@@ -345,7 +353,7 @@ function checkTodoRelation(t, userId, partnerUid) {
 /**
  * 毎朝の定期通知を対象ユーザーに送信する
  */
-function sendDailyMorningNotifications(targets, events, todos, anniversaries, photos, albums, lineMessagingIds, firestore) {
+function sendDailyMorningNotifications(targets, events, todos, anniversaries, photos, albums, replenishments, lineMessagingIds, firestore) {
   try {
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
@@ -591,6 +599,42 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
         message += `\n`;
       }
 
+      // 🛒買い足しリマインド セクション
+      const alertReplenishments = (replenishments || []).filter(function(item) {
+        if (item.notifyEnabled === false) return false;
+        if (!item.lastPurchasedDate) return false;
+        const passedDays = calculateDiffDays(item.lastPurchasedDate, todayStr);
+        const cycle = Math.max(1, item.cycleDays || 30);
+        const reminderBefore = item.reminderDaysBefore !== undefined ? item.reminderDaysBefore : 3;
+        const remaining = cycle - passedDays;
+        return remaining <= reminderBefore;
+      }).map(function(item) {
+        const passedDays = calculateDiffDays(item.lastPurchasedDate, todayStr);
+        const cycle = Math.max(1, item.cycleDays || 30);
+        const remaining = cycle - passedDays;
+        return {
+          id: item.id || "",
+          name: item.name || "",
+          categoryName: item.categoryName || "",
+          passedDays: passedDays,
+          remaining: remaining,
+          isOverdue: remaining <= 0
+        };
+      }).sort(function(a, b) {
+        return a.remaining - b.remaining;
+      });
+
+      if (alertReplenishments.length > 0) {
+        message += `🛒買い足しリマインド\n`;
+        alertReplenishments.forEach(function(item) {
+          const timingText = item.remaining <= 0
+            ? "買い足し時期です"
+            : `あと${item.remaining}日`;
+          message += `・${item.name} (${timingText} / 前回から${item.passedDays}日)\n`;
+        });
+        message += `買い足しリストを見る：\n${BASE_URL}/stock\n\n`;
+      }
+
       // 📸今日の一枚 セクション
       if (todayPhoto) {
         message += `📸今日の一枚\n`;
@@ -641,7 +685,7 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
         notificationTitle: "朝の定期通知",
         recipientUid: user.id,
         recipientName: nickname,
-        summary: `朝の定期通知 (予定${todaysEvents.length}件 / TODO${todaysTodos.length}件${todayPhoto ? " / 写真添付" : ""})`,
+        summary: `朝の定期通知 (予定${todaysEvents.length}件 / TODO${todaysTodos.length}件${alertReplenishments.length > 0 ? ` / 買い足し${alertReplenishments.length}件` : ""}${todayPhoto ? " / 写真添付" : ""})`,
         details: {
           areaLabel: userLoc.areaLabel,
           weather: weatherDaily && weatherDaily.weather_code && weatherDaily.weather_code[0] !== undefined ? {
@@ -661,6 +705,8 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
           anniversaries: userAnniversaries.map(function(a) {
             return { title: a.title, diffDays: a.diffDays, isToday: !!a.isToday };
           }),
+          replenishmentAlertCount: alertReplenishments.length,
+          replenishments: alertReplenishments,
           hasDailyPhoto: !!(todayPhoto && todayPhoto.url),
           dailyPhotoAlbumName: todayPhoto && albumMap[todayPhoto.albumId] ? albumMap[todayPhoto.albumId].name : null,
         }
@@ -1389,6 +1435,7 @@ function testMorningNotification() {
     const anniversariesDocs = firestore.getDocuments('anniversaries');
     let photosDocs = [];
     let albumsDocs = [];
+    let replenishmentsDocs = [];
     try {
       photosDocs = firestore.getDocuments('photos');
     } catch (e) {
@@ -1398,6 +1445,11 @@ function testMorningNotification() {
       albumsDocs = firestore.getDocuments('albums');
     } catch (e) {
       Logger.log('Albums fetch failed: ' + e.toString());
+    }
+    try {
+      replenishmentsDocs = firestore.getDocuments('replenishments');
+    } catch (e) {
+      Logger.log('Replenishments fetch failed: ' + e.toString());
     }
 
     const users = usersDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
@@ -1411,6 +1463,7 @@ function testMorningNotification() {
     const anniversaries = anniversariesDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const photos = photosDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
     const albums = albumsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
+    const replenishments = replenishmentsDocs.map(doc => ({ id: doc.name.split('/').pop(), ...doc.obj }));
 
     // LINE IDが設定されているユーザーをテスト送信対象とする
     const testTargets = users.filter(user => !!lineMessagingIds[user.id]);
@@ -1420,7 +1473,7 @@ function testMorningNotification() {
     }
 
     Logger.log(`朝の通知テスト実行中... 対象ユーザー数: ${testTargets.length}`);
-    sendDailyMorningNotifications(testTargets, events, todos, anniversaries, photos, albums, lineMessagingIds, firestore);
+    sendDailyMorningNotifications(testTargets, events, todos, anniversaries, photos, albums, replenishments, lineMessagingIds, firestore);
     Logger.log('朝の通知テスト送信が完了しました！');
   } catch (e) {
     Logger.log('testMorningNotification Error: ' + e.toString());

@@ -156,6 +156,17 @@ service cloud.firestore {
       allow update, delete: if isSignedIn();
     }
 
+    // 買い足しリマインド機能
+    match /replenishments/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    match /replenishmentCategories/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
     // ============================
 
     // LINE通知送信ログ機能

@@ -225,6 +225,9 @@ export default function Header() {
             <Link href="/ideal-property" onClick={closeMenu} className={styles.menuLinkSub}>
               <i className={`fa-solid fa-house-chimney-window ${styles.menuIconSub}`}></i> 理想の物件
             </Link>
+            <Link href="/stock" onClick={closeMenu} className={styles.menuLinkSub}>
+              <i className={`fa-solid fa-cart-shopping ${styles.menuIconSub}`}></i> 買い足し
+            </Link>
             <Link href="/settings" onClick={closeMenu} className={styles.menuLinkSub}>
               <i className={`fa-solid fa-bell ${styles.menuIconSub}`}></i> 通知設定
             </Link>
