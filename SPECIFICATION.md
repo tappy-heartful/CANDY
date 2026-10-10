@@ -20,6 +20,7 @@
 
 ### 1.2. 主要技術スタック
 - **フロントエンド / サーバー**: Next.js 16 (App Router, Turbopack), React 19, TypeScript (Strict)
+- **ローカル実行ポート**: ポート `3002` 固定（`npm run dev -p 3002`, `PORT=3002`）
 - **スタイリング**: CSS Modules (`*.module.css`), Font Awesome 6 (アイコン)
 - **BaaS / データベース**: Firebase SDK (Web v11) / Cloud Firestore, Firebase Storage, Firebase Authentication
 - **認証**: LINE Login API v2.1 + Firebase Custom Token (PWAクロスブラウザ同期対応)
