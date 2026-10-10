@@ -30,9 +30,14 @@ export default function LineLogItem({ log, onClick }: LineLogItemProps) {
             {log.notificationTitle || "LINE通知"}
           </span>
         </div>
-        <span className={styles.timeText}>
+        <span
+          className={styles.timeText}
+          title={log.sentAtFormatted || log.date}
+        >
           <i className="fa-regular fa-clock"></i>
-          {log.sentAtFormatted ? log.sentAtFormatted.substring(5, 16) : log.date}
+          {log.sentAtFormatted && log.sentAtFormatted.length >= 16
+            ? log.sentAtFormatted.substring(11, 16)
+            : log.sentAtFormatted ? log.sentAtFormatted.substring(5, 16) : log.date}
         </span>
       </div>
 

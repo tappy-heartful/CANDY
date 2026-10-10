@@ -189,7 +189,66 @@
 .logListContainer {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+}
+
+/* 日付別グループセクション */
+.dateGroupSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dateGroupSection:first-child {
+  margin-top: 0;
+}
+
+.dateGroupHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 4px 0 4px;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.dateGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+
+.dateTag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.dateTagToday {
+  background: #d1fae5;
+  color: #065f46;
+  font-weight: 700;
+}
+
+.dateGroupCountText {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.dateGroupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* 空表示 */

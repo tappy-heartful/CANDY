@@ -100,6 +100,77 @@ export default function LineLogListClient() {
     });
   }, [logs, accountFilter, recipientFilter, user]);
 
+  // 日付文字列のフォーマットヘルパー
+  const formatLogDateHeader = useCallback((dateStr: string) => {
+    const normalized = dateStr.replace(/\//g, "-");
+    const [y, m, d] = normalized.split("-").map(Number);
+    if (!y || !m || !d) return { text: dateStr, tag: "", isToday: false };
+
+    const targetDate = new Date(y, m - 1, d);
+    const days = ["日", "月", "火", "水", "木", "金", "土"];
+    const dayOfWeek = days[targetDate.getDay()];
+
+    const now = new Date();
+    const isToday =
+      now.getFullYear() === y &&
+      now.getMonth() === m - 1 &&
+      now.getDate() === d;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      yesterday.getFullYear() === y &&
+      yesterday.getMonth() === m - 1 &&
+      yesterday.getDate() === d;
+
+    let tag = "";
+    if (isToday) tag = "本日";
+    else if (isYesterday) tag = "昨日";
+
+    return {
+      text: `${m}月${d}日 (${dayOfWeek})`,
+      tag,
+      isToday,
+    };
+  }, []);
+
+  // 日付ごとにグループ化されたログ
+  const groupedLogs = useMemo(() => {
+    const groups: {
+      date: string;
+      dateInfo: { text: string; tag: string; isToday: boolean };
+      logs: LineNotificationLog[];
+    }[] = [];
+    const map = new Map<string, LineNotificationLog[]>();
+
+    filteredLogs.forEach((log) => {
+      let dKey = log.date;
+      if (!dKey && log.sentAtFormatted) {
+        dKey = log.sentAtFormatted.substring(0, 10).replace(/\//g, "-");
+      }
+      if (!dKey && log.sentAt) {
+        const dt = new Date(log.sentAt);
+        dKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+      }
+      dKey = dKey || "日付未設定";
+
+      if (!map.has(dKey)) {
+        map.set(dKey, []);
+      }
+      map.get(dKey)!.push(log);
+    });
+
+    map.forEach((logList, dateKey) => {
+      groups.push({
+        date: dateKey,
+        dateInfo: formatLogDateHeader(dateKey),
+        logs: logList,
+      });
+    });
+
+    return groups;
+  }, [filteredLogs, formatLogDateHeader]);
+
   // 年月操作ヘルパー
   const handlePrevMonth = () => {
     const [y, m] = currentYearMonth.split("-").map(Number);
@@ -234,14 +305,40 @@ export default function LineLogListClient() {
           <div className={styles.loadingSpinner}></div>
           <p>送信履歴を読み込み中...</p>
         </div>
-      ) : filteredLogs.length > 0 ? (
+      ) : groupedLogs.length > 0 ? (
         <div className={styles.logListContainer}>
-          {filteredLogs.map((log) => (
-            <LineLogItem
-              key={log.id}
-              log={log}
-              onClick={() => setSelectedLog(log)}
-            />
+          {groupedLogs.map((group) => (
+            <div key={group.date} className={styles.dateGroupSection}>
+              {/* 日付見出し */}
+              <div className={styles.dateGroupHeader}>
+                <div className={styles.dateGroupTitle}>
+                  <span>{group.dateInfo.text}</span>
+                  {group.dateInfo.tag && (
+                    <span
+                      className={`${styles.dateTag} ${
+                        group.dateInfo.isToday ? styles.dateTagToday : ""
+                      }`}
+                    >
+                      {group.dateInfo.tag}
+                    </span>
+                  )}
+                </div>
+                <span className={styles.dateGroupCountText}>
+                  {group.logs.length}件
+                </span>
+              </div>
+
+              {/* その日の送信履歴カード一覧 */}
+              <div className={styles.dateGroupItems}>
+                {group.logs.map((log) => (
+                  <LineLogItem
+                    key={log.id}
+                    log={log}
+                    onClick={() => setSelectedLog(log)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
