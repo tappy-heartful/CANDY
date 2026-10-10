@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { CalendarEvent, Anniversary, Todo, User, Group, TodoStep } from "@/src/lib/firestore/types";
-import { getEvents, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
+import { getEvents, getEventsByMonth, getTodosForCalendar, addEvent, updateEvent, deleteEvent } from "@/src/features/calendar/api/calendar-client-service";
 import { addTodo, updateTodo, deleteTodo, getGroups } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { updateProfile } from "@/src/features/user/api/user-client-service";
@@ -172,6 +172,9 @@ export default function CalendarView({
   const [todos, setTodos] = useState<any[]>(initialTodos || []); // will be typed as Todo[]
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>(initialAnniversaries || []);
 
+  // ロード済み年月（例: "2026-9", "2026-10", "2026-11"）を追跡するRef（重複フェッチ防止）
+  const loadedMonthsRef = useRef<Set<string>>(new Set());
+
   // 親からの初回データ供給（初期データ到着時に一度だけ反映）
   const isEventsInitRef = useRef(false);
   const isTodosInitRef = useRef(false);
@@ -180,8 +183,57 @@ export default function CalendarView({
     if (!isEventsInitRef.current && initialEvents && initialEvents.length > 0) {
       setEvents(initialEvents);
       isEventsInitRef.current = true;
+      // 初期ロードされた年月の前後月をロード済みとしてマーク
+      const targetM = currentMonth + 1;
+      const prevM = targetM === 1 ? 12 : targetM - 1;
+      const nextM = targetM === 12 ? 1 : targetM + 1;
+      const prevY = targetM === 1 ? currentYear - 1 : currentYear;
+      const nextY = targetM === 12 ? currentYear + 1 : currentYear;
+      loadedMonthsRef.current.add(`${prevY}-${prevM}`);
+      loadedMonthsRef.current.add(`${currentYear}-${targetM}`);
+      loadedMonthsRef.current.add(`${nextY}-${nextM}`);
     }
-  }, [initialEvents]);
+  }, [initialEvents, currentMonth, currentYear]);
+
+  // 表示月が切り替わった際、未ロードの月であれば非同期に取得して既存の events にマージ
+  useEffect(() => {
+    const targetMonth = currentMonth + 1;
+    const monthKey = `${currentYear}-${targetMonth}`;
+
+    // すでに取得済みの月、またはまだ初期イベントが届いていない場合はスキップ
+    if (loadedMonthsRef.current.has(monthKey) || !isEventsInitRef.current) {
+      return;
+    }
+
+    let isCancelled = false;
+    getEventsByMonth(currentYear, targetMonth)
+      .then((newMonthEvents) => {
+        if (isCancelled) return;
+        const prevM = targetMonth === 1 ? 12 : targetMonth - 1;
+        const nextM = targetMonth === 12 ? 1 : targetMonth + 1;
+        const prevY = targetMonth === 1 ? currentYear - 1 : currentYear;
+        const nextY = targetMonth === 12 ? currentYear + 1 : currentYear;
+        loadedMonthsRef.current.add(`${prevY}-${prevM}`);
+        loadedMonthsRef.current.add(monthKey);
+        loadedMonthsRef.current.add(`${nextY}-${nextM}`);
+
+        setEvents((prev) => {
+          const map = new Map<string, CalendarEvent>();
+          prev.forEach((e) => map.set(e.id, e));
+          newMonthEvents.forEach((e) => map.set(e.id, e));
+          const merged = Array.from(map.values());
+          onEventsChange?.(merged);
+          return merged;
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load events for month:", monthKey, err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentYear, currentMonth, onEventsChange]);
 
   useEffect(() => {
     if (!isTodosInitRef.current && initialTodos && initialTodos.length > 0) {
@@ -331,7 +383,7 @@ export default function CalendarView({
 
     showSpinner();
     Promise.all([
-      getEvents(), 
+      getEventsByMonth(currentYear, currentMonth + 1), 
       getTodosForCalendar(),
       getAnniversaries(currentUserId, partnerNickname !== "パートナー" ? "dummy" : null),
       getGroups("todo")
@@ -586,6 +638,9 @@ export default function CalendarView({
   };
 
   const timelineCellsData = useMemo(() => {
+    if (calendarMode !== "timeline") {
+      return { cells: [], maxCouple: 0, maxMe: 0, maxPartner: 0 };
+    }
     const cells = [];
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
 
@@ -673,9 +728,12 @@ export default function CalendarView({
       });
     }
     return { cells, maxCouple, maxMe, maxPartner };
-  }, [currentYear, currentMonth, visibleEvents, visibleTodos, anniversaries, currentUserId]);
+  }, [calendarMode, currentYear, currentMonth, visibleEvents, visibleTodos, anniversaries, currentUserId]);
 
   const processedWeeks = useMemo(() => {
+    if (calendarMode !== "grid") {
+      return [];
+    }
     // 1. 各曜日のアイテムをまず解決する
     const allCellsData = gridCells.map((cell) => {
       const dateStr = `${cell.year}-${padZero(cell.month + 1)}-${padZero(cell.dayNum)}`;
@@ -782,7 +840,7 @@ export default function CalendarView({
       });
     }
     return weeks;
-  }, [gridCells, visibleEvents, visibleTodos, anniversaries, currentUserId]);
+  }, [calendarMode, gridCells, visibleEvents, visibleTodos, anniversaries, currentUserId]);
 
   const renderPill = (item: any, dateStr: string, cellDayOfWeek: number) => {
     const isMe = item.uid === currentUserId;
@@ -902,20 +960,24 @@ export default function CalendarView({
           });
           
           const results = await Promise.all(updates);
-          setEvents((prev) =>
-            prev.map((e) => {
+          setEvents((prev) => {
+            const next = prev.map((e) => {
               const res = results.find((r) => r.id === e.id);
               return res ? ({ ...e, ...res.data } as CalendarEvent) : e;
-            })
-          );
+            });
+            onEventsChange?.(next);
+            return next;
+          });
         } else {
           // 通常の編集
           await updateEvent(activeModalEvent.id, eventData);
-          setEvents((prev) =>
-            prev.map((e) =>
+          setEvents((prev) => {
+            const next = prev.map((e) =>
               e.id === activeModalEvent.id ? ({ ...e, ...eventData } as CalendarEvent) : e
-            )
-          );
+            );
+            onEventsChange?.(next);
+            return next;
+          });
         }
       } else {
         // Create Mode
@@ -948,7 +1010,11 @@ export default function CalendarView({
           });
           
           const addedEvents = await Promise.all(creations);
-          setEvents((prev) => [...prev, ...addedEvents]);
+          setEvents((prev) => {
+            const next = [...prev, ...addedEvents];
+            onEventsChange?.(next);
+            return next;
+          });
         } else {
           // 通常登録
           const docRef = await addEvent(eventData);
@@ -958,7 +1024,11 @@ export default function CalendarView({
             createdAt: Date.now(),
             updatedAt: Date.now(),
           } as CalendarEvent;
-          setEvents((prev) => [...prev, newEventItem]);
+          setEvents((prev) => {
+            const next = [...prev, newEventItem];
+            onEventsChange?.(next);
+            return next;
+          });
         }
       }
       setIsModalOpen(false);
@@ -979,11 +1049,19 @@ export default function CalendarView({
         const recurringEvents = events.filter((e) => e.recurrenceId === activeModalEvent.recurrenceId);
         const deletions = recurringEvents.map((e) => deleteEvent(e.id));
         await Promise.all(deletions);
-        setEvents((prev) => prev.filter((e) => e.recurrenceId !== activeModalEvent.recurrenceId));
+        setEvents((prev) => {
+          const next = prev.filter((e) => e.recurrenceId !== activeModalEvent.recurrenceId);
+          onEventsChange?.(next);
+          return next;
+        });
       } else {
         // この予定のみ削除（通常削除）
         await deleteEvent(id);
-        setEvents((prev) => prev.filter((e) => e.id !== id));
+        setEvents((prev) => {
+          const next = prev.filter((e) => e.id !== id);
+          onEventsChange?.(next);
+          return next;
+        });
       }
       setIsModalOpen(false);
       setActiveModalEvent(null);

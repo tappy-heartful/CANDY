@@ -9,7 +9,7 @@ import { getWishlist } from "@/src/features/wishlist/api/wishlist-client-service
 import { getPartnerData, updateProfile } from "@/src/features/user/api/user-client-service";
 import { getDailyStatuses, saveDailyStatus } from "@/src/features/home/api/daily-status-client-service";
 import { notifyDailyStatusSaved, notifyDailyStatusCommented } from "@/src/features/home/api/daily-status-server-actions";
-import { getEvents, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
+import { getEventsByMonth, getTodosForCalendar } from "@/src/features/calendar/api/calendar-client-service";
 import { getGroups, addTodo, updateTodo, deleteTodo } from "@/src/features/todo/api/todo-client-service";
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
@@ -250,15 +250,18 @@ export default function HomeClient() {
 
     if (user && hasRequired) {
       const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayStr = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const partnerUid = userData?.partnerUid || null;
 
       // パートナー情報取得とその他すべてのコレクション取得を完全並列化
+      // カレンダーイベントは今月（カレンダー表示に必要な前後月含む）に限定して取得・高速化
       Promise.all([
         getPartnerData(user.uid, partnerUid || undefined),
         getWishlist(),
         getDailyStatuses(todayStr),
-        getEvents(),
+        getEventsByMonth(todayYear, todayMonth),
         getGroups("wishlist"),
         getAnniversaries(user.uid, partnerUid),
         getTodosForCalendar(),
