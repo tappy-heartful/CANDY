@@ -35,10 +35,10 @@ export default function LineQuotaCard({ quotaSummary, displayMonthLabel }: LineQ
       : styles.fillDanger;
 
     const statusText = isSafe
-      ? "ゆったり余裕あり🍀"
+      ? "ゆったり配信中🍀"
       : isWarning
       ? "順調に配信中💡"
-      : "残数に配慮中✨";
+      : "たくさん配信中✨";
 
     return (
       <div className={styles.quotaCard} key={info.accountType}>
@@ -64,10 +64,10 @@ export default function LineQuotaCard({ quotaSummary, displayMonthLabel }: LineQ
         </div>
 
         <div className={styles.remainingSection}>
-          <span className={styles.remainingLabel}>今月の残り配信可能数</span>
+          <span className={styles.remainingLabel}>今月の送信回数</span>
           <div className={styles.remainingValue}>
             <span className={`${styles.remainingNumber} ${numberColorClass}`}>
-              {info.remaining}
+              {info.consumed}
             </span>
             <span className={styles.remainingUnit}>/ {info.limit} 通</span>
           </div>
@@ -82,9 +82,9 @@ export default function LineQuotaCard({ quotaSummary, displayMonthLabel }: LineQ
           </div>
           <div className={styles.progressTextRow}>
             <span>
-              使用済み: <strong>{info.consumed}</strong> 通 ({info.usageRate}%)
+              残り枠: <strong>{info.remaining}</strong> 通
             </span>
-            <span>上限: {info.limit} 通/月</span>
+            <span>月間上限: {info.limit} 通 ({info.usageRate}% 配信)</span>
           </div>
         </div>
       </div>

@@ -388,7 +388,7 @@ export default function SettingsClient() {
             </div>
             <div>
               <div className={styles.logLinkTitle}>LINE送信履歴</div>
-              <div className={styles.logLinkDesc}>月200通枠の残り回数や送信ログを確認</div>
+              <div className={styles.logLinkDesc}>月200通枠の送信回数や送信ログを確認</div>
             </div>
           </div>
           <Link href="/settings/line-logs" className={styles.logLinkBtn}>

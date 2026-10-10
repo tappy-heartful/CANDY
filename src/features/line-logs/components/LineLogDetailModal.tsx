@@ -9,6 +9,40 @@ interface LineLogDetailModalProps {
   onClose: () => void;
 }
 
+// URLを検知してクリック可能なリンクに変換するヘルパー関数
+const renderMessageTextWithLinks = (text: string) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const lines = text.split("\n");
+
+  return lines.map((line, lineIdx) => {
+    const parts = line.split(urlRegex);
+    return (
+      <React.Fragment key={lineIdx}>
+        {parts.map((part, partIdx) => {
+          if (part.match(/^https?:\/\//)) {
+            return (
+              <a
+                key={partIdx}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.bubbleUrlLink}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span>{part}</span>
+                <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: "0.75em" }}></i>
+              </a>
+            );
+          }
+          return part;
+        })}
+        {lineIdx < lines.length - 1 && "\n"}
+      </React.Fragment>
+    );
+  });
+};
+
 export default function LineLogDetailModal({ log, onClose }: LineLogDetailModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,13 +149,13 @@ export default function LineLogDetailModal({ log, onClose }: LineLogDetailModalP
                   }
                   return (
                     <div key={index} className={styles.messageBubble}>
-                      {msg.text || "（テキストなし）"}
+                      {renderMessageTextWithLinks(msg.text || "") || "（テキストなし）"}
                     </div>
                   );
                 })
               ) : (
                 <div className={styles.messageBubble}>
-                  {log.summary || "（メッセージデータなし）"}
+                  {renderMessageTextWithLinks(log.summary || "") || "（メッセージデータなし）"}
                 </div>
               )}
             </div>

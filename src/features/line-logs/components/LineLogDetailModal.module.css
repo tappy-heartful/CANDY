@@ -274,3 +274,23 @@
 .closeFooterBtn:hover {
   background-color: #cbd5e1;
 }
+
+.bubbleUrlLink {
+  color: #2563eb;
+  text-decoration: underline;
+  word-break: break-all;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.bubbleUrlLink:hover {
+  color: #1d4ed8;
+  opacity: 0.85;
+}
+
+.bubbleUrlLink:active {
+  color: #1e40af;
+}
