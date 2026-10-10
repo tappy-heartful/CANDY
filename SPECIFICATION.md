@@ -166,9 +166,11 @@
 - **負担割合 (`splitRatio`) の個別設定**:
   - 項目ごとに「自分○% : 相手○%」の負担割合を設定可能（デフォルト50:50）。
   - 各自の負担すべき金額と実際の支払い額から、月末の差額精算を自動算出。
-- **領収書エビデンス添付**:
+- **送金エビデンス添付 & 楽天銀行 振込履歴の分割送金対応**:
   - 支出実績にレシートや明細の写真・PDFを添付して記録可能。
-  - PayPay等の月間精算送金画面のスクリーンショットを `budgetSettlementProofs` として保存。
+  - 月間精算時の送金エビデンスとして「楽天銀行の振込履歴・振込完了スクリーンショット」を登録。
+  - 送金の分割払いに対応し、1回目（N円）、2回目（M円）…と回数・金額・メモ・スクショ画像をセットで複数登録・管理可能。
+  - 目標精算額に対する送金済み合計額および残額をリアルタイム表示し、残額クイック入力や個別履歴削除をサポート。
 
 ### 3.8. ワリカン精算・立替計算 (`/settlement`, `/settlement/[id]`, `src/features/settlement/`)
 - **目的**: 旅行やイベント、大きな買い物の立替払いをスムーズかつスマートに精算。
@@ -331,7 +333,7 @@ Firestoreの読み取り回数を完全無料枠（50,000回/日）の数％以�
 | `defaultBudgets` | 自動採番 | `coupleKey`, `uid`, `category` (fixed/variable/income), `type`, `name`, `amount`, `splitRatio` | ログイン済みカップル | ログイン済みカップル |
 | `monthlyBudgets` | 自動採番 | `coupleKey`, `uid`, `year`, `month`, `category`, `type`, `name`, `amount`, `splitRatio` | ログイン済みカップル | ログイン済みカップル |
 | `actualBudgets` | 自動採番 | `coupleKey`, `uid`, `year`, `month`, `date`, `category`, `type`, `name`, `amount`, `splitRatio`, `proofUrl` | ログイン済みカップル | ログイン済みカップル |
-| `budgetSettlementProofs`| 自動採番 | `coupleKey`, `year`, `month`, `proofUrl`, `proofFileName`, `proofUploadedAt`, `uploadedUid` | ログイン済みカップル | ログイン済みカップル |
+| `budgetSettlementProofs`| 自動採番 | `coupleKey`, `year`, `month`, `payments` (BudgetSettlementPayment[]), `proofUrl`, `uploadedUid` | ログイン済みカップル | ログイン済みカップル |
 | `memos` | 自動採番 | `coupleKey`, `title`, `content`, `partnerEditable`, `uid` | ログイン済みカップル | 本人 / 編集許可時パートナー |
 | `garbageSchedules` | 自動採番 | `name`, `color`, `icon`, `monthType`, `weekType`, `nthWeeks`, `daysOfWeek`, `note`, `imageUrls`, `uid` | ログイン済みカップル | ログイン済みカップル |
 | `replenishmentCategories`| 自動採番 | `name`, `order`, `uid` | ログイン済みカップル | ログイン済みカップル |

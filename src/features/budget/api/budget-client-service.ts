@@ -1,6 +1,6 @@
 import { db, storage } from "@/src/lib/firebase";
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { BudgetMasterData, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
+import { BudgetMasterData, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof, BudgetSettlementPayment } from "@/src/lib/firestore/types";
 import { toPlainObject } from "@/src/lib/firestore/utils";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -289,7 +289,22 @@ export async function getBudgetSettlementProof(coupleKey: string, year: number, 
     const docRef = doc(db, "budgetSettlementProofs", docId);
     const snap = await getDoc(docRef);
     if (snap.exists()) {
-      return snap.data() as BudgetSettlementProof;
+      const data = snap.data() as BudgetSettlementProof;
+      // 下位互換性: paymentsがなく単一proofUrlがある場合はpayments配列を自動生成
+      if ((!data.payments || data.payments.length === 0) && data.proofUrl) {
+        data.payments = [
+          {
+            id: "legacy_1",
+            installmentNumber: 1,
+            amount: 0,
+            proofUrl: data.proofUrl,
+            proofFileName: data.proofFileName || "送金履歴スクショ",
+            uploadedAt: data.proofUploadedAt || Date.now(),
+            uploadedUid: data.uploadedUid || "",
+          },
+        ];
+      }
+      return data;
     }
     return null;
   } catch (error) {
@@ -299,7 +314,7 @@ export async function getBudgetSettlementProof(coupleKey: string, year: number, 
 }
 
 /**
- * 家計簿の清算証明画像 (PayPay等) をアップロードして登録する
+ * 家計簿の清算証明画像 (楽天銀行の振込履歴等) をアップロードして登録する (単一または初回用)
  */
 export async function uploadBudgetSettlementProof(
   coupleKey: string,
@@ -308,22 +323,76 @@ export async function uploadBudgetSettlementProof(
   file: File,
   uid: string
 ): Promise<BudgetSettlementProof> {
-  const fileName = `${Date.now()}_${file.name}`;
+  return uploadBudgetSettlementPayment(coupleKey, year, month, file, 1, 0, "", uid);
+}
+
+/**
+ * 楽天銀行の振込履歴スクショを分割回数・送金額とともに登録する
+ */
+export async function uploadBudgetSettlementPayment(
+  coupleKey: string,
+  year: number,
+  month: number,
+  file: File,
+  installmentNumber: number,
+  amount: number,
+  note: string,
+  uid: string
+): Promise<BudgetSettlementProof> {
+  const fileName = `${Date.now()}_installment${installmentNumber}_${file.name}`;
   const storageRef = ref(storage, `budgets/${coupleKey}/proofs/${fileName}`);
   await uploadBytes(storageRef, file);
   const proofUrl = await getDownloadURL(storageRef);
 
   const docId = `proof_${coupleKey}_${year}_${month}`;
   const docRef = doc(db, "budgetSettlementProofs", docId);
+  const snap = await getDoc(docRef);
+
+  let existingPayments: BudgetSettlementPayment[] = [];
+  if (snap.exists()) {
+    const data = snap.data() as BudgetSettlementProof;
+    if (data.payments && Array.isArray(data.payments)) {
+      existingPayments = [...data.payments];
+    } else if (data.proofUrl) {
+      existingPayments.push({
+        id: "legacy_1",
+        installmentNumber: 1,
+        amount: 0,
+        proofUrl: data.proofUrl,
+        proofFileName: data.proofFileName || "送金履歴スクショ",
+        uploadedAt: data.proofUploadedAt || Date.now(),
+        uploadedUid: data.uploadedUid || uid,
+      });
+    }
+  }
+
+  const newPayment: BudgetSettlementPayment = {
+    id: `payment_${Date.now()}`,
+    installmentNumber,
+    amount,
+    proofUrl,
+    proofFileName: file.name,
+    uploadedAt: Date.now(),
+    uploadedUid: uid,
+    note: note || undefined,
+  };
+
+  // 同じ回数のものが既に存在する場合は上書き、それ以外は追加
+  const filteredExisting = existingPayments.filter((p) => p.installmentNumber !== installmentNumber);
+  const updatedPayments = [...filteredExisting, newPayment].sort(
+    (a, b) => a.installmentNumber - b.installmentNumber
+  );
+
   const proofData: BudgetSettlementProof = {
     id: docId,
     coupleKey,
     year,
     month,
-    proofUrl,
-    proofFileName: file.name,
+    payments: updatedPayments,
+    proofUrl: updatedPayments[0]?.proofUrl || proofUrl,
+    proofFileName: updatedPayments[0]?.proofFileName || file.name,
     proofUploadedAt: Date.now(),
-    uploadedUid: uid
+    uploadedUid: uid,
   };
 
   await setDoc(docRef, proofData);
@@ -331,7 +400,50 @@ export async function uploadBudgetSettlementProof(
 }
 
 /**
- * 家計簿の清算証明画像を削除する
+ * 特定の分割送金エビデンスを削除する
+ */
+export async function removeBudgetSettlementPayment(
+  coupleKey: string,
+  year: number,
+  month: number,
+  paymentId: string
+): Promise<BudgetSettlementProof | null> {
+  const docId = `proof_${coupleKey}_${year}_${month}`;
+  const docRef = doc(db, "budgetSettlementProofs", docId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return null;
+
+  const data = snap.data() as BudgetSettlementProof;
+  const payments = data.payments || [];
+  const targetPayment = payments.find((p) => p.id === paymentId);
+
+  if (targetPayment?.proofUrl) {
+    try {
+      const fileRef = ref(storage, targetPayment.proofUrl);
+      await deleteObject(fileRef).catch((e) => console.warn("Failed to delete storage file:", e));
+    } catch (e) {
+      console.warn("Storage deletion error:", e);
+    }
+  }
+
+  const remainingPayments = payments.filter((p) => p.id !== paymentId);
+  if (remainingPayments.length === 0) {
+    await deleteDoc(docRef);
+    return null;
+  }
+
+  const updatedProof: BudgetSettlementProof = {
+    ...data,
+    payments: remainingPayments,
+    proofUrl: remainingPayments[0]?.proofUrl || "",
+    proofFileName: remainingPayments[0]?.proofFileName || "",
+  };
+  await setDoc(docRef, updatedProof);
+  return updatedProof;
+}
+
+/**
+ * 家計簿の清算証明画像（全分割履歴含む）を削除する
  */
 export async function removeBudgetSettlementProof(coupleKey: string, year: number, month: number): Promise<void> {
   const docId = `proof_${coupleKey}_${year}_${month}`;
@@ -341,10 +453,17 @@ export async function removeBudgetSettlementProof(coupleKey: string, year: numbe
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const data = snap.data() as BudgetSettlementProof;
-      if (data.proofUrl) {
-        // StorageのURLから参照を取得して削除
+      // 分割支払い内のすべての画像を削除
+      if (data.payments && data.payments.length > 0) {
+        for (const payment of data.payments) {
+          if (payment.proofUrl) {
+            const fileRef = ref(storage, payment.proofUrl);
+            await deleteObject(fileRef).catch((e) => console.warn("Failed to delete storage file:", e));
+          }
+        }
+      } else if (data.proofUrl) {
         const fileRef = ref(storage, data.proofUrl);
-        await deleteObject(fileRef).catch(e => console.warn("Failed to delete storage file:", e));
+        await deleteObject(fileRef).catch((e) => console.warn("Failed to delete storage file:", e));
       }
     }
   } catch (e) {

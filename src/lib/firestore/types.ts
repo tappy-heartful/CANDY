@@ -450,15 +450,29 @@ export interface Memo {
   updatedAt: number;
 }
 
+export interface BudgetSettlementPayment {
+  id: string; // payment_${timestamp}
+  installmentNumber: number; // 1回目, 2回目...
+  amount: number; // 金額 (円)
+  proofUrl: string; // 楽天銀行の振込履歴スクショ画像URL
+  proofFileName: string;
+  uploadedAt: number;
+  uploadedUid: string;
+  note?: string; // メモ・備考
+}
+
 export interface BudgetSettlementProof {
   id: string; // proof_${coupleKey}_${year}_${month}
   coupleKey: string;
   year: number;
   month: number;
-  proofUrl: string;
-  proofFileName: string;
-  proofUploadedAt: number;
-  uploadedUid: string;
+  // 分割払い対応の各送金情報
+  payments?: BudgetSettlementPayment[];
+  // 単一送金（下位互換性維持用）
+  proofUrl?: string;
+  proofFileName?: string;
+  proofUploadedAt?: number;
+  uploadedUid?: string;
 }
 
 // ==========================================

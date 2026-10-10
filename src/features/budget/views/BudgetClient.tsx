@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useBreadcrumb } from "@/src/contexts/BreadcrumbContext";
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
-import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof } from "@/src/lib/firestore/types";
+import { User as FirestoreUser, BudgetCategory, BudgetType, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof, BudgetSettlementPayment } from "@/src/lib/firestore/types";
 import { showDialog, showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 import BackToHome from "@/src/components/Common/BackToHome";
 import styles from "./BudgetClient.module.css";
@@ -25,6 +25,8 @@ import {
   updateBudgetMasterData,
   getBudgetSettlementProof,
   uploadBudgetSettlementProof,
+  uploadBudgetSettlementPayment,
+  removeBudgetSettlementPayment,
   removeBudgetSettlementProof,
   uploadActualBudgetProof,
   removeActualBudgetProofFile,
@@ -140,9 +142,16 @@ export default function BudgetClient() {
   // マスタ設定モーダル用
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
-  // 清算証明エビデンス用
+  // 楽天銀行 振込履歴エビデンス（分割送金対応）用
   const [settlementProof, setSettlementProof] = useState<BudgetSettlementProof | null>(null);
   const [isProofModalOpen, setIsProofModalOpen] = useState<boolean>(false);
+  const [isUploadProofModalOpen, setIsUploadProofModalOpen] = useState<boolean>(false);
+  const [uploadInstallmentNumber, setUploadInstallmentNumber] = useState<number>(1);
+  const [uploadAmount, setUploadAmount] = useState<string>("");
+  const [uploadNote, setUploadNote] = useState<string>("");
+  const [selectedProofFile, setSelectedProofFile] = useState<File | null>(null);
+  const [previewProofUrl, setPreviewProofUrl] = useState<string>("");
+  const [isSubmittingProof, setIsSubmittingProof] = useState<boolean>(false);
   const proofInputRef = useRef<HTMLInputElement | null>(null);
 
   // 実際収支フォーム内の添付ファイル用
@@ -1044,43 +1053,118 @@ export default function BudgetClient() {
     }
   };
 
-  // エビデンス画像のアップロード
-  const handleProofFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 楽天銀行 振込履歴スクショ登録モーダルを開く
+  const handleOpenUploadProofModal = (customInstallment?: number) => {
+    const payments = settlementProof?.payments || [];
+    let nextNum = 1;
+    if (payments.length > 0) {
+      const maxNum = Math.max(...payments.map((p) => p.installmentNumber || 0));
+      nextNum = maxNum + 1;
+    }
+    const finalNum = customInstallment !== undefined ? customInstallment : nextNum;
+    setUploadInstallmentNumber(finalNum);
+
+    // 送金目標額（精算差額）と既払額から残額を計算して初期値にセット
+    const summary = getSettlementSummary(actualBudgets);
+    const targetDiff = summary ? Math.abs(summary.diff || 0) : 0;
+    const paidTotal = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const remaining = Math.max(0, targetDiff - paidTotal);
+
+    setUploadAmount(remaining > 0 ? String(remaining) : "");
+    setUploadNote("");
+    setSelectedProofFile(null);
+    setPreviewProofUrl("");
+    setIsUploadProofModalOpen(true);
+  };
+
+  // スクショ画像の選択
+  const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !coupleKey || !user) return;
+    if (file) {
+      setSelectedProofFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewProofUrl(url);
+    }
+  };
+
+  // 楽天銀行 振込履歴エビデンスの登録実行
+  const handleSubmitProof = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProofFile) {
+      showDialog("楽天銀行の振込履歴スクショを選択してください。");
+      return;
+    }
+    const amountNum = Number(uploadAmount);
+    if (!uploadAmount || isNaN(amountNum) || amountNum <= 0) {
+      showDialog("送金金額を正しく入力してください。");
+      return;
+    }
+    if (!coupleKey || !user) return;
+
     try {
+      setIsSubmittingProof(true);
       showSpinner();
-      const proof = await uploadBudgetSettlementProof(coupleKey, actualYear, actualMonth, file, user.uid);
-      setSettlementProof(proof);
-      showDialog("清算証明エビデンスを登録しました！📸");
+      const updatedProof = await uploadBudgetSettlementPayment(
+        coupleKey,
+        actualYear,
+        actualMonth,
+        selectedProofFile,
+        uploadInstallmentNumber,
+        amountNum,
+        uploadNote,
+        user.uid
+      );
+      setSettlementProof(updatedProof);
+      setIsUploadProofModalOpen(false);
+      showDialog(`${uploadInstallmentNumber}回目の送金エビデンス（${amountNum.toLocaleString()}円）を登録しました！🏦📸`);
     } catch (err) {
-      console.error("Failed to upload budget settlement proof:", err);
-      errorLog("清算証明エビデンス画像アップロード", err);
+      console.error("Failed to upload budget settlement payment:", err);
+      errorLog("楽天銀行振込履歴エビデンス登録", err);
       showDialog("画像のアップロード中に問題が発生したようです。");
     } finally {
+      setIsSubmittingProof(false);
       hideSpinner();
-      if (proofInputRef.current) {
-        proofInputRef.current.value = "";
+    }
+  };
+
+  // 特定回の送金エビデンスを削除
+  const handleRemovePayment = async (paymentId: string, installmentNumber: number) => {
+    if (!coupleKey) return;
+    if (window.confirm(`${installmentNumber}回目の送金エビデンスを削除してもよろしいですか？\n※画像データも削除されます。`)) {
+      try {
+        showSpinner();
+        const updatedProof = await removeBudgetSettlementPayment(coupleKey, actualYear, actualMonth, paymentId);
+        setSettlementProof(updatedProof);
+        if (!updatedProof || !updatedProof.payments || updatedProof.payments.length === 0) {
+          setIsProofModalOpen(false);
+        }
+        showDialog(`${installmentNumber}回目の送金エビデンスを削除しました。`);
+      } catch (err) {
+        console.error("Failed to remove payment:", err);
+        errorLog("送金エビデンス個別削除", err);
+        showDialog("削除処理中に問題が発生したようです。");
+      } finally {
+        hideSpinner();
       }
     }
   };
 
-  // エビデンス画像の登録解除 (削除)
+  // この月の全送金エビデンスを登録解除 (削除)
   const handleRemoveProof = async () => {
     if (!coupleKey) return;
-    if (window.confirm("この証明書の登録を解除してもよろしいですか？\n※画像データも削除されます。")) {
+    if (window.confirm("この月の送金エビデンスをすべて削除してもよろしいですか？\n※登録されたすべての画像データが削除されます。")) {
       try {
-         showSpinner();
-         await removeBudgetSettlementProof(coupleKey, actualYear, actualMonth);
-         setSettlementProof(null);
-         setIsProofModalOpen(false);
-         showDialog("証明書の登録を解除しました。");
+        showSpinner();
+        await removeBudgetSettlementProof(coupleKey, actualYear, actualMonth);
+        setSettlementProof(null);
+        setIsProofModalOpen(false);
+        showDialog("すべての送金エビデンスを削除しました。");
       } catch (err) {
-         console.error("Failed to remove proof:", err);
-         errorLog("清算証明エビデンス画像削除", err);
-         showDialog("解除処理中に問題が発生したようです。");
+        console.error("Failed to remove proof:", err);
+        errorLog("清算証明エビデンス画像全削除", err);
+        showDialog("解除処理中に問題が発生したようです。");
       } finally {
-         hideSpinner();
+        hideSpinner();
       }
     }
   };
@@ -1689,25 +1773,44 @@ export default function BudgetClient() {
                         )}
                       </div>
 
-                      {/* PayPay支払いのエビデンス登録 */}
+                      {/* 楽天銀行 振込履歴エビデンス登録 */}
                       <div className={styles.settlementProofArea}>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          ref={proofInputRef}
-                          style={{ display: "none" }}
-                          onChange={handleProofFileSelect}
-                        />
-                        {settlementProof ? (
+                        {settlementProof && settlementProof.payments && settlementProof.payments.length > 0 ? (
                           <div className={styles.proofInfoBox}>
-                            <span className={styles.proofLabel}>清算エビデンス：</span>
-                            <button type="button" className={styles.proofBadgeBtn} onClick={() => setIsProofModalOpen(true)}>
-                              <i className="fa-solid fa-image"></i> 送金完了の証明を確認
-                            </button>
+                            <div className={styles.proofSummaryRow}>
+                              <div className={styles.proofSummaryBadge}>
+                                <i className="fa-solid fa-building-columns" style={{ color: "#bf0000" }}></i>
+                                <span>振込履歴: <strong>{settlementProof.payments.length}件</strong></span>
+                                <span className={styles.proofTotalAmount}>
+                                  (計 {settlementProof.payments.reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}円)
+                                </span>
+                              </div>
+                              <div className={styles.proofBtnGroup}>
+                                <button
+                                  type="button"
+                                  className={styles.proofBadgeBtn}
+                                  onClick={() => setIsProofModalOpen(true)}
+                                >
+                                  <i className="fa-solid fa-receipt"></i> 振込スクショを確認
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.addProofBtn}
+                                  onClick={() => handleOpenUploadProofModal()}
+                                  title="追加の振込スクショを登録"
+                                >
+                                  <i className="fa-solid fa-plus"></i> 分割振込を追加
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ) : (
-                          <button type="button" className={styles.uploadProofBtn} onClick={() => proofInputRef.current?.click()}>
-                            <i className="fa-solid fa-file-arrow-up"></i> PayPay支払いのエビデンスを登録
+                          <button
+                            type="button"
+                            className={styles.uploadProofBtn}
+                            onClick={() => handleOpenUploadProofModal(1)}
+                          >
+                            <i className="fa-solid fa-building-columns" style={{ color: "#bf0000" }}></i> 楽天銀行の振込履歴スクショを登録
                           </button>
                         )}
                       </div>
@@ -2681,40 +2784,313 @@ export default function BudgetClient() {
         );
       })()}
 
-      {/* エビデンス画像プレビューモーダル */}
-      {isProofModalOpen && settlementProof && (
-        <div className={styles.modalOverlay} onClick={() => setIsProofModalOpen(false)}>
-          <div className={styles.proofModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>
-                <i className="fa-solid fa-image"></i> 清算エビデンス
-              </h2>
-              <button className={styles.modalClose} onClick={() => setIsProofModalOpen(false)}>
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-            <div className={styles.modalBody} style={{ textAlign: "center", padding: "16px" }}>
-              <img
-                src={settlementProof.proofUrl}
-                alt="清算証明"
-                className={styles.proofFullImage}
-              />
-              <div className={styles.proofMetaInfo}>
-                <p>登録ファイル名: {settlementProof.proofFileName}</p>
-                <p>登録日時: {new Date(settlementProof.proofUploadedAt).toLocaleString()}</p>
+      {/* 楽天銀行 振込履歴スクショ登録モーダル */}
+      {isUploadProofModalOpen && (() => {
+        const setSum = getSettlementSummary(actualBudgets);
+        const targetDiff = setSum ? Math.abs(setSum.diff || 0) : 0;
+        const currentPaid = (settlementProof?.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+        const remaining = Math.max(0, targetDiff - currentPaid);
+
+        return (
+          <div className={styles.modalOverlay} onClick={() => setIsUploadProofModalOpen(false)}>
+            <div className={styles.uploadProofModal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h2 className={styles.modalTitle}>
+                  <i className="fa-solid fa-building-columns" style={{ color: "#bf0000" }}></i>
+                  <span>楽天銀行 振込履歴スクショの登録</span>
+                </h2>
+                <button
+                  type="button"
+                  className={styles.modalClose}
+                  onClick={() => setIsUploadProofModalOpen(false)}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
               </div>
-            </div>
-            <div className={styles.modalActions}>
-              <button className={styles.modalDeleteBtn} onClick={handleRemoveProof}>
-                <i className="fa-solid fa-trash"></i> 登録を解除する
-              </button>
-              <button className={styles.cancelBtn} onClick={() => setIsProofModalOpen(false)}>
-                閉じる
-              </button>
+
+              <form onSubmit={handleSubmitProof} className={styles.uploadProofForm}>
+                <div className={styles.rakutenNoticeBox}>
+                  <div className={styles.rakutenNoticeHeader}>
+                    <i className="fa-solid fa-circle-info"></i>
+                    <span>送金の分割払いに対応しています</span>
+                  </div>
+                  <p className={styles.rakutenNoticeDesc}>
+                    楽天銀行アプリの振込履歴・振込完了画面のスクリーンショットと、その回の送金額（1回目N円、2回目M円など）を一緒に登録してください。
+                  </p>
+                  {targetDiff > 0 && (
+                    <div className={styles.settlementTargetPill}>
+                      <span>目標清算額: <strong>{formatCurrency(targetDiff)}</strong></span>
+                      <span>既送金: <strong>{formatCurrency(currentPaid)}</strong></span>
+                      <span className={remaining === 0 ? styles.paidFullText : styles.unpaidText}>
+                        {remaining === 0 ? "✨ 全額送金済み" : `残り: ${formatCurrency(remaining)}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.formRow}>
+                  <label className={styles.formLabel}>
+                    送金回数 <span className={styles.requiredBadge}>必須</span>
+                  </label>
+                  <div className={styles.installmentSelectWrapper}>
+                    <select
+                      className={styles.formSelect}
+                      value={uploadInstallmentNumber}
+                      onChange={(e) => setUploadInstallmentNumber(Number(e.target.value))}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <option key={num} value={num}>
+                          {num}回目（第{num}回 送金）
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.labelWithAction}>
+                    <label className={styles.formLabel}>
+                      送金額 <span className={styles.requiredBadge}>必須</span>
+                    </label>
+                    {remaining > 0 && (
+                      <button
+                        type="button"
+                        className={styles.quickFillBtn}
+                        onClick={() => setUploadAmount(String(remaining))}
+                      >
+                        残額 ({remaining.toLocaleString()}円) をセット
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.amountInputWrapper}>
+                    <span className={styles.currencyPrefix}>¥</span>
+                    <input
+                      type="number"
+                      className={styles.formInputAmount}
+                      placeholder="例: 15000"
+                      value={uploadAmount}
+                      onChange={(e) => setUploadAmount(e.target.value)}
+                      min={1}
+                      required
+                    />
+                    <span className={styles.currencySuffix}>円</span>
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <label className={styles.formLabel}>
+                    楽天銀行 振込履歴のスクショ <span className={styles.requiredBadge}>必須</span>
+                  </label>
+                  <div className={styles.fileUploadArea}>
+                    <input
+                      type="file"
+                      id="rakutenProofFile"
+                      accept="image/*"
+                      className={styles.hiddenFileInput}
+                      onChange={handleProofFileChange}
+                    />
+                    <label htmlFor="rakutenProofFile" className={styles.fileDropLabel}>
+                      {previewProofUrl ? (
+                        <div className={styles.previewImageContainer}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={previewProofUrl} alt="プレビュー" className={styles.proofThumbnail} />
+                          <div className={styles.changeImageOverlay}>
+                            <i className="fa-solid fa-arrows-rotate"></i>
+                            <span>画像を変更する</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.dropPrompt}>
+                          <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: "2rem", color: "#bf0000" }}></i>
+                          <p className={styles.dropText}>
+                            タップして楽天銀行の振込履歴スクショを選択
+                          </p>
+                          <span className={styles.dropSubText}>PNG, JPG, HEIC等の画像ファイル</span>
+                        </div>
+                      )}
+                    </label>
+                    {selectedProofFile && (
+                      <div className={styles.selectedFileName}>
+                        <i className="fa-regular fa-file-image"></i>
+                        <span>{selectedProofFile.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <label className={styles.formLabel}>
+                    メモ・備考 <span className={styles.optionalBadge}>任意</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    placeholder="例: 1回目振込分、生活費一部調整など"
+                    value={uploadNote}
+                    onChange={(e) => setUploadNote(e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setIsUploadProofModalOpen(false)}
+                    disabled={isSubmittingProof}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.submitProofBtn}
+                    disabled={isSubmittingProof || !selectedProofFile || !uploadAmount}
+                  >
+                    {isSubmittingProof ? (
+                      <>
+                        <i className="fa-solid fa-spinner fa-spin"></i> アップロード中...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-check"></i> {uploadInstallmentNumber}回目の送金エビデンスを登録
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* 楽天銀行 振込履歴エビデンス確認モーダル */}
+      {isProofModalOpen && settlementProof && (() => {
+        const setSum = getSettlementSummary(actualBudgets);
+        const targetDiff = setSum ? Math.abs(setSum.diff || 0) : 0;
+        const payments = settlementProof.payments || [];
+        const currentPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+        const remaining = Math.max(0, targetDiff - currentPaid);
+
+        return (
+          <div className={styles.modalOverlay} onClick={() => setIsProofModalOpen(false)}>
+            <div className={styles.uploadProofModal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h2 className={styles.modalTitle}>
+                  <i className="fa-solid fa-building-columns" style={{ color: "#bf0000" }}></i>
+                  <span>楽天銀行 振込履歴エビデンス</span>
+                </h2>
+                <button
+                  type="button"
+                  className={styles.modalClose}
+                  onClick={() => setIsProofModalOpen(false)}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                {/* 送金目標と進捗状況 */}
+                <div className={styles.rakutenNoticeBox}>
+                  <div className={styles.settlementTargetPill}>
+                    <span>目標清算額: <strong>{formatCurrency(targetDiff)}</strong></span>
+                    <span>送金済み合計: <strong>{formatCurrency(currentPaid)}</strong></span>
+                    <span className={remaining === 0 ? styles.paidFullText : styles.unpaidText}>
+                      {remaining === 0 ? "✨ 全額送金完了" : `残り: ${formatCurrency(remaining)}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 各回の振込履歴カードリスト */}
+                <div className={styles.proofListContainer}>
+                  {payments.length > 0 ? (
+                    payments.map((p) => (
+                      <div key={p.id} className={styles.paymentCardItem}>
+                        <div className={styles.paymentCardHeader}>
+                          <span className={styles.installmentBadge}>
+                            <i className="fa-solid fa-paper-plane"></i>
+                            第{p.installmentNumber}回 送金
+                          </span>
+                          <span className={styles.paymentAmountText}>
+                            {p.amount > 0 ? `${p.amount.toLocaleString()} 円` : "金額未設定"}
+                          </span>
+                        </div>
+
+                        {p.note && <p className={styles.paymentNoteText}>{p.note}</p>}
+
+                        <div className={styles.paymentImageWrapper}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.proofUrl}
+                            alt={`第${p.installmentNumber}回 楽天銀行振込履歴`}
+                            onClick={() => window.open(p.proofUrl, "_blank")}
+                            title="クリックして別タブで原寸大表示"
+                          />
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                          <p className={styles.paymentMetaText}>
+                            登録: {new Date(p.uploadedAt).toLocaleString()}
+                          </p>
+                          <button
+                            type="button"
+                            className={styles.paymentDeleteBtn}
+                            onClick={() => handleRemovePayment(p.id, p.installmentNumber)}
+                            title="この回の送金履歴を削除"
+                          >
+                            <i className="fa-solid fa-trash"></i> 削除
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : settlementProof.proofUrl ? (
+                    <div className={styles.paymentCardItem}>
+                      <div className={styles.paymentImageWrapper}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={settlementProof.proofUrl}
+                          alt="清算エビデンス"
+                          onClick={() => window.open(settlementProof.proofUrl, "_blank")}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <p style={{ textAlign: "center", color: "#64748b", fontSize: "13px" }}>
+                      登録された振込履歴はありません。
+                    </p>
+                  )}
+                </div>
+
+                {/* アクションボタン群 */}
+                <div className={styles.modalActions} style={{ marginTop: "8px" }}>
+                  <button
+                    type="button"
+                    className={styles.addProofBtn}
+                    onClick={() => {
+                      setIsProofModalOpen(false);
+                      handleOpenUploadProofModal();
+                    }}
+                  >
+                    <i className="fa-solid fa-plus"></i> 分割振込を追加する
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.modalDeleteBtn}
+                    onClick={handleRemoveProof}
+                  >
+                    <i className="fa-solid fa-trash"></i> すべて削除
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setIsProofModalOpen(false)}
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <BackToHome />
     </div>
