@@ -1,7 +1,8 @@
 import { db, storage } from "@/src/lib/firebase";
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { BudgetMasterData, DefaultBudget, ActualBudget, MonthlyBudget, BudgetSettlementProof, BudgetSettlementPayment } from "@/src/lib/firestore/types";
-import { toPlainObject } from "@/src/lib/firestore/utils";
+import { toPlainObject, sanitizeForFirestore } from "@/src/lib/firestore/utils";
+import { errorLog } from "@/src/lib/functions";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 // マスタデータ
@@ -11,16 +12,10 @@ const DEFAULT_MASTER_DATA: BudgetMasterData = {
 };
 
 /**
- * オブジェクトから値が undefined のプロパティを排除する
+ * オブジェクトから値が undefined のプロパティを再帰的に排除する
  */
 function cleanUndefined<T extends object>(obj: T): T {
-  const activeObj = { ...obj } as any;
-  Object.keys(activeObj).forEach((key) => {
-    if (activeObj[key] === undefined) {
-      delete activeObj[key];
-    }
-  });
-  return activeObj;
+  return sanitizeForFirestore(obj);
 }
 
 let cachedMasterData: BudgetMasterData | null = null;
@@ -167,7 +162,7 @@ export async function copyDefaultToActual(coupleKey: string, year: number, month
 
   // コピー処理
   await Promise.all(
-    defaults.map(item => 
+    defaults.map(item =>
       addDoc(colRef, {
         coupleKey,
         uid: item.uid,
@@ -369,12 +364,12 @@ export async function uploadBudgetSettlementPayment(
   const newPayment: BudgetSettlementPayment = {
     id: `payment_${Date.now()}`,
     installmentNumber,
-    amount,
+    amount: Number(amount) || 0,
     proofUrl,
     proofFileName: file.name,
     uploadedAt: Date.now(),
     uploadedUid: uid,
-    note: note || undefined,
+    ...(note && note.trim() ? { note: note.trim() } : {}),
   };
 
   // 同じ回数のものが既に存在する場合は上書き、それ以外は追加
@@ -395,7 +390,7 @@ export async function uploadBudgetSettlementPayment(
     uploadedUid: uid,
   };
 
-  await setDoc(docRef, proofData);
+  await setDoc(docRef, sanitizeForFirestore(proofData));
   return proofData;
 }
 
@@ -438,7 +433,7 @@ export async function removeBudgetSettlementPayment(
     proofUrl: remainingPayments[0]?.proofUrl || "",
     proofFileName: remainingPayments[0]?.proofFileName || "",
   };
-  await setDoc(docRef, updatedProof);
+  await setDoc(docRef, sanitizeForFirestore(updatedProof));
   return updatedProof;
 }
 
@@ -448,7 +443,7 @@ export async function removeBudgetSettlementPayment(
 export async function removeBudgetSettlementProof(coupleKey: string, year: number, month: number): Promise<void> {
   const docId = `proof_${coupleKey}_${year}_${month}`;
   const docRef = doc(db, "budgetSettlementProofs", docId);
-  
+
   try {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
@@ -469,7 +464,7 @@ export async function removeBudgetSettlementProof(coupleKey: string, year: numbe
   } catch (e) {
     console.warn("Storage file delete attempt failed:", e);
   }
-  
+
   await deleteDoc(docRef);
 }
 

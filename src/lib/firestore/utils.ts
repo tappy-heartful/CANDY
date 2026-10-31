@@ -31,3 +31,28 @@ export const toPlainObject = (doc: any) => {
 
   return convertTimestamps(obj);
 };
+
+/**
+ * Firestore書き込み用に undefined のフィールドを再帰的に除去する
+ */
+export const sanitizeForFirestore = <T>(obj: T): T => {
+  if (obj === undefined || obj === null) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForFirestore).filter((item) => item !== undefined) as unknown as T;
+  }
+  if (typeof obj === "object" && !(obj instanceof Date)) {
+    // Firestore FieldValue 等の場合はそのまま返す
+    if (typeof (obj as any).isEqual === "function") {
+      return obj;
+    }
+    const result: any = {};
+    for (const key of Object.keys(obj as any)) {
+      const val = (obj as any)[key];
+      if (val !== undefined) {
+        result[key] = sanitizeForFirestore(val);
+      }
+    }
+    return result as T;
+  }
+  return obj;
+};
