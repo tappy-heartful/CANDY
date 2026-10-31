@@ -111,8 +111,12 @@ export function hideSpinner() {
   }
 }
 
+let isWritingLog = false;
+
 // --- ログ記録 ---
-export async function writeLog({ dataId, action, status = 'success', errorDetail = {} }: any) {
+export async function writeLog({ dataId = 'unknown', action, status = 'success', errorDetail = {} }: any) {
+  if (isWritingLog) return;
+  isWritingLog = true;
   try {
     const uid = getSession('uid') || 'unknown';
     const now = new Date();
@@ -121,10 +125,11 @@ export async function writeLog({ dataId, action, status = 'success', errorDetail
       String(now.getMonth() + 1).padStart(2, '0') +
       String(now.getDate()).padStart(2, '0');
 
-    const logRef = doc(collection(db, 'logs'), dateStr, 'items', now.getTime().toString());
+    const logId = `${now.getTime()}_${Math.random().toString(36).substring(2, 7)}`;
+    const logRef = doc(collection(db, 'logs'), dateStr, 'items', logId);
     await setDoc(logRef, {
       uid,
-      dataId,
+      dataId: dataId || 'unknown',
       action,
       status,
       errorDetail,
@@ -133,17 +138,24 @@ export async function writeLog({ dataId, action, status = 'success', errorDetail
     });
   } catch (e) {
     console.error('Log write failed:', e);
+  } finally {
+    isWritingLog = false;
   }
 }
 
 export async function errorLog(action: string, error: any, dataId: string = 'unknown') {
   try {
-    const errorDetail = {
+    const errorDetail: Record<string, string> = {
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
     };
+    if (error instanceof Error && error.stack) {
+      errorDetail.stack = error.stack;
+    }
+    if (error && typeof error === 'object' && 'code' in error && error.code) {
+      errorDetail.code = String(error.code);
+    }
     await writeLog({
-      dataId,
+      dataId: dataId || 'unknown',
       action,
       status: 'error',
       errorDetail,
@@ -168,10 +180,10 @@ export function getJSTDate(): Date {
 export function getNextAnniversaryDiff(dateStr: string) {
   const today = getJSTDate();
   today.setHours(0, 0, 0, 0);
-  
+
   const [m, d] = dateStr.split("-").map(Number);
   let nextDate = new Date(today.getFullYear(), m - 1, d);
-  
+
   // 既に今年の記念日が過ぎている場合は来年
   if (nextDate.getTime() < today.getTime()) {
     nextDate = new Date(today.getFullYear() + 1, m - 1, d);
@@ -179,6 +191,6 @@ export function getNextAnniversaryDiff(dateStr: string) {
 
   const diffTime = nextDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   return { diffDays, isToday: diffDays === 0 };
 }

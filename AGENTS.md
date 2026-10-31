@@ -12,6 +12,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 3. **ブラウザでのレイアウト・動作確認の禁止**: レイアウト確認や動作確認はユーザー自身が行うため、ブラウザ（`browser_subagent` や `navigate`、ブラウザ操作ツール全般）による画面遷移や確認作業は一切行わないでください。AIがログインで手間取って時間がかかるのを防ぐため、検証は `npm run build` によるビルドチェックのみにとどめ、迅速にコード修正と報告を行ってください。
 4. **新機能追加時の Firestore セキュリティルール更新**: 新機能の実装や新しいコレクションの作成・拡張を行った際は、必ず忘れずに `firestore.rules` に対応するセキュリティルール（読み取り・書き込み権限の定義）を追加・更新すること。
 5. **修正時の仕様書（設計書）自動更新**: コードや機能の改修・変更を行った際は、必ず修正の都度 `AGENTS.md`（特にセクション8の詳細設計・仕様部分等）を改変・最新化し、実装とドキュメントの乖離を絶対に生じさせないこと。
+6. **エラー発生時の errorLogs コレクション登録の徹底**: クライアント・サーバー問わず、例外やエラー発生時は必ず `errorLogs` コレクション（クライアント側: `src/lib/functions.ts` の `errorLog()`, サーバー側: `src/lib/firebase-admin.ts` の `serverErrorLog()`）に登録すること。未処理の例外だけでなく、catch ブロック内や API 失敗時にも漏れなく記録し、障害の早期特定・復旧を可能にすること。
 
 # CANDY プロジェクト規約 (Project Conventions)
 
@@ -115,6 +116,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - コレクションの型定義は `src/lib/firestore/types.ts` に集約する。
 - データの更新は `src/features/<feature>/api/*-client-service.ts` で行い、読み込みは Server Actions または直接 Server Component で行う。
 - **セキュリティルールの同期必須**: 新しいコレクションを追加した際やスキーマ・新機能を実装した際は、必ず `firestore.rules` に適切なアクセス権限（`allow read`, `allow write`）を漏れなく記述・更新すること。
+- **エラーログ記録の徹底**: アプリ内で発生したすべてのエラーは `errorLogs` コレクションに保存する（クライアント: `errorLog()`, サーバー: `serverErrorLog()`）。セキュリティルールでは、未ログイン時のエラーも収集できるよう `create` を許可し、閲覧は認証済みユーザーのみ、改ざん防止のため更新・削除は禁止とする。
 - セキュリティのため、管理者権限 (`isAdmin`) のチェックを厳格に行う。
 
 ---
@@ -279,6 +281,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - 送信履歴一覧を送信日（`date` / `sentAt`）ごとにグルーピングし、「○月○日 (曜日)」「【本日】」「【昨日】」といった見出しヘッダーを設置。
   - 各日付グループ内に該当日の送信件数バッジ（例: `3件送信`）を表示し、カード内の時刻表示（HH:mm）と合わせて何日にどのメッセージが送信されたかを一目で把握できるようにUIを最適化。
 
+#### ⑧ エラーロギング・障害監視 (`errorLogs`)
+- **クライアント・サーバー両対応の統一ログ機構**:
+  - クライアント側: `src/lib/functions.ts` の `errorLog(action, error, options)`
+  - サーバー側: `src/lib/firebase-admin.ts` の `serverErrorLog(action, error, options)`
+  - グローバル監視: `src/components/ErrorLogger.tsx` により、Reactツリー外の未処理例外 (`window.onerror`) や非同期Promise棄却 (`window.onunhandledrejection`) も自動検知して `errorLogs` へ登録。
+- **循環参照・無限ロギングループ防止**:
+  - エラーログ送信自体が失敗した場合に再度エラーログを呼ぶ無限ループを防ぐため、`isLoggingError` ガードフラグによる再入防止を徹底。
+- **記録フィールド標準化**:
+  - `action`: エラー発生契機（例: `fetchCalendarEvents`, `UnhandledError`）
+  - `message`: エラーメッセージ
+  - `stack`: スタックトレース
+  - `code`: エラーコード（存在する場合）
+  - `url`: 発生ページURL
+  - `userAgent`: ブラウザ/クライアント環境
+  - `uid`: 操作中ユーザーID（ログイン時）
+  - `dataId`: 関連データID（存在する場合）
+  - `createdAt`: `toMillis()` またはミリ秒数値
+  - `createdAtFormatted`: `YYYY-MM-DD HH:mm:ss` (JST)
+  - `timestamp`: Firestore ServerTimestamp
+
 ---
 
 ## 9. Firestore＆GAS 最適化アーキテクチャ (Performance & Cost Saving)
@@ -325,6 +347,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
      - `notificationSettings`: 各ユーザーのLINE通知設定
      - `lineMessagingIds`: uidとLINE Messaging API UIDの紐付け
      - `pwaAuthSessions`: PWA/外部ブラウザ間のログインセッション連携
+     - `errorLogs`: アプリケーションエラーログ（クライアント・サーバー共通）
 2. **Firebase Storage**:
    - 写真アップロード用バケットを作成。
 3. **サービスアカウントの作成**:

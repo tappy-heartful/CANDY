@@ -563,3 +563,21 @@ export interface ReplenishmentItem {
 
 
 
+
+// ==========================================
+// エラーログ用データ型定義
+// ==========================================
+
+export interface ErrorLog {
+  id?: string;
+  action: string;
+  message: string;
+  stack?: string;
+  code?: string;
+  dataId?: string;
+  uid?: string;
+  url?: string;
+  userAgent?: string;
+  createdAt: number;
+  createdAtFormatted?: string;
+}

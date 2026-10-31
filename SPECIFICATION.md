@@ -262,6 +262,15 @@
   - 送信履歴一覧を送信日（`date` / `sentAt`）ごとにグルーピングし、「○月○日 (曜日)」「【本日】」「【昨日】」といった見出しヘッダーを設置。
   - 各日付グループ内に該当日の送信件数バッジ（例: `3件送信`）を表示し、カード内の時刻表示（HH:mm）と合わせて何日にどのメッセージが送信されたかを一目で把握できるようにUIを最適化。
 
+
+### 3.17. エラーロギング & 障害自動検知 (`errorLogs`)
+- **目的**: クライアントおよびサーバーサイドで発生したすべての異常・エラーをリアルタイムに収集・記録し、早期の障害特定と品質向上を実現する。
+- **機能特徴**:
+  - **クライアント側ログ (`errorLog`)**: UI操作時やAPI呼び出し失敗時のcatch構文、および未処理例外 (`window.onerror`, `window.onunhandledrejection`) を自動収集して `errorLogs` に書き込み。
+  - **サーバー側ログ (`serverErrorLog`)**: Server Actions や API Routes などのサーバー処理における例外を Firebase Admin SDK 経由で `errorLogs` へ記録。
+  - **無限ループ防止設計**: エラーロギング処理自体の失敗時にロギングが再帰呼び出しされるのを防ぐため、`isLoggingError` フラグによる厳格な再入防止制御を実装。
+  - **Firestore セキュリティルール**: 未認証時の初期ロードエラーも逃さず収集できるよう作成権限 (`allow create: if true;`) を付与し、改ざん防止のため更新・削除は全面禁止 (`allow update, delete: if false;`)。
+
 ---
 
 ## 4. バックグラウンドバッチ・外部API連携アーキテクチャ
@@ -348,6 +357,7 @@ Firestoreの読み取り回数を完全無料枠（50,000回/日）の数％以�
 | `replenishmentCategories`| 自動採番 | `name`, `order`, `uid` | ログイン済みカップル | ログイン済みカップル |
 | `replenishments` | 自動採番 | `name`, `categoryId`, `lastPurchasedDate`, `cycleDays`, `reminderDaysBefore`, `notifyEnabled`, `note`, `uid` | ログイン済みカップル | ログイン済みカップル |
 | `lineNotificationLogs` | 自動採番 | `accountType`, `accountName`, `notificationTitle`, `recipientUid`, `recipientName`, `messages`, `messageCount`, `summary`, `status`, `sentAt`, `yearMonth` | ログイン済みカップル (`isSignedIn()`) | GAS/Admin専用 (`false`) |
+| `errorLogs` | 自動採番 | `action`, `message`, `stack`, `code`, `url`, `userAgent`, `uid`, `dataId`, `createdAt`, `createdAtFormatted`, `timestamp` | ログイン済みカップル (`isSignedIn()`) | 作成のみ許可 (`allow create: if true;`) / 更新・削除不可 |
 | `lineMessagingIds` | `uid` | `lineMessagingId`, `updatedAt` | 本人のみ (`isOwner`) | Admin SDK専用 (`false`) |
 | `pwaAuthSessions` | 自動採番 | `token`, `uid`, `createdAt` | 作成後15分以内のみ | Admin SDK専用 (`false`) |
 

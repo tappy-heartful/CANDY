@@ -6,11 +6,11 @@ import { errorLog } from "@/src/lib/functions";
 export default function ErrorLogger() {
   useEffect(() => {
     const handleWindowError = (event: ErrorEvent) => {
-      // 無限ループを防ぐため、エラーログ書き込みエラー自体は除外する
+      // 無限ループを防ぐため、errorLogsへの書き込みエラー自体は除外する
+      const msg = event.message || "";
       if (
-        event.message?.includes("Log write failed") ||
-        event.message?.includes("errorLog failed") ||
-        event.message?.includes("Firebase")
+        msg.includes("errorLog to errorLogs") ||
+        msg.includes("Log write failed")
       ) {
         return;
       }
@@ -20,9 +20,8 @@ export default function ErrorLogger() {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reasonStr = String(event.reason);
       if (
-        reasonStr.includes("Log write failed") ||
-        reasonStr.includes("errorLog failed") ||
-        reasonStr.includes("Firebase")
+        reasonStr.includes("errorLog to errorLogs") ||
+        reasonStr.includes("Log write failed")
       ) {
         return;
       }

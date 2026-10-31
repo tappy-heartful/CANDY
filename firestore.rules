@@ -169,6 +169,13 @@ service cloud.firestore {
 
     // ============================
 
+    // エラーログコレクション（発生したエラーを記録）
+    match /errorLogs/{id} {
+      allow read: if isSignedIn();
+      allow create: if true; // ログイン処理エラーや未認証時エラーも含め記録を許可
+      allow update, delete: if false; // 改ざん・削除防止
+    }
+
     // LINE通知送信ログ機能
     match /lineNotificationLogs/{id} {
       allow read: if isSignedIn();
