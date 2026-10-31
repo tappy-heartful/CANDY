@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/src/lib/firebase-admin';
+import { adminDb, serverErrorLog } from '@/src/lib/firebase-admin';
 import crypto from 'crypto';
 
 export async function GET(req: NextRequest) {
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ loginUrl });
   } catch (err) {
     console.error(err);
+    await serverErrorLog("LINEログインURL生成エラー (API)", err);
     return NextResponse.json({ error: 'Failed to generate URL' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/src/lib/firebase-admin';
+import { adminAuth, adminDb, serverErrorLog } from '@/src/lib/firebase-admin';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error(err);
+    await serverErrorLog("LINEログイン認証処理エラー (API)", err);
     return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
   }
 }

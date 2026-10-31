@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { auth, db } from "@/src/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { setSession, clearAllAppSession } from "@/src/lib/functions";
+import { setSession, clearAllAppSession, errorLog } from "@/src/lib/functions";
 import { User as FirestoreUser } from "@/src/lib/firestore/types";
 import { BreadcrumbProvider } from "@/src/contexts/BreadcrumbContext";
 
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.error(e);
+      errorLog("ユーザーデータ取得 (AuthContext)", e, uid);
     }
   }, []);
 

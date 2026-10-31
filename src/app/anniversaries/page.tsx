@@ -6,7 +6,7 @@ import AnniversaryClient from "@/src/features/anniversary/views/AnniversaryClien
 import { fetchAnniversaries } from "@/src/features/anniversary/api/anniversary-server-actions";
 import AuthGuard from "@/src/components/AuthGuard";
 import { Anniversary } from "@/src/lib/firestore/types";
-import { showSpinner, hideSpinner } from "@/src/lib/functions";
+import { showSpinner, hideSpinner, errorLog } from "@/src/lib/functions";
 
 import { getPartnerData } from "@/src/features/user/api/user-client-service";
 
@@ -26,6 +26,7 @@ export default function AnniversariesPage() {
           setAnniversaries(annData);
         } catch (e) {
           console.error(e);
+          errorLog("記念日データ読み込み", e, user.uid);
         } finally {
           setLoading(false);
           hideSpinner();
@@ -39,12 +40,11 @@ export default function AnniversariesPage() {
     <AuthGuard>
       <Suspense fallback={null}>
         {!loading && (
-          <AnniversaryClient 
-            initialAnniversaries={anniversaries} 
+          <AnniversaryClient
+            initialAnniversaries={anniversaries}
           />
         )}
       </Suspense>
     </AuthGuard>
   );
 }
-

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { auth, db } from "@/src/lib/firebase";
 import { signInWithCustomToken } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { hideSpinner, setSession, showDialog, LOADING_MESSAGES } from "@/src/lib/functions";
+import { hideSpinner, setSession, showDialog, errorLog, LOADING_MESSAGES } from "@/src/lib/functions";
 import styles from "./callback.module.css";
 
 function CallbackContent() {
@@ -30,6 +30,7 @@ function CallbackContent() {
     const error = searchParams.get("error");
 
     if (error) {
+      errorLog("LINEログイン認可エラー", error);
       router.push("/login");
       return;
     }
@@ -116,6 +117,7 @@ function CallbackContent() {
 
     } catch (e) {
       console.error(e);
+      await errorLog("LINEログインコールバック", e);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
