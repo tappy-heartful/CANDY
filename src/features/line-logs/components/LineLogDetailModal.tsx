@@ -181,6 +181,11 @@ export default function LineLogDetailModal({ log, onClose }: LineLogDetailModalP
                     <span className={styles.detailContent}>
                       最高気温: {details.weather.tempMax}℃ / 最低気温: {details.weather.tempMin}℃
                       {details.weather.pop !== undefined ? ` / 降水確率: ${details.weather.pop}%` : ""}
+                      {details.weather.pops6h && (
+                        <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: "3px" }}>
+                          6時間ごと: {Object.entries(details.weather.pops6h).map(([s, p]) => `${s}時: ${p}%`).join(" / ")}
+                        </div>
+                      )}
                     </span>
                   </div>
                 )}

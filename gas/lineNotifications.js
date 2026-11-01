@@ -357,6 +357,8 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
   try {
     const todayDate = new Date();
     const todayStr = Utilities.formatDate(todayDate, "Asia/Tokyo", "yyyy-MM-dd");
+    const tomorrowDate = new Date(todayDate.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = Utilities.formatDate(tomorrowDate, "Asia/Tokyo", "yyyy-MM-dd");
 
     // アルバム情報のマップ化
     const albumMap = {};
@@ -684,12 +686,19 @@ function sendDailyMorningNotifications(targets, events, todos, anniversaries, ph
         summary: `朝の定期通知 (予定${todaysEvents.length}件 / TODO${todaysTodos.length}件${alertReplenishments.length > 0 ? ` / 買い足し${alertReplenishments.length}件` : ""}${todayPhoto ? " / 写真添付" : ""})`,
         details: {
           areaLabel: userLoc.areaLabel,
-          weather: weatherDaily && weatherDaily.weather_code && weatherDaily.weather_code[0] !== undefined ? {
-            code: weatherDaily.weather_code[0],
-            tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[0]) : null,
-            tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[0]) : null,
-            pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[0] : 0,
-          } : null,
+          weather: (function() {
+            if (!weatherDaily || !weatherDaily.weather_code) return null;
+            const wIdx = weatherDaily.time ? Math.max(0, weatherDaily.time.indexOf(todayStr)) : 0;
+            if (weatherDaily.weather_code[wIdx] === undefined) return null;
+            return {
+              code: weatherDaily.weather_code[wIdx],
+              tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[wIdx]) : null,
+              tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[wIdx]) : null,
+              pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[wIdx] : 0,
+              pops6h: weatherDaily.pops_6h ? weatherDaily.pops_6h[todayStr] : null,
+              source: weatherDaily.source || "open-meteo"
+            };
+          })(),
           todayEventsCount: todaysEvents.length,
           todayEvents: todaysEvents.map(function(e) {
             return { title: e.title, startTime: e.startTime || "", isAllDay: !!e.isAllDay, label: e.label || "" };
@@ -955,7 +964,7 @@ function getUserLocation(user) {
  * Open-Meteo APIから天気予報データ(daily)を取得する (指数バックオフ・429リトライ対応)
  */
 function fetchWeatherData(lat, lon) {
-  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo";
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=precipitation_probability&timezone=Asia%2FTokyo";
   const maxRetries = 2;
   let delay = 1500;
 
@@ -972,6 +981,33 @@ function fetchWeatherData(lat, lon) {
         const data = JSON.parse(res.getContentText());
         if (data && data.daily) {
           data.daily.source = "open-meteo";
+
+          // hourlyデータから6時間ごとの降水確率を集計
+          const pops6hByDate = {};
+          if (data.hourly && data.hourly.time && data.hourly.precipitation_probability) {
+            for (let h = 0; h < data.hourly.time.length; h++) {
+              const tStr = data.hourly.time[h];
+              if (!tStr || tStr.length < 13) continue;
+              const datePart = tStr.substring(0, 10);
+              const hourPart = parseInt(tStr.substring(11, 13), 10);
+              const popVal = Number(data.hourly.precipitation_probability[h]) || 0;
+
+              let slot = null;
+              if (hourPart >= 0 && hourPart < 6) slot = "00-06";
+              else if (hourPart >= 6 && hourPart < 12) slot = "06-12";
+              else if (hourPart >= 12 && hourPart < 18) slot = "12-18";
+              else if (hourPart >= 18 && hourPart < 24) slot = "18-24";
+
+              if (slot) {
+                if (!pops6hByDate[datePart]) pops6hByDate[datePart] = {};
+                if (pops6hByDate[datePart][slot] === undefined || popVal > pops6hByDate[datePart][slot]) {
+                  pops6hByDate[datePart][slot] = popVal;
+                }
+              }
+            }
+          }
+          data.daily.pops_6h = pops6hByDate;
+
           return data.daily;
         }
       } else if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
@@ -1088,6 +1124,33 @@ function fetchJmaWeatherData(prefCode, todayStr, tomorrowStr) {
       minTemps.push(tMin !== null ? tMin : 12);
     }
 
+    // 気象庁の6時間ごと降水確率を集計
+    const jmaPops6h = {};
+    if (areaPop && areaPop.pops && popSeries.timeDefines) {
+      for (let pIdx = 0; pIdx < popSeries.timeDefines.length; pIdx++) {
+        const tDef = popSeries.timeDefines[pIdx];
+        if (!tDef || tDef.length < 13) continue;
+        const datePart = tDef.substring(0, 10);
+        const hourPart = parseInt(tDef.substring(11, 13), 10);
+        const popVal = Number(areaPop.pops[pIdx]) || 0;
+
+        let slot = null;
+        if (hourPart === 0) slot = "00-06";
+        else if (hourPart === 6) slot = "06-12";
+        else if (hourPart === 12) slot = "12-18";
+        else if (hourPart === 18) slot = "18-24";
+        else {
+          if (hourPart < 6) slot = "00-06";
+          else if (hourPart < 12) slot = "06-12";
+          else if (hourPart < 18) slot = "12-18";
+          else slot = "18-24";
+        }
+
+        if (!jmaPops6h[datePart]) jmaPops6h[datePart] = {};
+        jmaPops6h[datePart][slot] = popVal;
+      }
+    }
+
     return {
       source: "jma",
       time: times,
@@ -1095,7 +1158,8 @@ function fetchJmaWeatherData(prefCode, todayStr, tomorrowStr) {
       weather_text: weatherTexts,
       temperature_2m_max: maxTemps,
       temperature_2m_min: minTemps,
-      precipitation_probability_max: pops
+      precipitation_probability_max: pops,
+      pops_6h: jmaPops6h
     };
   } catch (err) {
     Logger.log("fetchJmaWeatherData error: " + err.toString());
@@ -1226,6 +1290,47 @@ function getWeatherAdvice(weather, maxTemp, minTemp, pop, isTomorrow) {
 }
 
 /**
+ * 気温・天候・寒暖差から、今日/明日の服装おすすめアドバイスを生成する
+ */
+function getClothingAdvice(maxTemp, minTemp, weather, isTomorrow) {
+  const prefix = isTomorrow ? "あすのおすすめの服装 👗" : "今日のおすすめの服装 👗";
+  let advice = "";
+
+  const tempDiff = (maxTemp !== null && minTemp !== null) ? (maxTemp - minTemp) : 0;
+  const isRainy = weather && (weather.isRain || (weather.text && weather.text.indexOf("雨") !== -1));
+
+  // 気温基準の服装提案（日本気象協会服装指数に準拠した優しいアドバイス）
+  if (maxTemp !== null) {
+    if (maxTemp >= 28) {
+      advice = "半袖や風通しの良い涼しい服装がぴったり。日差しが強いので紫外線や熱中症対策を意識してみてね🌻";
+    } else if (maxTemp >= 24) {
+      advice = "半袖や薄手の長袖シャツで心地よく過ごせるよ。室内の冷房や風対策に薄手の羽織りものがあると安心✨";
+    } else if (maxTemp >= 20) {
+      advice = "長袖シャツやカットソー、薄手のカーディガンが快適な季節。日中は一枚で爽やかに過ごせそう🌸";
+    } else if (maxTemp >= 16) {
+      advice = "長袖の上にジャケットやスウェット、カーディガンを羽織る重ね着スタイルがおすすめだよ✨";
+    } else if (maxTemp >= 12) {
+      advice = "トレンチコートや秋・冬用ジャケット、セーターが必要な肌寒さ。しっかり羽織るものを選んでね🧥";
+    } else if (maxTemp >= 8) {
+      advice = "冬物コートやチェスターコート、厚手ニットが活躍する日。マフラーやストールで首元を温めてね🧣";
+    } else {
+      advice = "ダウンジャケットや厚手の防寒コート、手袋やマフラーでしっかり暖かくして出かけてね⛄️";
+    }
+  } else {
+    advice = "過ごしやすい季節の服装に、脱ぎ着できる羽織りものを用意しておくと安心だよ✨";
+  }
+
+  // 寒暖差や雨の追加アドバイス
+  if (tempDiff >= 10) {
+    advice += " 朝晩と日中で寒暖差が大きいので、脱ぎ着しやすい上着があると安心だよ✨";
+  } else if (isRainy) {
+    advice += " 雨で肌寒く感じやすいので、足元の雨対策や撥水アウターもおすすめ☂️";
+  }
+
+  return "・" + prefix + "\n　" + advice + "\n";
+}
+
+/**
  * 天気通知ブロックの文字列を生成する
  */
 function formatWeatherSection(dailyData, targetDateStr, areaLabel, isTomorrow) {
@@ -1256,9 +1361,39 @@ function formatWeatherSection(dailyData, targetDateStr, areaLabel, isTomorrow) {
   } else if (maxTemp !== null) {
     text += "・気温：最高 " + maxTemp + "℃\n";
   }
-  if (pop !== undefined && pop !== null) {
+
+  // 6時間ごとの降水確率
+  const pops6h = dailyData.pops_6h ? dailyData.pops_6h[targetDateStr] : null;
+  let popFormatted = false;
+  if (pops6h) {
+    const parts = [];
+    // 明日の予報（夜通知）なら 00-06時 も表示、今日の予報（朝通知）なら 06-12時 から表示
+    if (isTomorrow && pops6h["00-06"] !== undefined) {
+      parts.push("00-06時: " + pops6h["00-06"] + "%");
+    }
+    if (pops6h["06-12"] !== undefined) {
+      parts.push("06-12時: " + pops6h["06-12"] + "%");
+    }
+    if (pops6h["12-18"] !== undefined) {
+      parts.push("12-18時: " + pops6h["12-18"] + "%");
+    }
+    if (pops6h["18-24"] !== undefined) {
+      parts.push("18-24時: " + pops6h["18-24"] + "%");
+    }
+    if (parts.length > 0) {
+      text += "・降水確率（6時間ごと）：\n　" + parts.join(" / ") + "\n";
+      popFormatted = true;
+    }
+  }
+  if (!popFormatted && pop !== undefined && pop !== null) {
     text += "・降水確率：" + pop + "%\n";
   }
+
+  // おすすめの服装アドバイス
+  const clothingAdvice = getClothingAdvice(maxTemp, minTemp, { ...weather, text: weatherText }, isTomorrow);
+  text += clothingAdvice;
+
+  // 天気アドバイス
   text += advice + "\n\n";
   return text;
 }
@@ -1612,12 +1747,19 @@ function sendDailyNightNotifications(targets, events, todos, garbageSchedules, l
         summary: `夜のおやすみ通知 (明日の予定${tomorrowsEvents.length}件 / 明日のTODO${tomorrowDueTodos.length}件 / ごみ出し${tomorrowGarbage.length}件)`,
         details: {
           areaLabel: userLoc.areaLabel,
-          weather: weatherDaily && weatherDaily.weather_code && weatherDaily.weather_code[1] !== undefined ? {
-            code: weatherDaily.weather_code[1],
-            tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[1]) : null,
-            tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[1]) : null,
-            pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[1] : 0,
-          } : null,
+          weather: (function() {
+            if (!weatherDaily || !weatherDaily.weather_code) return null;
+            const wIdx = weatherDaily.time ? Math.max(0, weatherDaily.time.indexOf(tomorrowStr)) : 1;
+            if (weatherDaily.weather_code[wIdx] === undefined) return null;
+            return {
+              code: weatherDaily.weather_code[wIdx],
+              tempMax: weatherDaily.temperature_2m_max ? Math.round(weatherDaily.temperature_2m_max[wIdx]) : null,
+              tempMin: weatherDaily.temperature_2m_min ? Math.round(weatherDaily.temperature_2m_min[wIdx]) : null,
+              pop: weatherDaily.precipitation_probability_max ? weatherDaily.precipitation_probability_max[wIdx] : 0,
+              pops6h: weatherDaily.pops_6h ? weatherDaily.pops_6h[tomorrowStr] : null,
+              source: weatherDaily.source || "open-meteo"
+            };
+          })(),
           tomorrowEventsCount: tomorrowsEvents.length,
           tomorrowEvents: tomorrowsEvents.map(function(e) {
             return { title: e.title, startTime: e.startTime || "", isAllDay: !!e.isAllDay, label: e.label || "" };
