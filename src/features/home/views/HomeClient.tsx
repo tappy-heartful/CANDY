@@ -14,7 +14,7 @@ import { getGroups, addTodo, updateTodo, deleteTodo } from "@/src/features/todo/
 import { getAnniversaries } from "@/src/features/anniversary/api/anniversary-client-service";
 import { getAlbums, getRecentPhotos } from "@/src/features/album/api/album-client-service";
 import { Wishlist, User as FirestoreUser, DailyStatus, CalendarEvent, Group, Anniversary, Todo, Photo, TodoStep, ActualBudget } from "@/src/lib/firestore/types";
-import { getNextAnniversaryDiff, showDialog } from "@/src/lib/functions";
+import { getNextAnniversaryDiff, showDialog, errorLog } from "@/src/lib/functions";
 import styles from "./Home.module.css";
 import ProfileModal from "../components/ProfileModal";
 import CalendarView from "@/src/features/calendar/components/CalendarView";
@@ -138,8 +138,8 @@ export default function HomeClient() {
     }
   }, [userData, partnerData]);
 
-  const [allCalendarEvents, setAllCalendarEvents] = useState<CalendarEvent[]>([]);
-  const [allCalendarTodos, setAllCalendarTodos] = useState<Todo[]>([]);
+  const [allCalendarEvents, setAllCalendarEvents] = useState<CalendarEvent[] | null>(null);
+  const [allCalendarTodos, setAllCalendarTodos] = useState<Todo[] | null>(null);
 
   const updateUpcomingFromEvents = useCallback((events: CalendarEvent[], currentUserId: string) => {
     const today = new Date();
@@ -255,72 +255,98 @@ export default function HomeClient() {
       const todayStr = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const partnerUid = userData?.partnerUid || null;
 
-      // パートナー情報取得とその他すべてのコレクション取得を完全並列化
-      // カレンダーイベントは今月（カレンダー表示に必要な前後月含む）に限定して取得・高速化
-      Promise.all([
+      // 段階的フェッチ（Staged Fetching）:
+      // 1. 最重要: カレンダーイベント（今月分42日グリッド）を最優先で取得・即時反映
+      const fetchEvents = getEventsByMonth(todayYear, todayMonth)
+        .then((allEvents) => {
+          updateUpcomingFromEvents(allEvents, user.uid);
+          setAllCalendarEvents(allEvents);
+        })
+        .catch((e) => {
+          console.error("Error loading events:", e);
+          errorLog(e, "HomeClient.getEventsByMonth");
+        });
+
+      // 2. 最重要: TODO（カレンダー・リスト用）を最優先で取得・即時反映
+      const fetchTodos = Promise.all([getTodosForCalendar(), getGroups("todo")])
+        .then(([allTodos, tGroups]) => {
+          setTodoGroups(tGroups);
+          setAllCalendarTodos(allTodos);
+          processTodos(allTodos, user.uid);
+        })
+        .catch((e) => {
+          console.error("Error loading todos:", e);
+          errorLog(e, "HomeClient.getTodos");
+        });
+
+      // 3. コア情報: パートナー、今日の体調ステータス、記念日
+      const fetchCore = Promise.all([
         getPartnerData(user.uid, partnerUid || undefined),
-        getWishlist(),
         getDailyStatuses(todayStr),
-        getEventsByMonth(todayYear, todayMonth),
-        getGroups("wishlist"),
         getAnniversaries(user.uid, partnerUid),
-        getTodosForCalendar(),
-        getRecentPhotos(50),
-        getAlbums(),
-        getGroups("todo")
-      ]).then(([partner, wishData, statuses, allEvents, groups, anniversaries, allTodos, recentPics, albums, tGroups]) => {
-        setPartnerData(partner);
+      ])
+        .then(([partner, statuses, anniversaries]) => {
+          setPartnerData(partner);
 
-        // 自分とパートナー、それぞれのWishlistを新しい順に最大3件ずつ取得
-        const myWishes = wishData
-          .filter(w => w.uid === user.uid)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-          .slice(0, 3);
-        const partnerWishes = wishData
-          .filter(w => w.uid !== user.uid)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-          .slice(0, 3);
-        setRecentWishlist([...myWishes, ...partnerWishes]);
+          const myStatus = statuses.find((s) => s.uid === user.uid) || null;
+          const pStatus = statuses.find((s) => s.uid !== user.uid) || null;
+          setMyDailyStatus(myStatus);
+          setPartnerDailyStatus(pStatus);
 
-        const myStatus = statuses.find(s => s.uid === user.uid) || null;
-        const pStatus = statuses.find(s => s.uid !== user.uid) || null;
-        setMyDailyStatus(myStatus);
-        setPartnerDailyStatus(pStatus);
-
-        // 予定の抽出・ソート・設定
-        updateUpcomingFromEvents(allEvents, user.uid);
-        setAllCalendarEvents(allEvents);
-        setWishlistGroups(groups);
-        setTodoGroups(tGroups);
-
-        // 最近の写真とアルバム名のマッピングを設定
-        const allowedAlbumIds = new Set(
-          albums.filter((alb) => alb.showOnHome !== false).map((alb) => alb.id)
-        );
-        const eligiblePics = recentPics.filter((p) => allowedAlbumIds.has(p.albumId));
-        const shuffledPics = [...eligiblePics].sort(() => 0.5 - Math.random()).slice(0, 8);
-        setRecentPhotos(shuffledPics);
-        const mapping: Record<string, string> = {};
-        albums.forEach((alb) => {
-          mapping[alb.id] = alb.name;
+          const sortedAnniversaries = [...anniversaries].sort((a, b) => {
+            return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
+          });
+          setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
+        })
+        .catch((e) => {
+          console.error("Error loading core data:", e);
+          errorLog(e, "HomeClient.getCoreData");
         });
-        setAlbumsMap(mapping);
 
-        // 記念日のソート（直近のもの3件）
-        const sortedAnniversaries = [...anniversaries].sort((a, b) => {
-          return getNextAnniversaryDiff(a.date).diffDays - getNextAnniversaryDiff(b.date).diffDays;
-        });
-        setUpcomingAnniversaries(sortedAnniversaries.slice(0, 3));
-
-        // TODOの振り分け（重複通信なしで即時完了）
-        setAllCalendarTodos(allTodos);
-        processTodos(allTodos, user.uid);
-
-        setLoading(false);
-      }).catch((e) => {
-        console.error("Error loading dashboard data:", e);
+      // 画面の主要UI（予定・TODO・ステータス・カレンダー）が揃った時点で即座にローディング解除！
+      Promise.allSettled([fetchEvents, fetchTodos, fetchCore]).then(() => {
         setLoading(false);
       });
+
+      // 4. バックグラウンド非同期: ウィッシュリスト
+      getWishlist()
+        .then(async (wishData) => {
+          const groups = await getGroups("wishlist").catch(() => []);
+          const myWishes = wishData
+            .filter((w) => w.uid === user.uid)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 3);
+          const partnerWishes = wishData
+            .filter((w) => w.uid !== user.uid)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 3);
+          setRecentWishlist([...myWishes, ...partnerWishes]);
+          setWishlistGroups(groups);
+        })
+        .catch((e) => {
+          console.error("Error loading wishlist:", e);
+          errorLog(e, "HomeClient.getWishlist");
+        });
+
+      // 5. バックグラウンド非同期: 写真・アルバム（容量が大きいため裏で取得）
+      Promise.all([getRecentPhotos(50), getAlbums()])
+        .then(([recentPics, albums]) => {
+          const allowedAlbumIds = new Set(
+            albums.filter((alb) => alb.showOnHome !== false).map((alb) => alb.id)
+          );
+          const eligiblePics = recentPics.filter((p) => allowedAlbumIds.has(p.albumId));
+          const shuffledPics = [...eligiblePics].sort(() => 0.5 - Math.random()).slice(0, 8);
+          setRecentPhotos(shuffledPics);
+          const mapping: Record<string, string> = {};
+          albums.forEach((alb) => {
+            mapping[alb.id] = alb.name;
+          });
+          setAlbumsMap(mapping);
+        })
+        .catch((e) => {
+          console.error("Error loading photos:", e);
+          errorLog(e, "HomeClient.getPhotos");
+        });
     }
   }, [user, userData]);
 

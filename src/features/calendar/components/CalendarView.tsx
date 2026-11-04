@@ -23,8 +23,8 @@ interface CalendarViewProps {
   onOpenDateClear?: () => void;
   userData?: User | null;
   onMonthChange?: (year: number, month: number) => void;
-  initialEvents?: CalendarEvent[];
-  initialTodos?: Todo[];
+  initialEvents?: CalendarEvent[] | null;
+  initialTodos?: Todo[] | null;
   initialAnniversaries?: Anniversary[];
   initialTodoGroups?: Group[];
   onEventsChange?: (events: CalendarEvent[]) => void;
@@ -180,7 +180,7 @@ export default function CalendarView({
   const isTodosInitRef = useRef(false);
 
   useEffect(() => {
-    if (!isEventsInitRef.current && initialEvents && initialEvents.length > 0) {
+    if (initialEvents !== undefined && initialEvents !== null) {
       setEvents(initialEvents);
       isEventsInitRef.current = true;
       // 初期ロードされた年月の前後月をロード済みとしてマーク
@@ -236,7 +236,7 @@ export default function CalendarView({
   }, [currentYear, currentMonth, onEventsChange]);
 
   useEffect(() => {
-    if (!isTodosInitRef.current && initialTodos && initialTodos.length > 0) {
+    if (initialTodos !== undefined && initialTodos !== null) {
       setTodos(initialTodos);
       isTodosInitRef.current = true;
     }

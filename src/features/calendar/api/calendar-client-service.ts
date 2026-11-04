@@ -4,7 +4,7 @@ import { CalendarEvent, Todo } from "@/src/lib/firestore/types";
 import { toPlainObject } from "@/src/lib/firestore/utils";
 
 /**
- * 指定した年月のカレンダーグリッド（42日分）をカバーする日付範囲（前月1日〜翌月末日）を算出
+ * 指定した年月のカレンダー（前後月および月跨ぎの連日予定含む）を確実にカバーする日付範囲（前月1日〜翌月末日）を算出
  * @param year 対象年 (例: 2026)
  * @param month 対象月 (1〜12)
  */
@@ -45,7 +45,7 @@ export async function getEventsByDateRange(startDate: string, endDate: string): 
 }
 
 /**
- * クライアント認証済みSDKで指定月（カレンダーグリッドに表示される前月・翌月含む）のイベントを取得
+ * クライアント認証済みSDKで指定月（カレンダーグリッドに表示される前後月含む）のイベントを取得
  * @param year 年 (例: 2026)
  * @param month 月 (1〜12)
  */

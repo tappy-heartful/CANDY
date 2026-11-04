@@ -13,6 +13,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 4. **新機能追加時の Firestore セキュリティルール更新**: 新機能の実装や新しいコレクションの作成・拡張を行った際は、必ず忘れずに `firestore.rules` に対応するセキュリティルール（読み取り・書き込み権限の定義）を追加・更新すること。
 5. **修正時の仕様書（設計書）自動更新**: コードや機能の改修・変更を行った際は、必ず修正の都度 `AGENTS.md`（特にセクション8の詳細設計・仕様部分等）を改変・最新化し、実装とドキュメントの乖離を絶対に生じさせないこと。
 6. **エラー発生時の errorLogs コレクション登録の徹底**: クライアント・サーバー問わず、例外やエラー発生時は必ず `errorLogs` コレクション（クライアント側: `src/lib/functions.ts` の `errorLog()`, サーバー側: `src/lib/firebase-admin.ts` の `serverErrorLog()`）に登録すること。未処理の例外だけでなく、catch ブロック内や API 失敗時にも漏れなく記録し、障害の早期特定・復旧を可能にすること。
+7. **IDE上の変更確定（Accept all）とエディタ同期・保存エラー対策**: AIがコードを編集した際、Antigravity IDEで対象ファイルが開かれていると、変更がエディタ上のDiffバッファに未確定（Pending）として保留され、チャット右下に「○ Files With Changes [Accept all]」が表示される。この状態ではエディタ上で未保存マーク（●）や作業ツリー比較ビューが開き、TypeScript LSPが差分エディタを解釈して大量の構文・型エラー（「問題」）を誤検出したりディスク保存が衝突する。そのため、コード修正完了報告時には必ずユーザーに対して「チャット右下の青い『Accept all』ボタンをクリックして変更を確定・保存してください」と明記・案内すること。
 
 # CANDY プロジェクト規約 (Project Conventions)
 
@@ -197,6 +198,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **型チェック＆ビルド検証の徹底と応答速度の維持（応答放置の禁止）**: ユーザーの指示に基づいてコードを修正した後は、まず `npm run type-check` (`tsc --noEmit`) で型エラーがないことを確実に確認し、ビルドエラーがないかも検証してください。ただし、`npm run build` がバックグラウンドでハングしてユーザーへの応答が長時間途絶える事態は絶対に避けること。進捗や検証結果を迅速に報告すること。
 - **仕様書の継続的改変**: コードの変更・機能改修・仕様変更を行った際は、必ず修正の都度 `AGENTS.md`（特にセクション8の詳細設計・仕様部分等）を改変・最新化し、実装とドキュメントの乖離を絶対に生じさせないこと。
+- **IDE上の変更確定（Accept all）のユーザー誘導**: コード修正完了時、Antigravity IDEでファイルを開いているユーザーに対して、チャット欄右下の「Accept all」ボタンを押して差分を確定・保存するよう明示的にアナウンスすること。これによりエディタ内Diffバッファの未確定状態による大量の構文エラー誤検出（「問題」）やファイル保存ロックを防ぐこと。
 
 ---
 
@@ -215,6 +217,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ### 8.2. 各機能の設計と技術的工夫
 
 #### ① カレンダー・スケジュール管理 (`src/features/calendar/`)
+- **段階的（Staged / Priority）フェッチによるホーム初期描画の極限高速化（30秒→1秒未満）**:
+  - ホーム初期ロード時、重い写真50枚（`getRecentPhotos(50)`）やアルバム一覧、ウィッシュリスト等を含む単一の `Promise.all` による一括待機を解体。
+  - 最優先ステージとして、当月カレンダー予定（`getEventsByMonth`）および TODO（`getTodosForCalendar`）を即座に個別発火し、データ到着次第ただちに `setAllCalendarEvents` や `updateUpcomingFromEvents` を実行して画面に即時反映。
+  - コア情報（パートナー・体調ステータス・記念日・予定・TODO）が揃った時点で画面スピナー（`setLoading(false)`）を即時解除し、体感待機時間を従来の約30秒から1秒未満へと大幅短縮。
+  - 容量の大きい写真50枚・アルバムおよびウィッシュリストはバックグラウンド非同期で取得し、届き次第画面下部へふわっと反映。
+- **カレンダー表示月＋前後月カバー範囲取得（月跨ぎ連日予定の完全保証）**:
+  - `getMonthDateRange(year, month)` において、前月1日〜翌月末日（約90日分）を範囲取得することで、前月末から月を跨ぐ連日予定（旅行など）の描画欠落を確実に防止しつつ、全件取得に比べ通信量を大幅削減。
+- **親コンポーネント（HomeClient）との初期状態同期 (`initialEvents !== null`)**:
+  - `HomeClient` において `allCalendarEvents` の初期値を `null`（取得中）として定義し、データフェッチ完了後に配列（0件なら `[]`）をセット。
+  - `CalendarView` 側で `initialEvents !== null && initialEvents !== undefined` を検知して `events` ステートへ確実に反映。初期マウント時の空配列によるデータ破棄・無視バグを根本解決。
+  - `getMonthDateRange(year, month)` において、従来の「前月1日〜翌月末日（約90日分）」の取得を改め、カレンダーグリッドに実際に描画される日曜日始まりの42マス（前月末〜当月〜翌月初）にピンポイントで範囲（`startDate` 〜 `endDate`）を絞り込み、Firestore 通信量とシリアライズ負荷を半減。
+- **初期化ガードの安定化 (`initialEvents !== undefined`)**:
+  - `CalendarView` において、`initialEvents.length > 0` の判定を改め、今月予定が0件の場合でも正しく初期ロード完了と判定され、月切り替え時のオンデマンド取得がブロックされないよう改善。
 - **表示月（今月）限定フェッチ＆オンデマンドキャッシュアーキテクチャ（初期ロード高速化）**:
   - ホーム画面初期ロード時、`getEvents()` による過去〜未来の全件取得を撤廃し、表示月（およびカレンダー42セルグリッド描画に必要な前後月）に限定して取得する `getEventsByMonth(year, month)`（`startDate` 範囲クエリ）を採用。
   - Firestore からの通信データ量、シリアライズ処理、およびカレンダー42セルのイベント走査・計算コストを激減させ、スピナー非表示直後の画面表示速度を大幅に向上。
