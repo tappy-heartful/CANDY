@@ -613,18 +613,16 @@ export default function BudgetClient() {
     }
 
     let splitRatio = 50;
-    if (dfCategory !== "income") {
-      if (dfSplitMode === "equal") {
-        splitRatio = 50;
-      } else {
-        const myRatio = Number(dfMyRatio) || 0;
-        const partnerRatio = Number(dfPartnerRatio) || 0;
-        if (myRatio + partnerRatio !== 100) {
-          showDialog("負担割合の合計が100%になるように設定してください。");
-          return;
-        }
-        splitRatio = dfTargetUid === user?.uid ? myRatio : partnerRatio;
+    if (dfSplitMode === "equal") {
+      splitRatio = 50;
+    } else {
+      const myRatio = Number(dfMyRatio) || 0;
+      const partnerRatio = Number(dfPartnerRatio) || 0;
+      if (myRatio + partnerRatio !== 100) {
+        showDialog(dfCategory === "income" ? "配分割合の合計が100%になるように設定してください。" : "負担割合の合計が100%になるように設定してください。");
+        return;
       }
+      splitRatio = dfTargetUid === user?.uid ? myRatio : partnerRatio;
     }
 
     try {
@@ -716,18 +714,16 @@ export default function BudgetClient() {
     }
 
     let splitRatio = 50;
-    if (actCategory !== "income") {
-      if (actSplitMode === "equal") {
-        splitRatio = 50;
-      } else {
-        const myRatio = Number(actMyRatio) || 0;
-        const partnerRatio = Number(actPartnerRatio) || 0;
-        if (myRatio + partnerRatio !== 100) {
-          showDialog("負担割合の合計が100%になるように設定してください。");
-          return;
-        }
-        splitRatio = actTargetUid === user?.uid ? myRatio : partnerRatio;
+    if (actSplitMode === "equal") {
+      splitRatio = 50;
+    } else {
+      const myRatio = Number(actMyRatio) || 0;
+      const partnerRatio = Number(actPartnerRatio) || 0;
+      if (myRatio + partnerRatio !== 100) {
+        showDialog(actCategory === "income" ? "配分割合の合計が100%になるように設定してください。" : "負担割合の合計が100%になるように設定してください。");
+        return;
       }
+      splitRatio = actTargetUid === user?.uid ? myRatio : partnerRatio;
     }
     try {
       showSpinner();
@@ -851,18 +847,16 @@ export default function BudgetClient() {
     }
 
     let splitRatio = 50;
-    if (mbCategory !== "income") {
-      if (mbSplitMode === "equal") {
-        splitRatio = 50;
-      } else {
-        const myRatio = Number(mbMyRatio) || 0;
-        const partnerRatio = Number(mbPartnerRatio) || 0;
-        if (myRatio + partnerRatio !== 100) {
-          showDialog("負担割合の合計が100%になるように設定してください。");
-          return;
-        }
-        splitRatio = mbTargetUid === user?.uid ? myRatio : partnerRatio;
+    if (mbSplitMode === "equal") {
+      splitRatio = 50;
+    } else {
+      const myRatio = Number(mbMyRatio) || 0;
+      const partnerRatio = Number(mbPartnerRatio) || 0;
+      if (myRatio + partnerRatio !== 100) {
+        showDialog(mbCategory === "income" ? "配分割合の合計が100%になるように設定してください。" : "負担割合の合計が100%になるように設定してください。");
+        return;
       }
+      splitRatio = mbTargetUid === user?.uid ? myRatio : partnerRatio;
     }
     try {
       showSpinner();
@@ -995,6 +989,7 @@ export default function BudgetClient() {
   const getSettlementSummary = (list: any[]) => {
     if (!user) return null;
     const expenses = list.filter(item => item.category !== "income");
+    const incomes = list.filter(item => item.category === "income");
     
     let myPaid = 0;
     let partnerPaid = 0;
@@ -1016,13 +1011,50 @@ export default function BudgetClient() {
       }
     });
 
-    const diff = myPaid - myBurden;
+    let myReceived = 0;
+    let partnerReceived = 0;
+    let myIncomeShare = 0;
+    let partnerIncomeShare = 0;
+
+    incomes.forEach(item => {
+      const amount = item.amount || 0;
+      const ratio = item.splitRatio !== undefined ? item.splitRatio : 50;
+
+      if (item.uid === user.uid) {
+        myReceived += amount;
+        myIncomeShare += amount * (ratio / 100);
+        partnerIncomeShare += amount * ((100 - ratio) / 100);
+      } else {
+        partnerReceived += amount;
+        partnerIncomeShare += amount * (ratio / 100);
+        myIncomeShare += amount * ((100 - ratio) / 100);
+      }
+    });
+
+    // 支出差額（自分が多く支払った分がプラス）
+    const expenseDiff = myPaid - myBurden;
+    // 収入差額（自分が多く受け取った分は相手への送金が必要なためマイナス方向）
+    const incomeDiff = myReceived - myIncomeShare;
+    // 純精算差額（正なら受取、負なら送金）
+    const diff = expenseDiff - incomeDiff;
+
+    // 実質純負担額（支出負担 - 収入配分）
+    const myNetBurden = myBurden - myIncomeShare;
+    const partnerNetBurden = partnerBurden - partnerIncomeShare;
 
     return {
       myPaid,
       partnerPaid,
       myBurden,
       partnerBurden,
+      myReceived,
+      partnerReceived,
+      myIncomeShare,
+      partnerIncomeShare,
+      myNetBurden,
+      partnerNetBurden,
+      expenseDiff,
+      incomeDiff,
       diff
     };
   };
@@ -1299,11 +1331,10 @@ export default function BudgetClient() {
           <td className={styles.nameCell}>{item.name}</td>
           <td className={styles.amountCell}>{formatCurrency(item.amount)}</td>
           <td className={styles.ratioCell}>
-            {item.category === "income" ? "-" : (
-              item.splitRatio === undefined || item.splitRatio === 50 ? "折半" :
+            {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" :
               item.uid === user?.uid ? `自分:${item.splitRatio}% / 相手:${100 - item.splitRatio}%` :
               `自分:${100 - item.splitRatio}% / 相手:${item.splitRatio}%`
-            )}
+            }
           </td>
           <td className={styles.memoCell}>{item.memo || "-"}</td>
           <td className={styles.actionCell}>
@@ -1348,14 +1379,13 @@ export default function BudgetClient() {
                 <i className="fa-regular fa-clock"></i> {displayDate}
               </span>
             )}
-            {item.category !== "income" && (
-              <span className={styles.mobileCardRatio}>
-                負担: {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" : 
-                  item.uid === user?.uid ? `自分:${item.splitRatio}%` :
-                  `相手:${item.splitRatio}%`
-                }
-              </span>
-            )}
+            <span className={styles.mobileCardRatio}>
+              {item.category === "income" ? "配分: " : "負担: "}
+              {item.splitRatio === undefined || item.splitRatio === 50 ? "折半" : 
+                item.uid === user?.uid ? `自分:${item.splitRatio}%` :
+                `相手:${item.splitRatio}%`
+              }
+            </span>
           </div>
         </div>
       );
@@ -1699,9 +1729,15 @@ export default function BudgetClient() {
                       <span>支払った額:</span>
                       <strong>{formatCurrency(setSum.myPaid)}</strong>
                     </div>
+                    {setSum.myReceived > 0 && (
+                      <div className={styles.settlementCardRow}>
+                        <span>受け取った収入:</span>
+                        <strong style={{ color: "#10b981" }}>{formatCurrency(setSum.myReceived)}</strong>
+                      </div>
+                    )}
                     <div className={styles.settlementCardRow}>
                       <span>実質負担額:</span>
-                      <strong>{formatCurrency(setSum.myBurden)}</strong>
+                      <strong>{formatCurrency(setSum.myNetBurden)}</strong>
                     </div>
                   </div>
                   {partnerUser && (
@@ -1711,9 +1747,15 @@ export default function BudgetClient() {
                         <span>支払った額:</span>
                         <strong>{formatCurrency(setSum.partnerPaid)}</strong>
                       </div>
+                      {setSum.partnerReceived > 0 && (
+                        <div className={styles.settlementCardRow}>
+                          <span>受け取った収入:</span>
+                          <strong style={{ color: "#10b981" }}>{formatCurrency(setSum.partnerReceived)}</strong>
+                        </div>
+                      )}
                       <div className={styles.settlementCardRow}>
                         <span>実質負担額:</span>
-                        <strong>{formatCurrency(setSum.partnerBurden)}</strong>
+                        <strong>{formatCurrency(setSum.partnerNetBurden)}</strong>
                       </div>
                     </div>
                   )}
@@ -2028,10 +2070,11 @@ export default function BudgetClient() {
                     )}
                   </div>
 
-                  {/* 負担設定 */}
-                  {actCategory !== "income" && (
-                    <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
-                      <label className={styles.formLabel}>負担設定</label>
+                  {/* 負担・配分設定 */}
+                  <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
+                    <label className={styles.formLabel}>
+                      {actCategory === "income" ? "配分設定 (受取・権利の割合)" : "負担設定"}
+                    </label>
                       <div className={styles.splitModeSelector}>
                         <label className={styles.radioLabelInline}>
                           <input
@@ -2097,7 +2140,6 @@ export default function BudgetClient() {
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               </div>
 
@@ -2592,7 +2634,7 @@ export default function BudgetClient() {
                 <span className={`${styles.detailValue} ${styles.detailAmount}`}>{formatCurrency(selectedBudget.amount)}</span>
               </div>
               <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>支払者:</span>
+                <span className={styles.detailLabel}>{selectedBudget.category === "income" ? "受取者:" : "支払者:"}</span>
                 <span className={styles.detailValue}>
                   <span className={selectedBudget.uid === user?.uid ? styles.userBadgeMe : styles.userBadgePartner}>
                     {selectedBudget.uid === user?.uid ? myName : partnerName}
@@ -2720,23 +2762,26 @@ export default function BudgetClient() {
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>1</span>
               <div>
-                <span>二人の支出（固定費＋変動費）の実支払額</span>
+                <span>二人の支出の実支払額 & 収入の実受取額</span>
                 <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                  • 全体の支出合計: <strong>{formatCurrency(setSum.myPaid + setSum.partnerPaid)}</strong><br />
-                  • {myName} の支払額: {formatCurrency(setSum.myPaid)}<br />
-                  • {partnerName} の支払額: {formatCurrency(setSum.partnerPaid)}
+                  • 支出合計: <strong>{formatCurrency(setSum.myPaid + setSum.partnerPaid)}</strong> ({myName}: {formatCurrency(setSum.myPaid)} / {partnerName}: {formatCurrency(setSum.partnerPaid)})<br />
+                  {(setSum.myReceived + setSum.partnerReceived > 0) && (
+                    <>
+                      • 収入合計: <strong>{formatCurrency(setSum.myReceived + setSum.partnerReceived)}</strong> ({myName}: {formatCurrency(setSum.myReceived)} / {partnerName}: {formatCurrency(setSum.partnerReceived)})<br />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>2</span>
               <div>
-                <span>各項目の負担割合に基づく目標負担額</span>
+                <span>負担・配分割合に基づく実質純負担額</span>
                 <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                  • {myName} の目標負担額: <strong>{formatCurrency(setSum.myBurden)}</strong><br />
-                  • {partnerName} の目標負担額: <strong>{formatCurrency(setSum.partnerBurden)}</strong><br />
+                  • {myName} の実質負担: <strong>{formatCurrency(setSum.myNetBurden)}</strong> (支出負担 {formatCurrency(setSum.myBurden)} - 収入配分 {formatCurrency(setSum.myIncomeShare)})<br />
+                  • {partnerName} の実質負担: <strong>{formatCurrency(setSum.partnerNetBurden)}</strong> (支出負担 {formatCurrency(setSum.partnerBurden)} - 収入配分 {formatCurrency(setSum.partnerIncomeShare)})<br />
                   <span style={{ fontSize: "11px", color: "#888" }}>
-                    (※ 各支出項目ごとの設定割合「金額 × 負担率 %」の合算値です。未設定項目は折半 50% として計算されます)
+                    (※ 各項目の設定割合「金額 × 比率 %」の合算値です。未設定項目は折半 50% として計算されます)
                   </span>
                 </div>
               </div>
@@ -2744,10 +2789,10 @@ export default function BudgetClient() {
             <div className={styles.formulaStep}>
               <span className={styles.stepNum}>3</span>
               <div>
-                <span>支払済みの金額と目標負担額の差額</span>
+                <span>支出過払い額と収入過剰受取額の相殺・差額</span>
                 <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>
-                  • {myName}: {formatCurrency(setSum.myPaid)} (支払額) - {formatCurrency(setSum.myBurden)} (目標) = <strong>{setSum.diff > 0 ? `+${formatCurrency(setSum.diff)}` : formatCurrency(setSum.diff)}</strong><br />
-                  • {partnerName}: {formatCurrency(setSum.partnerPaid)} (支払額) - {formatCurrency(setSum.partnerBurden)} (目標) = <strong>{-setSum.diff > 0 ? `+${formatCurrency(-setSum.diff)}` : formatCurrency(-setSum.diff)}</strong>
+                  • {myName}: 支出差額 {setSum.expenseDiff >= 0 ? `+${formatCurrency(setSum.expenseDiff)}` : formatCurrency(setSum.expenseDiff)} - 収入差額 {setSum.incomeDiff >= 0 ? `+${formatCurrency(setSum.incomeDiff)}` : formatCurrency(setSum.incomeDiff)} = <strong>{setSum.diff > 0 ? `+${formatCurrency(setSum.diff)}` : formatCurrency(setSum.diff)}</strong><br />
+                  • {partnerName}: 支出差額 {-setSum.expenseDiff >= 0 ? `+${formatCurrency(-setSum.expenseDiff)}` : formatCurrency(-setSum.expenseDiff)} - 収入差額 {-setSum.incomeDiff >= 0 ? `+${formatCurrency(-setSum.incomeDiff)}` : formatCurrency(-setSum.incomeDiff)} = <strong>{-setSum.diff > 0 ? `+${formatCurrency(-setSum.diff)}` : formatCurrency(-setSum.diff)}</strong>
                 </div>
               </div>
             </div>

@@ -196,18 +196,16 @@ export default function ActualBudgetModal({
     }
 
     let splitRatio = 50;
-    if (actCategory !== "income") {
-      if (actSplitMode === "equal") {
-        splitRatio = 50;
-      } else {
-        const myRatio = Number(actMyRatio) || 0;
-        const partnerRatio = Number(actPartnerRatio) || 0;
-        if (myRatio + partnerRatio !== 100) {
-          showDialog("負担割合の合計が100%になるよう設定してください。");
-          return;
-        }
-        splitRatio = actTargetUid === currentUserId ? myRatio : partnerRatio;
+    if (actSplitMode === "equal") {
+      splitRatio = 50;
+    } else {
+      const myRatio = Number(actMyRatio) || 0;
+      const partnerRatio = Number(actPartnerRatio) || 0;
+      if (myRatio + partnerRatio !== 100) {
+        showDialog(actCategory === "income" ? "配分割合の合計が100%になるよう設定してください。" : "負担割合の合計が100%になるよう設定してください。");
+        return;
       }
+      splitRatio = actTargetUid === currentUserId ? myRatio : partnerRatio;
     }
 
     try {
@@ -448,10 +446,11 @@ export default function ActualBudgetModal({
                 )}
               </div>
 
-              {/* 負担設定（支出の場合のみ） */}
-              {actCategory !== "income" && (
-                <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
-                  <label className={styles.formLabel}>負担設定</label>
+              {/* 負担・配分設定 */}
+              <div className={`${styles.formGroup} ${styles.ratioFormGroup}`}>
+                <label className={styles.formLabel}>
+                  {actCategory === "income" ? "配分設定 (受取・権利の割合)" : "負担設定"}
+                </label>
                   <div className={styles.splitModeSelector}>
                     <label className={styles.radioLabelInline}>
                       <input
@@ -517,7 +516,6 @@ export default function ActualBudgetModal({
                     </div>
                   )}
                 </div>
-              )}
             </div>
           </div>
 
