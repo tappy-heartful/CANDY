@@ -84,25 +84,33 @@ export default function BudgetAnalysis({
     return data;
   }, [expenses, types, totalExpense]);
 
-  // 3. SVGドーナツグラフの描画に必要な円周等の計算
-  const circleRadius = 50;
-  const circleCircumference = 2 * Math.PI * circleRadius; // 約 314.159
+  // 3. 円グラフ（ドーナツチャート）用の conic-gradient 背景の生成
+  const donutBackground = useMemo(() => {
+    if (chartData.length === 0) return "#f3f3f3";
+    if (chartData.length === 1) return COLORS[0];
+
+    const parts: string[] = [];
+    let currentPct = 0;
+
+    chartData.forEach((item, index) => {
+      const color = COLORS[index % COLORS.length];
+      const startPct = currentPct;
+      const endPct = currentPct + item.percentage;
+      parts.push(`${color} ${startPct.toFixed(2)}% ${endPct.toFixed(2)}%`);
+      currentPct = endPct;
+    });
+
+    return `conic-gradient(${parts.join(", ")})`;
+  }, [chartData]);
 
   const doughnutSegments = useMemo(() => {
-    let accumulatedLength = 0;
     return chartData.map((item, index) => {
-      const strokeLength = circleCircumference * (item.percentage / 100);
-      const offset = accumulatedLength;
-      accumulatedLength += strokeLength;
-
       return {
         ...item,
-        strokeLength,
-        offset,
         color: COLORS[index % COLORS.length]
       };
     });
-  }, [chartData, circleCircumference]);
+  }, [chartData]);
 
   // 4. 固定費・変動費のバランス計算
   const fixedTotal = useMemo(() => {
@@ -174,57 +182,28 @@ export default function BudgetAnalysis({
         {/* 円グラフエリア */}
         <div className={styles.chartSection}>
           <div className={styles.donutWrapper}>
-            <svg width="100%" height="100%" viewBox="0 0 120 120" className={styles.donutSvg}>
-              {/* 背景の薄い円 */}
-              <circle
-                cx="60"
-                cy="60"
-                r="50"
-                fill="transparent"
-                stroke="#f3f3f3"
-                strokeWidth="10"
-              />
-              {/* 各セグメントの描画 */}
-              {doughnutSegments.map((segment, idx) => (
-                <circle
-                  key={segment.id}
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="transparent"
-                  stroke={segment.color}
-                  strokeWidth={activeSegmentIndex === idx ? "12" : "10"}
-                  strokeDasharray={`${segment.strokeLength} ${circleCircumference - segment.strokeLength}`}
-                  strokeDashoffset={-segment.offset}
-                  transform="rotate(-90 60 60)"
-                  className={styles.donutSegment}
-                  onMouseEnter={() => setActiveSegmentIndex(idx)}
-                  onMouseLeave={() => setActiveSegmentIndex(null)}
-                  style={{
-                    cursor: "pointer",
-                    transition: "stroke-width 0.2s, stroke 0.2s"
-                  }}
-                />
-              ))}
-            </svg>
-            
-            {/* グラフの中心のテキスト表示 */}
-            <div className={styles.donutCenter}>
-              {centerDisplay ? (
-                <>
-                  <span className={styles.centerLabel} style={{ color: centerDisplay.color }}>
-                    {centerDisplay.name}
-                  </span>
-                  <span className={styles.centerValue}>{formatCurrency(centerDisplay.amount)}</span>
-                  <span className={styles.centerPercentage}>{centerDisplay.percentage.toFixed(1)}%</span>
-                </>
-              ) : (
-                <>
-                  <span className={styles.centerLabel}>総支出額</span>
-                  <span className={styles.centerValue}>{formatCurrency(totalExpense)}</span>
-                  <span className={styles.centerPercentage}>100%</span>
-                </>
-              )}
+            <div
+              className={styles.donutCircle}
+              style={{ background: donutBackground }}
+            >
+              {/* ドーナツの中心穴とテキスト */}
+              <div className={styles.donutHole}>
+                {centerDisplay ? (
+                  <>
+                    <span className={styles.centerLabel} style={{ color: centerDisplay.color }}>
+                      {centerDisplay.name}
+                    </span>
+                    <span className={styles.centerValue}>{formatCurrency(centerDisplay.amount)}</span>
+                    <span className={styles.centerPercentage}>{centerDisplay.percentage.toFixed(1)}%</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.centerLabel}>総支出額</span>
+                    <span className={styles.centerValue}>{formatCurrency(totalExpense)}</span>
+                    <span className={styles.centerPercentage}>100%</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

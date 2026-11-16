@@ -54,36 +54,52 @@
 
 .donutWrapper {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 190px;
+  height: 190px;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  flex-shrink: 0;
 }
 
-.donutSvg {
+.donutCircle {
   width: 100%;
   height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(155, 124, 195, 0.15);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-.donutSegment {
-  transform-origin: center;
-  transition: stroke-width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1), stroke 0.3s;
+.donutCircle:hover {
+  transform: scale(1.02);
 }
 
-.donutSegment:hover {
-  stroke-width: 12;
-}
-
-/* Center text in Donut */
-.donutCenter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.donutHole {
+  width: 68%;
+  height: 68%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  pointer-events: none; /* ホバー処理を阻害しない */
-  width: 75%;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  pointer-events: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .centerLabel {
@@ -376,22 +392,37 @@
   .analysisCard {
     padding: 16px;
   }
-  
+
   .donutWrapper {
     width: 160px;
     height: 160px;
   }
-  
-  .centerValue {
-    font-size: 16px;
+
+  .centerLabel {
+    font-size: 10px;
   }
-  
+
+  .centerValue {
+    font-size: 15px;
+  }
+
   .centerPercentage {
     font-size: 10px;
   }
-  
+
   .balanceGrid {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .donutWrapper {
+    width: 140px;
+    height: 140px;
+  }
+
+  .centerValue {
+    font-size: 13px;
   }
 }

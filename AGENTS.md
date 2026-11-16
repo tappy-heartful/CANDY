@@ -1,12 +1,15 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
 
 すべて日本語で回答してください
 
 # Agent Behavior Rules
+
 1. **実装プランの承認プロセス省略**: Implementation Planを作成した後、ユーザーの明示的な承認を待つ必要はありません。プランを提示（または作成）したら、そのまま連続してタスクの実行（コードの修正等）に進んでください。
 2. **モバイル表示の考慮**: スマートフォンでの表示崩れを防ぐため、フィルターバッジやボタン等のUI要素が画面幅で見切れたり不自然に折り返したりしないように常に設計に配慮してください。必要に応じて要素を別行にするか、スクロール可能なコンテナに格納するなど、モバイルファーストでの実装を徹底してください。
 3. **ブラウザ確認禁止＆検証ハング時の放置厳禁（型チェック優先）**: レイアウト確認や動作確認はユーザー自身が行うため、ブラウザ操作ツール全般による画面遷移や確認作業は一切行わないこと。また、Next.js 16 (Turbopack) 環境下では `npm run build` が `Creating an optimized production build ...` でハングしてAIの応答が途絶えるリスクがあるため、**コード修正後の検証はまず `npm run type-check` (`tsc --noEmit`) を優先して実行すること**。`npm run build` の完了待ちでユーザーを長時間放置することは固く禁止し、必要に応じて迅速にタスクを停止して型検証結果と状況を即座に報告すること。
@@ -207,6 +210,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 本セクションは、本プロジェクトをゼロから完全に再現・再構築できるように、採用されている設計思想、機能ごとのロジック、および工夫を網羅的に記録する。
 
 ### 8.1. プロジェクト概要とデータモデルの二者間設計
+
 - **サービスコンセプト**: カップル向けプライベートライフマネジメントPWA。
 - **データ分離と共有モデル**:
   - 各データ（予定、TODO、ウィッシュリスト等）には `type: "personal" | "couple"` および `uid: string`（作成者）を持つ。
@@ -217,6 +221,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ### 8.2. 各機能の設計と技術的工夫
 
 #### ① カレンダー・スケジュール管理 (`src/features/calendar/`)
+
 - **段階的（Staged / Priority）フェッチによるホーム初期描画の極限高速化（30秒→1秒未満）**:
   - ホーム初期ロード時、重い写真50枚（`getRecentPhotos(50)`）やアルバム一覧、ウィッシュリスト等を含む単一の `Promise.all` による一括待機を解体。
   - 最優先ステージとして、当月カレンダー予定（`getEventsByMonth`）および TODO（`getTodosForCalendar`）を即座に個別発火し、データ到着次第ただちに `setAllCalendarEvents` や `updateUpcomingFromEvents` を実行して画面に即時反映。
@@ -247,6 +252,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - グリッド表示（月間カレンダー）、タイムライン表示（時間軸リスト/カラム）、デイリーアジェンダ（1日の詳細モーダル）を完備。
 
 #### ② LINE通知・バックグラウンド連携 (`gas/lineNotifications.js`)
+
 - **公式アカウントの2系統分離運用**:
   - **定期通知用アカウント**: 朝の定時メッセージ（天気・予定・TODO・記念日・今日の一枚）および夜のお休み通知（明日の予定・明日のゴミ出し・明日のTODO）。
   - **イベント通知用アカウント**: 予定開始N分前（0〜60分前、5分刻み）のリマインダー専用。日常の定時通知でリマインダーが埋もれないようにLINEトークルームを物理的に分離。
@@ -262,6 +268,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - **気温・天候連動の「おすすめの服装アドバイス」**: 最高気温・最低気温・雨天判定・寒暖差（10℃以上）から、季節や一日の気温差に合わせた最適な服装（半袖・カーディガン・トレンチコート・厚手コート・ストール等）を優しくアドバイス。
 
 #### ③ 家計簿・ワリカン精算 (`src/features/settlement/`, `src/features/budget/`)
+
 - **収入（Income）の精算連動と双方向相殺ロジック**:
   - 支出（固定費・変動費）の立替精算に加え、収入項目（共通の還付金、フリマ売上、祝い金等）も精算計算に完全連動。
   - 収入登録時も配分割合（折半5:5、またはカスタム%）を設定可能。
@@ -276,22 +283,31 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - 家計簿の月次精算における送金エビデンスとして「楽天銀行の振込履歴・振込完了スクリーンショット」を登録。
   - 送金の分割払いに対応し、1回目（N円）、2回目（M円）…と回数・金額・メモ・スクショをセットで複数登録可能。
   - 目標精算額に対する送金済み合計額および残り送金必要額をリアルタイム表示し、残額クイック入力や個別履歴削除を完備。
+- **家計分析タブの円グラフ（ドーナツチャート）描画最適化 & スマホ真円維持設計**:
+  - 各支出種別のシェア（割合%）に応じたカラーリング（パープル、ピンク、インディゴ、ミントティール等）を `conic-gradient` を用いて確実に描画。
+  - SVG dashoffsetの回転・座標ズレによる白紙化バグを根絶し、どんなブラウザ環境でも美しく色分けされた円グラフ表示を実現。
+  - **スマートフォン画面における縦横比 1:1（完全な真円）保証**: モバイル端末の幅狭レイアウト（幅480px、幅360px以下等）において、flexレイアウトの縮小や親要素の幅縮小に伴う左右の押し潰し・楕円形（卵型）への歪みを防止するため、`.donutWrapper`, `.donutCircle`, `.donutHole` のすべてに `aspect-ratio: 1 / 1;` および `flex-shrink: 0;`、幅高比率（`width: 100% / 68%`, `height: 100% / 68%`）を適用。どんな画面幅でも外円・内側の穴ともに完全な真円と中央揃えを100%維持。
+  - 凡例ホバー時のハイライト・中心テキスト（金額・割合）連動を完備。
 
 #### ④ 体調・気分・ひとこと共有 (`src/features/home/`)
+
 - **DailyStatus**:
   - 毎日の気分（1〜5）、体調（1〜5）、ひとことコメントを記録。
   - パートナーのコメントに対して絵文字リアクションを即時反映。
 
 #### ⑤ ごみ出しスケジュール (`src/features/garbage/`)
+
 - **定期収集ルールの柔軟な定義**:
   - 毎週特定の曜日、隔週、第N曜日（例: 第2・第4水曜日）に対応。
   - 夜の通知で「明日のごみ」、朝の通知で「今日のごみ」を自動リマインド。出し方や分別表の写真URLも添付可能。
 
 #### ⑥ 理想の住まい・引越し条件管理 (`src/features/ideal-property/`)
+
 - **カテゴリ別の重要度スコアリング**:
   - キッチン、冷暖房、建物設備、周辺環境などの各項目に優先度（★1〜★3）を設定。パートナーとの希望条件の擦り合わせを可視化。
 
 #### ⑦ LINE送信履歴・配信枠管理 (`src/features/line-logs/`)
+
 - **認証ガード仕様（カップルユーザー専用）**:
   - `src/app/settings/line-logs/` は `AuthGuard` で保護され、ログイン済みカップルユーザーのみ閲覧可能。
   - Firestoreセキュリティルールも `match /lineNotificationLogs/{id}` に対して `allow read: if isSignedIn();` を適用（書き込みはGAS/Adminのみ）。
@@ -307,6 +323,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - 各日付グループ内に該当日の送信件数バッジ（例: `3件送信`）を表示し、カード内の時刻表示（HH:mm）と合わせて何日にどのメッセージが送信されたかを一目で把握できるようにUIを最適化。
 
 #### ⑧ エラーロギング・障害監視 (`errorLogs`)
+
 - **クライアント・サーバー両対応の統一ログ機構**:
   - クライアント側: `src/lib/functions.ts` の `errorLog(action, error, options)`
   - サーバー側: `src/lib/firebase-admin.ts` の `serverErrorLog(action, error, options)`
@@ -333,6 +350,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防ぎ、完全無料枠内で安全に運用するための必須設計指針。
 
 ### 9.1. 読み取り爆発（Read Explosion）を防ぐ3大原則
+
 1. **全件取得（`getDocuments`）のポーリング禁止**:
    - 定期バッチやリマインダー内で `getDocuments('events')` などの無制限フェッチを絶対に行わない。
    - 必ず `startDate >= today && startDate <= tomorrow` のように **クエリで日付範囲を限定** して取得する。
@@ -343,6 +361,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
    - これにより、実行回数と読み取り回数を **1/5（1日1,440回 → 288回）** に削減し、GASの1日90分実行制限エラーも完全に回避する。
 
 ### 9.2. GASのタイマー遅延（ジッター）対策設計
+
 - **Googleの仕様**: GASの時間主導型トリガーは、Googleのインフラ仕様により約30〜50秒の起動遅延（ゆらぎ）が必ず発生する。
 - **「時間の幅（区間）」によるスキャン**:
   - `currentTime === "08:00"` のようなピンポイント一致判定は、起動が `08:00:45` にずれた場合にすり抜けてしまうため禁止。
@@ -357,6 +376,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
 本プロジェクトを別環境で再構築する際の手順と必要な設定項目一覧。
 
 ### 10.1. Firebase プロジェクト設定
+
 1. **Firestore Database**:
    - データベース作成（ロケーション: `asia-northeast1` (Tokyo) 推奨）。
    - コレクション構成:
@@ -379,6 +399,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
    - IAMからサービスアカウントを作成し、JSONキーを発行（GASからFirestoreへの接続に使用）。
 
 ### 10.2. LINE Developers 設定
+
 1. **LINE ログイン チャネル**:
    - Webアプリ用のチャネルを作成。
    - コールバックURL: `https://<DOMAIN>/api/line/callback`
@@ -387,6 +408,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
    - ② **イベントリマインダー用公式アカウント**（Channel Access Token を発行）
 
 ### 10.3. Google Apps Script（GAS）設定
+
 1. **ライブラリ追加**:
    - `FirestoreApp`（ID: `1VUSl4b1r1eoNcRWotZM3e87ygkxvXltOgyDZhixqncz9lQ3MjfT1iKFw`）
 2. **スクリプトプロパティ**:
@@ -402,6 +424,7 @@ Firestoreの従量課金爆発（月間1,000万回以上の読み取り）を防
    - 時間の間隔: **5分おき**
 
 ### 10.4. Vercel 環境変数一覧
+
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
